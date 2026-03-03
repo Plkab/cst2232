@@ -1,0 +1,25 @@
+/* Supprimer l'en-tête Material */
+.md-header {
+  display: none;
+}
+
+/* Supprimer le pied de page */
+.md-footer {
+  display: none;
+}
+
+/* Supprimer les marges et paddings superflus */
+.md-main__inner {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+.md-content {
+  max-width: 800px; /* ou la largeur que tu souhaites */
+  margin: 0 auto;
+  padding: 20px;
+  background: white;
+  color: black;
+  font-family: 'Times New Roman', serif; /* comme ece4760 */
+}

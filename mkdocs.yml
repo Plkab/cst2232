@@ -8,3 +8,9 @@ theme: mkdocs
 markdown_extensions:
   - tables
   - attr_list
+
+nav:
+  - Accueil: index.md
+
+extra_css:
+  - stylesheets/extra.css
