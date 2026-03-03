@@ -8,6 +8,7 @@ La Conception des Systèmes Embarqués Temps Réel à base du Microcontrôleur e
 Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception culminante (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
 
 À l’issue de ce cours, l’étudiant sera capable de :
+
 - Concevoir un firmware temps réel structuré sur le microcontrôleur STM32F4
 - Maîtriser FreeRTOS (tâches, queues, sémaphores, mutex)
 - Implémenter des algorithmes de contrôle et de traitement de données en temps réel.
