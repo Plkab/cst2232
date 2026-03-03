@@ -8,6 +8,3 @@ theme: mkdocs
 markdown_extensions:
   - tables
   - attr_list
-
-nav:
-  - Accueil: index.md
