@@ -3,11 +3,16 @@
   display: none;
 }
 
-/* Faire occuper toute la largeur à la colonne principale */
+/* Masquer toute la colonne de gauche (sidebar) */
+.col-md-3 {
+  display: none !important;
+}
+
+/* Faire prendre toute la largeur à la colonne de contenu */
 .col-md-9 {
-  width: 100%;
-  max-width: 100%;
-  flex: 0 0 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
 }
 
 /* Optionnel : style de base pour le contenu */
