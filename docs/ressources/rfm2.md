@@ -1,1 +1,1 @@
-"# Manuel de r‚f‚rence Cortex-M" 
+"# Manuel de râ€šfâ€šrence Cortex-M" 

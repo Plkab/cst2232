@@ -1,1 +1,1 @@
-"# Manuel de r‚f‚rence STM32F4" 
+"# Manuel de râ€šfâ€šrence STM32F4" 

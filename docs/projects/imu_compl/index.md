@@ -1,1 +1,1 @@
-"# Projet : Filtrage des donn‚es IMU (filtre compl‚mentaire)" 
+"# Projet : Filtrage des donnâ€šes IMU (filtre complâ€šmentaire)" 
