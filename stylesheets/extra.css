@@ -1,64 +1,32 @@
-/* Supprimer l'en-tête Material */
-.md-header {
+/* Masquer la barre latérale gauche (table des matières) */
+.bss-sidebar {
   display: none;
 }
 
-/* Supprimer le pied de page */
-.md-footer {
-  display: none;
+/* Faire occuper toute la largeur à la colonne principale */
+.col-md-9 {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 100%;
 }
 
-/* Supprimer les marges et paddings superflus */
-.md-main__inner {
-  margin: 0 !important;
-  padding: 0 !important;
-  max-width: 100% !important;
-}
-
-/* Optionnel : Supprime l'espace blanc que l'en-tête laissait */
-.md-main {
-  margin-top: 0;
-}
-
-/* Masquer la table des matières latérale */
-.md-sidebar--secondary {
-  display: none;
-}
-
-/* Optionnel : ajuster la largeur du contenu principal */
-.md-content {
-  max-width: 900px; /* ou la largeur que tu souhaites */
-  margin: 0 auto;
-  padding: 20px;
+/* Optionnel : style de base pour le contenu */
+body {
+  font-family: 'Times New Roman', serif;  /* Comme ece4760 */
   background: white;
   color: black;
-  font-family: 'Times New Roman', serif; 
+  line-height: 1.6;
+  margin: 40px auto;
+  max-width: 900px;  /* Largeur de lecture confortable */
+  padding: 0 20px;
 }
 
-/* Masque toute la barre de navigation (en-tête) */
+/* Si vous voulez aussi masquer l'en-tête du site (le titre en haut) */
 .navbar {
   display: none;
 }
 
-/* Supprime l'espace blanc que l'en-tête laissait */
-body > .container {
-  margin-top: 0;
-  padding-top: 20px; /* Ajustez selon vos préférences */
-}
-
-/* Masque UNIQUEMENT le titre du site dans l'en-tête */
-.navbar-brand {
-  display: none;
-}
-
-/* Si le titre est dans un autre élément, on peut aussi masquer toute la barre */
-/* Mais on veut garder la barre si elle contient d'autres infos ? */
-/* Pour être plus sûr, on peut cibler le conteneur du titre */
-.navbar-header .navbar-brand {
-  display: none;
-}
-
-/* Masque toute la barre latérale (table des matières) */
-.bss-sidebar {
-  display: none;
+/* Ajustement pour compenser la suppression de l'en-tête */
+body {
+  margin-top: 20px;
 }
