@@ -41,4 +41,4 @@ Un système embarqué combine **matériel (hardware) et logiciel (software)** po
   
 ### Lien connexe
 
-- [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
+- [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)

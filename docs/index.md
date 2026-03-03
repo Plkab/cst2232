@@ -28,6 +28,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
   
 - [Philosophie du cours](philosophie/index.md)
 - [Introduction aux Systèmes Temps Réels](rtos/index.md)
+- [Introduction à freeRTOS](rtos/#introduction-a-freertos)
 - [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
 
 ---
