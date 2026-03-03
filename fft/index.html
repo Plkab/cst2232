@@ -9,29 +9,31 @@
         <meta name="author" content="Paul S. Kabidu">
       
       
-        <link rel="canonical" href="https://Plkab.github.io/cst2232/">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/fft/">
       
       
+        <link rel="prev" href="../filtre/">
       
-        <link rel="next" href="rtos/">
+      
+        <link rel="next" href="../dds/">
       
       
         
       
       
-      <link rel="icon" href="images/favicon.ico">
+      <link rel="icon" href="../images/favicon.ico">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
-        <title>Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Analyse fréquentielle avec FFT - Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -50,13 +52,13 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
     
     
-  <link href="assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
             html.glightbox-open { overflow: initial; height: 100%; }
             .gslide-title { margin-top: 0px; user-select: text; }
             .gslide-desc { color: #666; user-select: text; }
@@ -84,11 +86,6 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
-        
-        <a href="#cst2232-conception-des-systa-mes-temps-rael-a-base-de-microcontra-leur" class="md-skip">
-          Aller au contenu
-        </a>
-      
     </div>
     <div data-md-component="announce">
       
@@ -99,7 +96,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="En-tête">
-    <a href="." title="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" class="md-header__button md-logo" aria-label="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" data-md-component="logo">
+    <a href=".." title="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" class="md-header__button md-logo" aria-label="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
@@ -119,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Présentation du Cours
+              Analyse fréquentielle avec FFT
             
           </span>
         </div>
@@ -218,11 +215,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -241,7 +236,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="rtos/" class="md-tabs__link">
+      <a href="../rtos/" class="md-tabs__link">
         
   
   
@@ -260,7 +255,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="mcu/" class="md-tabs__link">
+      <a href="../mcu/" class="md-tabs__link">
         
   
   
@@ -281,7 +276,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="stm32f4/gpio/" class="md-tabs__link">
+        <a href="../stm32f4/gpio/" class="md-tabs__link">
           
   
   
@@ -297,11 +292,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="fsm/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../fsm/" class="md-tabs__link">
           
   
   
@@ -321,7 +318,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="projects/imu_compl/" class="md-tabs__link">
+        <a href="../projects/imu_compl/" class="md-tabs__link">
           
   
   
@@ -341,7 +338,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="labos/stabilisation1/" class="md-tabs__link">
+        <a href="../labos/stabilisation1/" class="md-tabs__link">
           
   
   
@@ -361,7 +358,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="ressources/installation/" class="md-tabs__link">
+        <a href="../ressources/installation/" class="md-tabs__link">
           
   
   
@@ -395,7 +392,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" class="md-nav__button md-logo" aria-label="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" data-md-component="logo">
+    <a href=".." title="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" class="md-nav__button md-logo" aria-label="Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
@@ -410,37 +407,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Présentation du Cours
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -456,37 +426,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table des matières">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table des matières
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#objectifs-padagogiques" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Objectifs PÃ©dagogiques
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -498,7 +437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="rtos/" class="md-nav__link">
+      <a href="../rtos/" class="md-nav__link">
         
   
   
@@ -525,7 +464,7 @@
   
   
     <li class="md-nav__item">
-      <a href="mcu/" class="md-nav__link">
+      <a href="../mcu/" class="md-nav__link">
         
   
   
@@ -604,7 +543,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/gpio/" class="md-nav__link">
+      <a href="../stm32f4/gpio/" class="md-nav__link">
         
   
   
@@ -632,7 +571,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/timer/" class="md-nav__link">
+      <a href="../stm32f4/timer/" class="md-nav__link">
         
   
   
@@ -660,7 +599,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/adc/" class="md-nav__link">
+      <a href="../stm32f4/adc/" class="md-nav__link">
         
   
   
@@ -688,7 +627,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/usart/" class="md-nav__link">
+      <a href="../stm32f4/usart/" class="md-nav__link">
         
   
   
@@ -716,7 +655,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/i2c/" class="md-nav__link">
+      <a href="../stm32f4/i2c/" class="md-nav__link">
         
   
   
@@ -744,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/spi/" class="md-nav__link">
+      <a href="../stm32f4/spi/" class="md-nav__link">
         
   
   
@@ -772,7 +711,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/can/" class="md-nav__link">
+      <a href="../stm32f4/can/" class="md-nav__link">
         
   
   
@@ -800,7 +739,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stm32f4/dma/" class="md-nav__link">
+      <a href="../stm32f4/dma/" class="md-nav__link">
         
   
   
@@ -832,26 +771,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -869,7 +813,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -887,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="fsm/" class="md-nav__link">
+      <a href="../fsm/" class="md-nav__link">
         
   
   
@@ -915,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="pid/" class="md-nav__link">
+      <a href="../pid/" class="md-nav__link">
         
   
   
@@ -943,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="estimation/" class="md-nav__link">
+      <a href="../estimation/" class="md-nav__link">
         
   
   
@@ -971,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="filtre/" class="md-nav__link">
+      <a href="../filtre/" class="md-nav__link">
         
   
   
@@ -996,10 +940,17 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="fft/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1015,6 +966,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1027,7 +979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="dds/" class="md-nav__link">
+      <a href="../dds/" class="md-nav__link">
         
   
   
@@ -1055,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="graphisme/" class="md-nav__link">
+      <a href="../graphisme/" class="md-nav__link">
         
   
   
@@ -1142,7 +1094,7 @@
   
   
     <li class="md-nav__item">
-      <a href="projects/imu_compl/" class="md-nav__link">
+      <a href="../projects/imu_compl/" class="md-nav__link">
         
   
   
@@ -1229,7 +1181,7 @@
   
   
     <li class="md-nav__item">
-      <a href="labos/stabilisation1/" class="md-nav__link">
+      <a href="../labos/stabilisation1/" class="md-nav__link">
         
   
   
@@ -1257,7 +1209,7 @@
   
   
     <li class="md-nav__item">
-      <a href="labos/monitoringEsp8266/" class="md-nav__link">
+      <a href="../labos/monitoringEsp8266/" class="md-nav__link">
         
   
   
@@ -1285,7 +1237,7 @@
   
   
     <li class="md-nav__item">
-      <a href="labos/fft1/" class="md-nav__link">
+      <a href="../labos/fft1/" class="md-nav__link">
         
   
   
@@ -1372,7 +1324,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/installation/" class="md-nav__link">
+      <a href="../ressources/installation/" class="md-nav__link">
         
   
   
@@ -1400,7 +1352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/datasheets/" class="md-nav__link">
+      <a href="../ressources/datasheets/" class="md-nav__link">
         
   
   
@@ -1428,7 +1380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/rfm1/" class="md-nav__link">
+      <a href="../ressources/rfm1/" class="md-nav__link">
         
   
   
@@ -1456,7 +1408,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/rfm2/" class="md-nav__link">
+      <a href="../ressources/rfm2/" class="md-nav__link">
         
   
   
@@ -1484,7 +1436,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/freeRTOS/" class="md-nav__link">
+      <a href="../ressources/freeRTOS/" class="md-nav__link">
         
   
   
@@ -1512,7 +1464,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/demarrerKiel/" class="md-nav__link">
+      <a href="../ressources/demarrerKiel/" class="md-nav__link">
         
   
   
@@ -1540,7 +1492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/configRtosKiel/" class="md-nav__link">
+      <a href="../ressources/configRtosKiel/" class="md-nav__link">
         
   
   
@@ -1568,7 +1520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ressources/langageC/" class="md-nav__link">
+      <a href="../ressources/langageC/" class="md-nav__link">
         
   
   
@@ -1641,27 +1593,6 @@
   
   
   
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table des matières
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#objectifs-padagogiques" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Objectifs PÃ©dagogiques
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -1679,6 +1610,46 @@
   
 
 
+  <nav class="md-path" aria-label="Navigation">
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Présentation du Cours
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../fsm/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Techniques de Programmation et Algorithmes
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
               
               <article class="md-content__inner md-typeset">
                 
@@ -1686,16 +1657,9 @@
 
 
 
-<h1 id="cst2232-conception-des-systa-mes-temps-rael-a-base-de-microcontra-leur">CST2232, Conception des SystÃ¨mes Temps RÃ©el Ã&nbsp; Base de MicrocontrÃ´leur</h1>
-<p><a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="images/banner.jpg" data-desc-position="bottom"><img align="center" alt="BanniÃ¨re du cours" src="images/banner.jpg" width="800"></a></p>
-<p>Ce cours a pour objectif de <strong>former les Ã©tudiants Ã&nbsp; la conception de systÃ¨mes embarquÃ©s temps rÃ©el Ã&nbsp; base du microcontrÃ´leur STM32F4</strong>, avec un accent sur le dÃ©veloppement multi-capteurs, le contrÃ´le numÃ©rique et la communication IoT.</p>
-<p>Ce cours CST2232 est Ã©laborÃ© pour les Ã©tudiants en <strong>Master en GÃ©nie Logiciel Industriel Ã&nbsp; l'Institut SupÃ©rieur des Techniques AppliquÃ©es de Goma (ISTA)</strong>. Ce cours suit l'approche <strong>d'expÃ©rience de conception culminante (CDE, Cumulative Design Experience)</strong>. Il est conÃ§u pour permettre aux Ã©tudiants de synthÃ©tiser et d'appliquer l'ensemble des connaissances acquises durant leurs Ã©tudes pour rÃ©soudre des problÃ¨mes rÃ©els et complexes.</p>
-<h2 id="objectifs-padagogiques">Objectifs PÃ©dagogiques</h2>
-<p>Ã€ lâ€™issue du cours, lâ€™Ã©tudiant sera capable de :
-- Concevoir un firmware temps rÃ©el structurÃ© sur le microcontrÃ´leur STM32F4
-- MaÃ®triser FreeRTOS (tÃ¢ches, queues, sÃ©maphores, mutex)
-- ImplÃ©menter des algorithmes de contrÃ´le et de traitement de donnÃ©es en temps rÃ©el.
-- RÃ©aliser des interfaces homme-machine et des systÃ¨mes connectÃ©s.</p>
+  <h1>Analyse fréquentielle avec FFT</h1>
+
+<p>"# Analyse frï¿½quentielle (FFT)" </p>
 
 
 
@@ -1751,10 +1715,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.sections", "navigation.path", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copi\u00e9 dans le presse-papier", "clipboard.copy": "Copier dans le presse-papier", "search.result.more.one": "1 de plus sur cette page", "search.result.more.other": "# de plus sur cette page", "search.result.none": "Aucun document trouv\u00e9", "search.result.one": "1 document trouv\u00e9", "search.result.other": "# documents trouv\u00e9s", "search.result.placeholder": "Taper pour d\u00e9marrer la recherche", "search.result.term.missing": "Non trouv\u00e9", "select.version": "S\u00e9lectionner la version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.path", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copi\u00e9 dans le presse-papier", "clipboard.copy": "Copier dans le presse-papier", "search.result.more.one": "1 de plus sur cette page", "search.result.more.other": "# de plus sur cette page", "search.result.none": "Aucun document trouv\u00e9", "search.result.one": "1 document trouv\u00e9", "search.result.other": "# documents trouv\u00e9s", "search.result.placeholder": "Taper pour d\u00e9marrer la recherche", "search.result.term.missing": "Non trouv\u00e9", "select.version": "S\u00e9lectionner la version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   
