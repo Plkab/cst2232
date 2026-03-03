@@ -1,6 +1,5 @@
-# Titre de la page
-
-*Ir Paul S. Kabidu*
+# Philosophie du cours
+*Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*
 
 ---
 
