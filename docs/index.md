@@ -4,7 +4,7 @@
 
 Ce cours a pour objectif de **former les étudiants à la conception de systèmes embarqués temps réel à base du microcontrôleur STM32F4**, avec un accent sur le développement multi-capteurs, le contrôle numérique et la communication IoT.
 
-Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception culminante (CDE, Cumulative Design Experience)**. Il est conçue pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
+Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception culminante (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
 
 ## Objectifs Pédagogiques
 
