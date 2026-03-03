@@ -65,23 +65,20 @@
 
 <h1 id="philosophie-du-cours">Philosophie du cours</h1>
 <p>{: style="text-align: center;" }</p>
-<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng.</em><br />
-<a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></p>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
-<p><a href="/">Accueil</a> | <a href=".">Philosophie</a></p>
 <p><br></p>
-<p>La philosophie de ce cours d'ingénierie repose sur l'étude du microcontrôleur choisi, son architecture, ses périphériques et l'interfaçage avec différents capteurs et actionneurs dans le but de concevoir des systèmes digitaux. Vu le niveau de complexité du système et la gestion du temps et des ressources, nous allons utiliser un système d'exploitation temps réel (RTOS) pour la coordination générale.</p>
-<p>La programmation des drivers du microcontrôleur est faite en <em>bare metal</em> C (sans HAL) pour une compréhension totale de la puce, mais aussi pour des raisons pédagogiques. Utiliser le langage C permet d'être très proche du matériel et d'avoir un code plus optimisé à un certain niveau.</p>
-<p>Nous allons fournir des codes drivers expliqués pour tous les périphériques utilisés dans ce cours. C'est sur base de ces derniers que l'on va commencer à construire des systèmes complexes en temps réel.</p>
-<p>Chaque étudiant, à son tour, devra être capable de construire des systèmes digitaux sur base du microcontrôleur tout en utilisant un RTOS. Il devra implémenter tout un système depuis les équations mathématiques et physiques, en passant par le codage, pour enfin atterrir dans une puce et faire fonctionner du matériel.</p>
-<p>Le système construit devra répondre à un cahier des charges prédéfini, à une problématique quelconque. Nous construisons des systèmes pour résoudre un problème ou bien nous aider à résoudre des problèmes dans la vie quotidienne. Dans ce cours, les problèmes à résoudre sont de divers domaines d'ingénierie : de la biologie en passant par la physique et la robotique jusqu'à l'aérospatiale.</p>
+<p>La philosophie de ce cours d'ingénierie repose sur l'étude approfondie du microcontrôleur : son architecture, ses périphériques et son interaction avec capteurs et actionneurs, dans le but de concevoir des systèmes numériques complets. Face à la complexité croissante des systèmes embarqués et aux contraintes temporelles sévères, nous utiliserons un <em>système d'exploitation temps réel (RTOS)</em> pour orchestrer l'ensemble des tâches.</p>
+<p>La programmation des drivers du microcontrôleur est réalisée en <em>C bare metal</em>, c'est-à-dire sans utiliser de couche d'abstraction matérielle (HAL). Ce choix, délibérément pédagogique, vise à acquérir une <em>compréhension totale</em> de la puce. Il permet aussi à avoir un <em>code plus optimisé</em> et plus proche du matériel, egalement à évelopper une <em>autonomie et libérté</em> face à la documentation technique.</p>
+<p>Pour chaque périphérique abordé, des <em>codes drivers commentés</em> seront fournis et expliqués. C'est sur ces bases solides que nous construirons progressivement des systèmes temps réel complexes.</p>
+<p>Chaque étudiant, à son tour, devra être capable de <em>concevoir et réaliser un système numérique complet</em> à partir d'un cahier des charges tout en utilisant un RTOS. Il devra suivre une démarche d'ingénieur complète. Cela implique une comprehension réelle du mode physique, des signaux réels, en <em>modélisant</em> un problème sous forme d'équations mathématiques et physiques; en <em>concevant</em> une architecture logicielle (découpage en tâches, choix des mécanismes de communication). Par après l'<em>implémenter</em> en code en C, en intégrant les drivers et le RTOS et puis enfin le <em>valider</em> le fonctionnement sur la cible matérielle (STM32F4):</p>
+<p>Le système final construit devra répondre à un cahier des charges prédéfini, à une problématique concrète, issue de domaines variés : de la biologie en passant par la physique et la robotique, aérospatiale, etc.</p>
+<p>Nous ne programmons pas pour programmer. Nous construisons des systèmes pour résoudre des problèmes, pour nous aider dans la vie quotidienne, pour explorer de nouveaux champs d'application. Les défis abordés dans ce cours couvrent un large spectre de l'ingénierie, mais un principe demeure :</p>
 <p>Seule notre imagination est notre limite.</p>
 <hr />
-<h3 id="liens-connexes">Liens connexes</h3>
+<h3 id="lien-connexe">Lien connexe</h3>
 <ul>
 <li><a href="rtos/index.md">Introduction aux systèmes temps réel</a></li>
-<li><a href="stm32f4/mcu_intro/index.md">Présentation du microcontrôleur STM32F4</a></li>
-<li><a href="./">Retour à l'accueil</a></li>
 </ul></div>
             </div>
         </div>
