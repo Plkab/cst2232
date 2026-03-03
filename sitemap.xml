@@ -9,30 +9,6 @@
          <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://Plkab.github.io/cst2232/dds/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/estimation/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/fft/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/filtre/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/fsm/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/graphisme/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
          <loc>https://Plkab.github.io/cst2232/labos/fft1/</loc>
          <lastmod>2026-03-03</lastmod>
     </url>
@@ -42,14 +18,6 @@
     </url>
     <url>
          <loc>https://Plkab.github.io/cst2232/labos/stabilisation1/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/mcu/</loc>
-         <lastmod>2026-03-03</lastmod>
-    </url>
-    <url>
-         <loc>https://Plkab.github.io/cst2232/pid/</loc>
          <lastmod>2026-03-03</lastmod>
     </url>
     <url>
@@ -113,6 +81,10 @@
          <lastmod>2026-03-03</lastmod>
     </url>
     <url>
+         <loc>https://Plkab.github.io/cst2232/stm32f4/mcu_intro/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
          <loc>https://Plkab.github.io/cst2232/stm32f4/spi/</loc>
          <lastmod>2026-03-03</lastmod>
     </url>
@@ -122,6 +94,34 @@
     </url>
     <url>
          <loc>https://Plkab.github.io/cst2232/stm32f4/usart/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/dds/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/estimation/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/fft/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/filtre/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/fsm/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/graphisme/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://Plkab.github.io/cst2232/technique-algos/pid/</loc>
          <lastmod>2026-03-03</lastmod>
     </url>
 </urlset>
