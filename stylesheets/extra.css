@@ -1,42 +1,23 @@
-/* Masquer la barre latérale gauche (table des matières) */
-.bss-sidebar {
-  display: none;
-}
-
-/* Masquer toute la barre latérale de navigation */
-.nav.flex-column {
+/* 1. Masquer l'en-tête (navbar) complètement */
+.navbar {
   display: none !important;
 }
 
-/* Optionnel : masquer aussi le conteneur principal de la sidebar si nécessaire */
+/* 2. Masquer la barre latérale gauche (colonne de navigation) */
 .col-md-3 {
   display: none !important;
 }
 
-/* Ajuster la colonne principale pour prendre toute la largeur */
+/* 3. Faire prendre toute la largeur à la colonne de contenu principal */
 .col-md-9 {
   width: 100% !important;
   max-width: 100% !important;
   flex: 0 0 100% !important;
+  margin-left: 0 !important;
 }
 
-/* Optionnel : style de base pour le contenu */
+/* 4. Optionnel : ajuster les marges du body pour compenser */
 body {
-  font-family: 'Times New Roman', serif;  /* Comme ece4760 */
-  background: white;
-  color: black;
-  line-height: 1.6;
-  margin: 40px auto;
-  max-width: 900px;  /* Largeur de lecture confortable */
-  padding: 0 20px;
-}
-
-/* Si vous voulez aussi masquer l'en-tête du site (le titre en haut) */
-.navbar {
-  display: none;
-}
-
-/* Ajustement pour compenser la suppression de l'en-tête */
-body {
+  padding-top: 0 !important;
   margin-top: 20px;
 }
