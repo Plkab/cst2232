@@ -34,3 +34,14 @@
   color: black;
   font-family: 'Times New Roman', serif; 
 }
+
+/* Masque toute la barre de navigation (en-tête) */
+.navbar {
+  display: none;
+}
+
+/* Supprime l'espace blanc que l'en-tête laissait */
+body > .container {
+  margin-top: 0;
+  padding-top: 20px; /* Ajustez selon vos préférences */
+}

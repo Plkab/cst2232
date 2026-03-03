@@ -10,7 +10,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 À l’issue de ce cours, l’étudiant sera capable de :
 
 - Concevoir un firmware temps réel structuré sur le microcontrôleur STM32F4
-- Maîtriser FreeRTOS (tâches, queues, sémaphores, mutex)
+- Maîtriser RTOS (FreeRTOS), tâches, queues, sémaphores, mutex
 - Implémenter des algorithmes de contrôle et de traitement de données en temps réel.
 - Réaliser des interfaces homme-machine et des systèmes connectés.
 
