@@ -45,3 +45,15 @@ body > .container {
   margin-top: 0;
   padding-top: 20px; /* Ajustez selon vos préférences */
 }
+
+/* Masque UNIQUEMENT le titre du site dans l'en-tête */
+.navbar-brand {
+  display: none;
+}
+
+/* Si le titre est dans un autre élément, on peut aussi masquer toute la barre */
+/* Mais on veut garder la barre si elle contient d'autres infos ? */
+/* Pour être plus sûr, on peut cibler le conteneur du titre */
+.navbar-header .navbar-brand {
+  display: none;
+}
