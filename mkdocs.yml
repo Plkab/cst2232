@@ -34,5 +34,3 @@ markdown_extensions:
 plugins:
   - search
 
-nav:
-  - Accueil: index.md
