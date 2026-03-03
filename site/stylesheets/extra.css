@@ -57,3 +57,8 @@ body > .container {
 .navbar-header .navbar-brand {
   display: none;
 }
+
+/* Masque toute la barre latérale (table des matières) */
+.bss-sidebar {
+  display: none;
+}
