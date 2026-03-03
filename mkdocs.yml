@@ -17,9 +17,9 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
-  features:
-    - search.suggest
-    - search.highlight
+  #features:
+   # - search.suggest
+    #- search.highlight
 
 markdown_extensions:
   - admonition
@@ -34,4 +34,5 @@ markdown_extensions:
 plugins:
   - search
 
-
+nav:
+  - Accueil: index.md
