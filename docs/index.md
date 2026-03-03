@@ -67,4 +67,3 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 - [Introduction au Langage C embarqué](ressources/langageC.md)
 - [Codes source Github](https://github.com/Plkab/code-demo-cours)
 
----

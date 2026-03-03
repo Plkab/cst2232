@@ -15,17 +15,11 @@
   max-width: 100% !important;
 }
 
-/* Masquer la table des matières latérale */
-.md-sidebar--secondary {
-  display: none;
-}
-
-/* Optionnel : ajuster la largeur du contenu principal */
 .md-content {
-  max-width: 900px; /* ou la largeur que tu souhaites */
+  max-width: 800px; /* ou la largeur que tu souhaites */
   margin: 0 auto;
   padding: 20px;
   background: white;
   color: black;
-  font-family: 'Times New Roman', serif; 
+  font-family: 'Times New Roman', serif; /* comme ece4760 */
 }
