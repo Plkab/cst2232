@@ -4,8 +4,6 @@
 
 ---
 
-[Accueil](/) | [Page courante](.) 
-
 Contenu spécifique de la page...
 
 ---
