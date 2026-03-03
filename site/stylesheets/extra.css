@@ -13,7 +13,7 @@
   width: 100% !important;
   max-width: 100% !important;
   flex: 0 0 100% !important;
-  margin-left: 0 !important;
+  margin-left: 10 !important;
 }
 
 /* 4. Optionnel : ajuster les marges du body pour compenser */
