@@ -4,9 +4,7 @@ site_author: Ir Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
 
 theme:
-  name: material
   language: fr
-  favicon: images/favicon.ico
 
   font:
     text: Roboto
