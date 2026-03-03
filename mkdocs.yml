@@ -17,12 +17,3 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
-  features: []   # pas de navigation, pas de TOC
-
-markdown_extensions:
-  - tables
-  - attr_list
-
-plugins: []   # aucun plugin
-
-nav: []       # supprime le menu "Accueil"
