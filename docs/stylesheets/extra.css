@@ -15,6 +15,11 @@
   max-width: 100% !important;
 }
 
+/* Optionnel : Supprime l'espace blanc que l'en-tête laissait */
+.md-main {
+  margin-top: 0;
+}
+
 /* Masquer la table des matières latérale */
 .md-sidebar--secondary {
   display: none;
