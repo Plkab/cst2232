@@ -28,7 +28,6 @@ theme:
   features:
     - search.suggest
     - search.highlight
-    - content.code.copy
 
 # Extensions Markdown
 markdown_extensions:
@@ -54,5 +53,4 @@ markdown_extensions:
 # Plugins
 plugins:
   - search
-  - glightbox
 
