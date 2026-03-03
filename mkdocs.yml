@@ -17,13 +17,12 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
-  features: []   # désactive navigation, onglets, TOC
+  features: []   # pas de navigation, pas de TOC
 
 markdown_extensions:
   - tables
   - attr_list
 
-plugins: []   # pas de recherche, pas de TOC, rien d’automatique
+plugins: []   # aucun plugin
 
-nav:
-  - Accueil: index.md
+nav: []       # supprime le menu "Accueil"
