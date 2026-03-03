@@ -17,4 +17,19 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
+  features: []   # aucune navigation, juste le contenu
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - attr_list
+  - md_in_html
+  - tables
+
+plugins: []   # aucun plugin, pas de recherche, pas de TOC
+
+nav:
+  - Accueil: index.md
