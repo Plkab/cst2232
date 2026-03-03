@@ -1,5 +1,5 @@
 # CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur
-Ir Paul S. Kabidu, Enseignant à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA) dans le departement de génie électrique et Informatique
+_Ir Paul S. Kabidu, Enseignant à l'ISTA dans le departement de génie électrique et Informatique_
 
 ---
 
