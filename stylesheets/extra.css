@@ -9,11 +9,14 @@
 }
 
 /* 3. Faire prendre toute la largeur à la colonne de contenu principal */
+/* Option 2 : Centrer le contenu dans une largeur fixe (type livre) */
 .col-md-9 {
-  width: 100% !important;
-  max-width: 100% !important;
-  flex: 0 0 100% !important;
-  margin-left: 10 !important;
+  max-width: 900px;        /* Largeur de lecture confortable */
+  margin-left: auto !important;
+  margin-right: auto !important;
+  float: none !important;   /* Annule le comportement de flottement Bootstrap */
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 /* 4. Optionnel : ajuster les marges du body pour compenser */
