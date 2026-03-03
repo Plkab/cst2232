@@ -3,12 +3,17 @@
   display: none;
 }
 
-/* Masquer toute la colonne de gauche (sidebar) */
+/* Masquer toute la barre latérale de navigation */
+.nav.flex-column {
+  display: none !important;
+}
+
+/* Optionnel : masquer aussi le conteneur principal de la sidebar si nécessaire */
 .col-md-3 {
   display: none !important;
 }
 
-/* Faire prendre toute la largeur à la colonne de contenu */
+/* Ajuster la colonne principale pour prendre toute la largeur */
 .col-md-9 {
   width: 100% !important;
   max-width: 100% !important;
