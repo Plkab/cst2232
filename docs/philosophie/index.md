@@ -26,4 +26,4 @@ Seule notre imagination est notre limite.
   
 ### Lien connexe
 
-- [Introduction aux systèmes temps réel](rtos/index.md)
+- [Introduction aux Systèmes Temps Réels](rtos/index.md)
