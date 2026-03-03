@@ -1,6 +1,7 @@
-# CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur..
-*Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*..
-*Enseignant à l'ISTA dans le departement de génie électrique et Informatique*..
+# CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur  
+*Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*  
+*Enseignant à l'ISTA dans le departement de génie électrique et Informatique*  
+{: style="text-align: center;" }
 
 
 ---
@@ -10,15 +11,15 @@
 
 La Conception des Systèmes Embarqués Temps Réel à base du Microcontrôleur est un cours qui a pour objectif de former les étudiants à la conception de systèmes électroniques, avec un accent sur le développement multi-capteurs, le contrôle numérique, le traitement numérique du signal et la communication IoT.
 
-Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception cumulative (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes...
+Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception cumulative (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
 
 À l’issue de ce cours, l’étudiant sera capable de :
 
 - Concevoir un firmware temps réel structuré sur le microcontrôleur STM32F4
 - Maîtriser RTOS (FreeRTOS), tâches, queues, sémaphores, mutex
 - Implémenter des algorithmes de contrôle et de traitement de données en temps réel.
-- Réaliser des interfaces homme-machine et des systèmes connectés.
-..
+- Réaliser des interfaces homme-machine et des systèmes connectés.  
+
 
 ---
 

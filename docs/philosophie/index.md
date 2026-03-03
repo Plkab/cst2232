@@ -1,5 +1,6 @@
-# Philosophie du cours..
-*Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*..
+# Philosophie du cours  
+*Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*  
+{: style="text-align: center;" }
 
 ---
 
