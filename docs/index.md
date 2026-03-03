@@ -1,5 +1,5 @@
 # CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur
-##### Ir Paul S. Kabidu, Enseignant à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA) dans le departement de génie électrique et Informatique
+Ir Paul S. Kabidu, Enseignant à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA) dans le departement de génie électrique et Informatique
 
 ---
 
@@ -16,12 +16,13 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
+- [Philosophie du cours](Philosophie/index.md)
 - [Introduction aux Systèmes Temps Réels](rtos/index.md)
 - [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
 
 ---
 
-### Périphériques STM32F4
+### Périphériques du STM32F4
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
 - [Timer et Interruption](stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](stm32f4/adc/index.md)
@@ -33,7 +34,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
-### Techniques de Programmation et Algorithmes
+### Algorithmes et Techniques de Programmation
 - [Machine d’État Fini (FSM)](technique-algos/fsm/index.md)
 - [Contrôle Numérique avec PID](technique-algos/pid/index.md)
 - [Estimation d’État et Fusion Capteurs](technique-algos/estimation/index.md)
@@ -53,6 +54,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 - [Labo 1 – Stabilisation Plate-Forme dynamique](labos/stabilisation1.md)
 - [Labo 2 – Monitoring Industriel via ESP8266](labos/monitoringEsp8266.md)
 - [Labo 3 – Analyse vibratoire avec FFT](labos/fft1.md)
+- [Labo Final](labos/laboFinal.md)
 
 ---
 
