@@ -8,7 +8,7 @@
 <br>
 
 ### **Les Systèmes Embarquées et Systèmes digitaux**
-
+  
 Un **système embarqué** est un système numérique basé sur un processeur, généralement un microcontrôleur SoC (System On Chip). Il est conçu pour répondre à une **tâche spécifique et bien définie**. Il n'est ni généraliste ni polyvalent, contrairement à un PC qui doit savoir tout faire (bureautique, jeux, navigation web) ou à un smartphone qui exécute des applications diverses simultanément (banque, jeux, réseaux sociaux, outils de travail). 
 
 La différence fondamentale entre les systèmes à base de microcontrôleurs et les ordinateurs de type PC réside dans leur **spécialisation** et leur **tâche dédiée**.
@@ -25,14 +25,19 @@ Un système embarqué combine **matériel (hardware) et logiciel (software)** po
 - **Fiabilité et robustesse** : ils doivent fonctionner sans intervention humaine pendant des années, parfois dans des environnements hostiles et délivrer toujours des bons resultats.
 
 - **Interaction minimale** : l'interface avec le monde extérieur est réduite à l'essentiel pour sa fonction dédiée, soit un simple bouton poussoir est suffisant.
+  
+---
 
-### **Les Systèmes Temps réels**
+### Les Systèmes Temps réels
 
+
+---
 
 ### **Les Systèmes d'Exploitation Temps réels**
 
+---
 
-### **Introduction à FreeRTOS**
+### **Introduction à FreeRTOS** {#introduction-a-freertos}
 
 
 
