@@ -1,4 +1,4 @@
-# CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur
+## CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur
 
 ---
 
@@ -8,7 +8,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
-## Objectifs Pédagogiques
+### Objectifs Pédagogiques
 
 À l’issue du cours, l’étudiant sera capable de :
 - Concevoir un firmware temps réel structuré sur le microcontrôleur STM32F4
@@ -19,12 +19,12 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
-# [Introduction aux Systèmes Temps Réels](rtos/index.md)
-# [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
+- [Introduction aux Systèmes Temps Réels](rtos/index.md)
+- [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
 
 ---
 
-# Périphériques STM32F4
+### Périphériques STM32F4
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
 - [Timer et Interruption](stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](stm32f4/adc/index.md)
@@ -36,7 +36,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
-# Techniques de Programmation et Algorithmes
+### Techniques de Programmation et Algorithmes
 - [Machine d’État Fini (FSM)](technique-algos/fsm/index.md)
 - [Contrôle Numérique avec PID](technique-algos/pid/index.md)
 - [Estimation d’État et Fusion Capteurs](technique-algos/estimation/index.md)
@@ -47,19 +47,19 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 
-# Projets d’Application
+### Projets d’Application
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](projects/imu_compl/index.md)
 
 ---
 
-# Laboratoires 2026
+### Laboratoires 2026
 - [Labo 1 – Stabilisation Plate-Forme dynamique](labos/stabilisation1.md)
 - [Labo 2 – Monitoring Industriel via ESP8266](labos/monitoringEsp8266.md)
 - [Labo 3 – Analyse vibratoire avec FFT](labos/fft1.md)
 
 ---
 
-# Ressources et Références
+### Ressources et Références
 - [Manuel de Références pour STM32F4](ressources/rfm1.md)
 - [Manuel de Références pour Cortex-M](ressources/rfm2.md)
 - [Manuel de Références pour FreeRTOS](ressources/freeRTOS.md)
