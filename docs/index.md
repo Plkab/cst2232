@@ -24,12 +24,14 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 <br>
+
 - [Philosophie du cours](philosophie/index.md)
 - [Introduction aux Systèmes Temps Réels](rtos/index.md)
 - [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
 
 ---
 <br>
+
 ### Périphériques du STM32F4
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
 - [Timer et Interruption](stm32f4/timer/index.md)
@@ -42,6 +44,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 <br>
+
 ### Algorithmes et Techniques de Programmation
 - [Machine d’État Fini (FSM)](technique-algos/fsm/index.md)
 - [Contrôle Numérique avec PID](technique-algos/pid/index.md)
@@ -53,11 +56,13 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 <br>
+
 ### Projets d’Application
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](projects/imu_compl/index.md)
 
 ---
 <br>
+
 ### Laboratoires 2026
 - [Labo 1 – Stabilisation Plate-Forme dynamique](labos/stabilisation1.md)
 - [Labo 2 – Monitoring Industriel via ESP8266](labos/monitoringEsp8266.md)
@@ -66,6 +71,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ---
 <br>
+
 ### Ressources et Références
 - [Manuel de Références pour STM32F4](ressources/rfm1.md)
 - [Manuel de Références pour Cortex-M](ressources/rfm2.md)
@@ -75,3 +81,4 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 - [Introduction au Langage C embarqué](ressources/langageC.md)
 - [Codes source Github](https://github.com/Plkab/code-demo-cours)
 <br>
+
