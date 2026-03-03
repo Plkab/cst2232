@@ -1,5 +1,5 @@
 # Nom du site
-site_name: Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4
+site_name: CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4
 site_description: Cours Master Génie Logiciel Industriel
 site_author: Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
@@ -26,10 +26,6 @@ theme:
     text: Roboto
     code: Roboto Mono
   features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.path
-    - navigation.top
     - search.suggest
     - search.highlight
     - content.code.copy
