@@ -3,9 +3,11 @@ site_description: Cours de Master en Génie Logiciel Industriel
 site_author: Ir Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
 
-theme:
-  language: fr
+theme: mkdocs
 
-  font:
-    text: Roboto
-    code: Roboto Mono
+markdown_extensions:
+  - tables
+  - attr_list
+
+nav:
+  - Accueil: index.md
