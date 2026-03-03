@@ -1,5 +1,4 @@
 # Philosophie du cours
-{: style="text-align: center;" }
 
 *Ir Paul S. Kabidu, M.Eng. <spaulkabidu@gmail.com>*
 {: style="text-align: center;" }
