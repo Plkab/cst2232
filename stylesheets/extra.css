@@ -24,3 +24,8 @@ body {
   padding-top: 0 !important;
   margin-top: 20px;
 }
+
+/* Centrer tous les titres principaux (h1) */
+h1 {
+    text-align: center;
+}
