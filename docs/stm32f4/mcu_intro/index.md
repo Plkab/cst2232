@@ -5,7 +5,7 @@
 
 ---
 
-[Acceuil](../#Acceuil)
+[Acceuil](#Acceuil)
   
 <br>
 <br>
@@ -47,8 +47,8 @@ Le manuel de référence pour le [STM32F401x](https://www.st.com/resource/en/dat
 - **Bus** : communication avec les périphériques via une matrice de bus (Bus Matrix) AHB/APB.
 - **Mémoire** : le modèle STM32F401CCU6 (celui de la carte Black Pill) dispose de :
 
-- - 256 Ko de mémoire Flash
-- - 64 Ko de RAM
+    - 256 Ko de mémoire Flash
+    - 64 Ko de RAM
  
   
 ---
@@ -144,9 +144,9 @@ DMA_Stream0->CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 
 ### **Présentation de la carte de développement utilisée**
 
-La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (environ [10$])(https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/) et très répandue dans le monde de l'embarqué.
+La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (environ [10$](https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/)) et très répandue dans le monde de l'embarqué.
 
-Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (environ [6$](https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
+Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (environ [6$](https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/)). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
 
 
 ---
