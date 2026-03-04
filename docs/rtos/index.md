@@ -69,7 +69,7 @@ Un **système d'exploitation temps réel** (RTOS, Real-Time Operating System) es
 
 Lorsque le nombre de tâches est limité, on peut les gérer directement avec les interruptions matérielles du microcontrôleur. Dès que la complexité augmente et que la précision temporelle devient critique, l'utilisation d'un RTOS s'impose. Il permet d'exécuter plusieurs tâches sur un même processeur en donnant l'illusion du **parallélisme**, et organise le partage des ressources (temps CPU, mémoire, périphériques) selon des règles prédéfinies.  
 
-#### Qu'est ce qu'une tache?
+#### **Qu'est ce qu'une tache?**
 
 Une tâche (task) est une unité logicielle indépendante. Chaque tâche peut se trouver dans l'un des trois états suivants :
 
@@ -77,21 +77,21 @@ Une tâche (task) est une unité logicielle indépendante. Chaque tâche peut se
 - **Ready (prête)** : la tâche veut s'exécuter, mais une tâche de priorité supérieure occupe le processeur.
 - **Blocked (bloquée)** : la tâche attend un événement (par exemple, un signal provenant d'un capteur ou l'expiration d'un délai de 10 ms).
 
-#### Le Noyau
+#### **Le Noyau**
 
 Le **cœur du système**, ou _kernel_, est le module responsable du partage du processeur entre les différentes tâches. Il est très léger (quelques kilo-octets), ce qui le rend adapté aux microcontrôleurs aux ressources limitées.
 
-#### L'ordonnanceur (scheduler)
+#### **L'ordonnanceur (scheduler)**
 
 L'**ordonnanceur** est la partie la plus critique du RTOS. Il gère les priorités entre les tâches, chaque tâche se voyant attribuer un niveau de priorité par le développeur. L'ordonnanceur garantit que la tâche de plus haute priorité prête à être exécutée occupe toujours le processeur. Si une tâche de priorité 1 est en cours de calcul et qu'une tâche de priorité 10 (par exemple une urgence) devient prête, l'ordonnanceur **suspend immédiatement** la première tâche. C'est le principe de la **préemption**.
 
 Exemple : on peut assigner une priorité élevée (10) à une routine d'arrêt d'urgence, et une priorité basse (1) à une tâche d'affichage.
 
-#### Commutation de contexte (Context Switch) 
+#### **Commutation de contexte (Context Switch)**
 
 Lorsqu'une préemption a lieu, le RTOS sauvegarde l'état des registres du processeur pour la tâche interrompue. Cette opération, appelée **commutation de contexte**, permet de reprendre ultérieurement l'exécution de la tâche exactement là où elle s'était arrêtée, comme si rien ne s'était passé.
 
-#### Le Tick système
+#### **Le Tick système**
 
 Le RTOS utilise un timer matériel interne au microcontrôleur (sur les processeurs Cortex-M, on emploie généralement le timer **SysTick**) qui génère une interruption à intervalles réguliers (par exemple toutes les 1 ms). À chaque interruption (le tick), le RTOS reprend la main pour vérifier si une tâche de plus haute priorité doit être exécutée. Ce mécanisme sert également à gérer les temporisations demandées par les tâches.
 
@@ -100,14 +100,17 @@ C'est grâce à cette latence d'interruption minimale et à ce comportement dét
 **Pour une comparaison imagée** :
 
 - **OS Classique (PC)** est comme un **buffet à volonté**. Tout le monde essaie de se servir, on peut attendre un peu, mais tout le monde finit par manger.
+
 - **RTOS** est comme un service d'**urgence d'hôpital**. Si une ambulance arrive (haute priorité), tout le reste s'arrête immédiatement pour lui laisser le passage.
 
-#### Les mécanismes de synchronisation (Sécurité)
+#### **Les mécanismes de synchronisation (Sécurité)**
 
 Les tâches doivent souvent communiquer ou collaborer sans risquer de corrompre des données partagées. Le RTOS fournit pour cela des outils sécurisés :
 
 - **Sémaphores et Mutex** : ils évitent que deux tâches n'accèdent simultanément à une ressource critique (par exemple le bus de communication vers les moteurs). Chaque tâche doit posséder un « jeton » pour utiliser la ressource ; si une autre tâche tente de l'obtenir, elle est bloquée jusqu'à ce que le jeton soit libéré.
+
 - **Files d'attente (Queues)** : elles permettent d'échanger des messages entre tâches sans risque de collision. Une tâche peut envoyer des données dans une file, et une autre tâche les récupère de manière ordonnée et sécurisée. 
+
 Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréquence et place les échantillons dans une file ; une autre tâche, moins prioritaire, vide cette file pour afficher les valeurs sur le moniteur série. Cela découple la production rapide des données de leur consommation plus lente, sans perte d'information ni blocage.
 
 
