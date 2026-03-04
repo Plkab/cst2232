@@ -10,33 +10,33 @@
 <br>
 <br>
 
-
-
-### **Architecture du microcontroleur**
+### **Architecture du microcontrôleur**
   
 
   
 ---
-
 <br>
-
-
 
 ### **STM32F4**
 
 
   
 ---
-
 <br>
 
-### Organisation Mémoire
+### **Organisation Mémoire**
+
 
 
 ---
 <br>
-  
+
+### **Présentation de la carte de développement utilisée**
+
+
+
+---
 
 ### Lien connexe
 
-[GPIO et Interruptions](stm32f4/gpio/index.md)
+[GPIO et Interruptions](../stm32f4/gpio/index.md)
