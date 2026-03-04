@@ -129,7 +129,7 @@ Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréque
 
 FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqués, supportant plus de 40 microcontrôleurs. Il se présente sous la forme d'une API qui nous permet de mettre en œuvre des applications temps réel sur microcontrôleur. Nous allons apprendre à utiliser ses fonctions pré-écrites pour structurer nos projets de manière efficace.
 
-On peut l'avoir sur le site web [freertos](https://www.freertos.org/)
+On peut avoir sur le site web le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible [freertos](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
 
 
 #### **Création de Tâches (xTaskCreate)**
@@ -294,7 +294,7 @@ void vTaskA(void * pvParameters) {
 
 #### **Communication par files de messages : Queues (xQueue)**
 
-CC'est la méthode propre pour échanger des données entre tâches. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
+C'est la méthode propre pour échanger des données entre tâches. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
 
 - **Créer la file** : xQueueCreate(taille, taille_d'un_élément);
 - **Poster un message** : xQueueSend(file, &donnee, delai);
