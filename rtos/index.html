@@ -170,68 +170,69 @@ Exemple : Un flux vidéo en direct, un système de contrôle qualité sur une li
 <p>La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.</p>
 <p>Dans un programme classique (sans OS), tout le code se trouve dans la fonction main(). Dans FreeRTOS, le rôle de main() est simplement de créer les tâches nécessaires, puis de lancer l'ordonnanceur qui prend le contrôle.</p>
 <p>Une tâche est typiquement une fonction qui ne doit jamais se terminer. Sa structure type est une boucle infinie :</p>
-<p><code>```c</code>
-void maTache(void * pvParameters) {
+<pre><code class="language-c">void maTache(void * pvParameters) {
     while(1) { // Une tâche est une boucle infinie
         // Ton code ici (ex: lire un capteur)
         vTaskDelay(pdMS_TO_TICKS(100)); // On laisse respirer le CPU 100ms
     }
-}</p>
+}
+</code></pre>
 <p><strong>Création d'une tâche dans le main</strong></p>
-<p><code>```c</code>
-xTaskCreate(
+<pre><code class="language-c">xTaskCreate(
     maTache,           // Nom de la fonction
-    "Nom_Tache",       // Nom pour le debug
+    &quot;Nom_Tache&quot;,       // Nom pour le debug
     2048,              // Taille de la pile (en mots, souvent 32 bits)
     NULL,              // Paramètres à passer (optionnel)
     2,                 // PRIORITÉ (plus le chiffre est élevé, plus la tâche est prioritaire)
     NULL               // Handle pour manipuler la tâche plus tard
-);</p>
+);
+</code></pre>
 <p><strong>Le lancement (vTaskStartScheduler)</strong></p>
 <p>Après avoir créé les tâches, on appelle vTaskStartScheduler(). Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.</p>
-<p><code>```c</code>
-// Prototype de la tâche
-void maTache(void * pvParameters);</p>
-<p>void main(void) {
-    // Création : Fonction, Nom, Taille pile, Paramètre, Priorité, Handle
-    xTaskCreate(maTache, "TacheAExecuter", 1024, NULL, 5, NULL);</p>
-<pre><code>// Lance l'ordonnanceur (le système prend le contrôle)
-vTaskStartScheduler();
+<pre><code class="language-c">// Prototype de la tâche
+void maTache(void * pvParameters);
 
-// Le code ici ne sera jamais atteint
+void main(void) {
+    // Création : Fonction, Nom, Taille pile, Paramètre, Priorité, Handle
+    xTaskCreate(maTache, &quot;TacheAExecuter&quot;, 1024, NULL, 5, NULL);
+
+    // Lance l'ordonnanceur (le système prend le contrôle)
+    vTaskStartScheduler();
+
+    // Le code ici ne sera jamais atteint
+}
 </code></pre>
-<p>}</p>
 <h4 id="gestion-du-temps-vtaskdelay"><strong>Gestion du Temps (vTaskDelay)</strong></h4>
 <p>Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked". Pendant ce temps, le CPU peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.</p>
-<p><code>```c</code>
-void vTaskMoteur(void * pvParameters) {
+<pre><code class="language-c">void vTaskMoteur(void * pvParameters) {
     for(;;) { // Boucle infinie obligatoire
         ControleVitesse();
         // Attend 20ms de manière déterministe
         vTaskDelay(pdMS_TO_TICKS(20)); 
     }
-}</p>
-<p>Prenons un autre exemple qui fait du temps réel périodique précis: </p>
-<p><code>```c</code>
-void Task_Stabilisation(void *pvParameters) {</p>
-<pre><code> // Variable pour stocker l'instant du prochain réveil
-TickType_t xLastWakeTime = xTaskGetTickCount();
-
-// Période souhaitée : 20 ms (50 Hz)
-const TickType_t xPeriod = pdMS_TO_TICKS(20);
-
-for (;;) { // Boucle infinie de la tâche
-    // --- DEBUT DU TRAITEMENT ---
-    // 1. Lire les capteurs (ex: Accéléromètre)
-    // 2. Calculer l'algorithme (ex: PID de stabilisation)
-    // 3. Appliquer la correction aux moteurs
-
-    // --- SYNCHRONISATION ---
-    // On attend "jusqu'à" la prochaine échéance fixe
-    vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
 }
 </code></pre>
-<p>}</p>
+<p>Prenons un autre exemple qui fait du temps réel périodique précis: </p>
+<pre><code class="language-c">void Task_Stabilisation(void *pvParameters) {
+
+     // Variable pour stocker l'instant du prochain réveil
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Période souhaitée : 20 ms (50 Hz)
+    const TickType_t xPeriod = pdMS_TO_TICKS(20);
+
+    for (;;) { // Boucle infinie de la tâche
+        // --- DEBUT DU TRAITEMENT ---
+        // 1. Lire les capteurs (ex: Accéléromètre)
+        // 2. Calculer l'algorithme (ex: PID de stabilisation)
+        // 3. Appliquer la correction aux moteurs
+
+        // --- SYNCHRONISATION ---
+        // On attend &quot;jusqu'à&quot; la prochaine échéance fixe
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+    }
+}
+</code></pre>
 <p><strong>Pourquoi utiliser vTaskDelayUntil plutôt que vTaskDelay ?</strong></p>
 <ul>
 <li>
@@ -252,42 +253,43 @@ for (;;) { // Boucle infinie de la tâche
 <p><strong>Le Mutex (Le type de sémaphore pour les ressources partagées)</strong></p>
 <p>Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex agit comme un jeton : une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.</p>
 <p>Déclaration et création :</p>
-<p><code>```c</code>
-SemaphoreHandle_t xMutexUART; // Variable représentant le jeton</p>
-<p>void main() {
+<pre><code class="language-c">SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
+
+void main() {
     // Création du mutex
-    xMutexUART = xSemaphoreCreateMutex();</p>
-<pre><code>if(xMutexUART != NULL) {
-    // Création des tâches seulement si le mutex est prêt
-    xTaskCreate(vTaskA, "Tache A", 1000, NULL, 1, NULL);
-    xTaskCreate(vTaskB, "Tache B", 1000, NULL, 1, NULL);
-    vTaskStartScheduler();
+    xMutexUART = xSemaphoreCreateMutex();
+
+    if(xMutexUART != NULL) {
+        // Création des tâches seulement si le mutex est prêt
+        xTaskCreate(vTaskA, &quot;Tache A&quot;, 1000, NULL, 1, NULL);
+        xTaskCreate(vTaskB, &quot;Tache B&quot;, 1000, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
 }
 </code></pre>
-<p>}</p>
 <p><strong>Utilisation dans les tâches: xSemaphoreTake et xSemaphoreGive</strong></p>
 <ul>
 <li>xSemaphoreTake(xMutex, portMAX_DELAY) : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).</li>
 <li>xSemaphoreGive(xMutex) : libère le jeton pour les autres tâches.</li>
 </ul>
-<p><code>```c</code>
-void vTaskA(void * pvParameters) {
+<pre><code class="language-c">void vTaskA(void * pvParameters) {
     for(;;) {
         // 1. Tenter de prendre le jeton (attendre max 100 ms)
-        if(xSemaphoreTake(xMutexUART, pdMS_TO_TICKS(100)) == pdPASS) {</p>
-<pre><code>        // 2. Jeton obtenu → accès exclusif à l'UART
-        printf("Je suis la Tache A et je contrôle l'UART\n");
+        if(xSemaphoreTake(xMutexUART, pdMS_TO_TICKS(100)) == pdPASS) {
 
-        // 3. Important : rendre le jeton
-        xSemaphoreGive(xMutexUART);
-    } else {
-        // Échec : le jeton n'a pas pu être obtenu dans le délai imparti
-        // On peut prendre une action corrective ou signaler une erreur
+            // 2. Jeton obtenu → accès exclusif à l'UART
+            printf(&quot;Je suis la Tache A et je contrôle l'UART\n&quot;);
+
+            // 3. Important : rendre le jeton
+            xSemaphoreGive(xMutexUART);
+        } else {
+            // Échec : le jeton n'a pas pu être obtenu dans le délai imparti
+            // On peut prendre une action corrective ou signaler une erreur
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
-    vTaskDelay(pdMS_TO_TICKS(500));
 }
 </code></pre>
-<p>}</p>
 <p><strong>On a 3 types de Sémaphores à connaître :</strong></p>
 <ul>
 <li>
@@ -307,13 +309,14 @@ void vTaskA(void * pvParameters) {
 <li><strong>Poster un message</strong> : xQueueSend(file, &amp;donnee, delai);</li>
 <li><strong>Lire un message</strong> : xQueueReceive(file, &amp;reception, delai);</li>
 </ul>
-<p><code>```c</code>
-// Envoyer une donnée
-xQueueSend(xQueueCapteurs, &amp;valeurLue, 0);</p>
-<p>// Recevoir la donnée (attend si la queue est vide)
+<pre><code class="language-c">// Envoyer une donnée
+xQueueSend(xQueueCapteurs, &amp;valeurLue, 0);
+
+// Recevoir la donnée (attend si la queue est vide)
 if(xQueueReceive(xQueueCapteurs, &amp;donneeRecue, pdMS_TO_TICKS(100))) {
     // Traiter la donnée
-}</p>
+}
+</code></pre>
 <h4 id="trois-regles-dor-a-connaitre"><strong>Trois règles d'or a connaitre :</strong></h4>
 <ul>
 <li><strong>Priorité</strong> : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).</li>
