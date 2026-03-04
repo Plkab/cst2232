@@ -1,4 +1,4 @@
-# CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur  
+# [CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur](index.md)  
 
 *Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*  
 *Enseignant à l'ISTA dans le département de génie électrique et informatique*  
