@@ -140,17 +140,18 @@ Dans un programme classique (sans OS), tout le code se trouve dans la fonction m
 
 Une tâche est typiquement une fonction qui ne doit jamais se terminer. Sa structure type est une boucle infinie :
 
-````c`
+```c
 void maTache(void * pvParameters) {
     while(1) { // Une tâche est une boucle infinie
         // Ton code ici (ex: lire un capteur)
         vTaskDelay(pdMS_TO_TICKS(100)); // On laisse respirer le CPU 100ms
     }
 }
+```
 
 **Création d'une tâche dans le main**
 
-````c`
+```c
 xTaskCreate(
     maTache,           // Nom de la fonction
     "Nom_Tache",       // Nom pour le debug
@@ -159,12 +160,13 @@ xTaskCreate(
     2,                 // PRIORITÉ (plus le chiffre est élevé, plus la tâche est prioritaire)
     NULL               // Handle pour manipuler la tâche plus tard
 );
+```
 
 **Le lancement (vTaskStartScheduler)**
 
 Après avoir créé les tâches, on appelle vTaskStartScheduler(). Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.
 
-````c`
+```c
 // Prototype de la tâche
 void maTache(void * pvParameters);
 
@@ -177,12 +179,13 @@ void main(void) {
 
     // Le code ici ne sera jamais atteint
 }
+```
 
 #### **Gestion du Temps (vTaskDelay)**
 
 Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked". Pendant ce temps, le CPU peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
 
-````c`
+```c
 void vTaskMoteur(void * pvParameters) {
     for(;;) { // Boucle infinie obligatoire
         ControleVitesse();
@@ -190,10 +193,11 @@ void vTaskMoteur(void * pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(20)); 
     }
 }
+```
 
 Prenons un autre exemple qui fait du temps réel périodique précis: 
 
-````c`
+```c
 void Task_Stabilisation(void *pvParameters) {
  
      // Variable pour stocker l'instant du prochain réveil
@@ -213,6 +217,7 @@ void Task_Stabilisation(void *pvParameters) {
         vTaskDelayUntil(&xLastWakeTime, xPeriod);
     }
 }
+```
 
 **Pourquoi utiliser vTaskDelayUntil plutôt que vTaskDelay ?**
 
@@ -237,7 +242,7 @@ Imaginons que deux tâches doivent écrire sur le même port série (UART). Si e
 
 Déclaration et création :
 
-````c`
+```c
 SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
 
 void main() {
@@ -251,13 +256,14 @@ void main() {
         vTaskStartScheduler();
     }
 }
+```
 
 **Utilisation dans les tâches: xSemaphoreTake et xSemaphoreGive**
 
 - xSemaphoreTake(xMutex, portMAX_DELAY) : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).
 - xSemaphoreGive(xMutex) : libère le jeton pour les autres tâches.
 
-````c`
+```c
 void vTaskA(void * pvParameters) {
     for(;;) {
         // 1. Tenter de prendre le jeton (attendre max 100 ms)
@@ -275,6 +281,7 @@ void vTaskA(void * pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
+```
 
 **On a 3 types de Sémaphores à connaître :**
 
@@ -293,7 +300,7 @@ CC'est la méthode propre pour échanger des données entre tâches. Par exemple
 - **Poster un message** : xQueueSend(file, &donnee, delai);
 - **Lire un message** : xQueueReceive(file, &reception, delai);
 
-````c`
+```c
 // Envoyer une donnée
 xQueueSend(xQueueCapteurs, &valeurLue, 0);
 
@@ -301,7 +308,7 @@ xQueueSend(xQueueCapteurs, &valeurLue, 0);
 if(xQueueReceive(xQueueCapteurs, &donneeRecue, pdMS_TO_TICKS(100))) {
     // Traiter la donnée
 }
-
+```
 
 
 #### **Trois règles d'or a connaitre :**
