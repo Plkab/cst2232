@@ -70,16 +70,116 @@
 <p><br>
 <br></p>
 <h3 id="architecture-du-microcontroleur"><strong>Architecture du microcontrôleur</strong></h3>
+<p>Un <strong>microcontrôleur (MCU)</strong> est un circuit intégré qui rassemble sur une seule puce tous les éléments nécessaires au fonctionnement d'un système autonome :</p>
+<ul>
+<li>Un <strong>processeur (cœur)</strong> pour exécuter les instructions</li>
+<li>De la mémoire (<strong>RAM et Flash/ROM</strong>) pour stocker le code et les données</li>
+<li>Des <strong>périphériques d'entrée-sortie</strong> pour interagir avec le monde extérieur</li>
+</ul>
+<p>On parle de <strong>système sur puce (SoC, System-on-Chip)</strong>. Le microcontrôleur est conçu pour contrôler un système spécifique en temps réel, avec un minimum de composants externes.</p>
+<p><strong>Les trois éléments clés</strong> :</p>
+<ul>
+<li><strong>Mémoire Flash (ROM)</strong> : stocke le code programme (firmware) de manière non volatile. C'est ici que résident votre application et le noyau FreeRTOS.</li>
+<li><strong>Mémoire SRAM (RAM)</strong> : stocke les variables, la pile et les données temporaires pendant l'exécution. Elle est volatile.</li>
+<li><strong>Processeur</strong> : lit les instructions en Flash, déplace et traite les données en RAM, et contrôle les périphériques.</li>
+</ul>
+<p>Tous ces éléments communiquent via un <strong>bus</strong> (ici un bus 32 bits). Le fonctionnement du microcontrôleur est cadencé par une horloge (clock), comme tout système digital synchrone.</p>
+<p>Actuellement, les microcontrôleurs les plus populaires sont basés sur l'architecture <strong>32 bits ARM Cortex-M</strong>, un standard de l'industrie offrant un excellent rapport performance/consommation.</p>
 <hr />
 <p><br></p>
-<h3 id="stm32f4"><strong>STM32F4</strong></h3>
+<h3 id="stm32f401"><strong>STM32F401</strong></h3>
+<p>Le <strong>STM32F4</strong> est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur <strong>ARM Cortex-M4 32 bits</strong>, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (<strong>FPU, Floating Point Unit</strong>). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.</p>
+<p>Le manuel de référence pour le <a href="https://www.st.com/resource/en/datasheet/stm32f401re.pdf">STM32F401x</a>.</p>
+<p><strong>Caractéristiques principales</strong> :</p>
+<ul>
+<li><strong>Fréquence</strong> : généralement cadencé à 84 MHz, peut être overclocké via un multiplicateur de fréquence (PLL) jusqu'à 100 MHz. Cette puissance permet de faire tourner un noyau FreeRTOS avec plusieurs tâches concurrentes.</li>
+<li><strong>Bus</strong> : communication avec les périphériques via une matrice de bus (Bus Matrix) AHB/APB.</li>
+<li>
+<p><strong>Mémoire</strong> : le modèle STM32F401CCU6 (celui de la carte Black Pill) dispose de :</p>
+</li>
+<li>
+<ul>
+<li>256 Ko de mémoire Flash</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>64 Ko de RAM</li>
+</ul>
+</li>
+</ul>
 <hr />
 <p><br></p>
 <h3 id="organisation-memoire"><strong>Organisation Mémoire</strong></h3>
+<p>Le STM32F4 utilise une architecture de type <strong>Harvard</strong> (bus séparés pour les instructions et les données), mais organisée sur une carte mémoire unifiée de 4 Go (adressage 32 bits). Chaque élément (Flash, RAM, périphériques) possède une adresse fixe et unique dans cet espace mémoire. Cela permet au processeur, grâce aux bus séparés, de lire une instruction en Flash tout en accédant simultanément à une donnée en RAM, améliorant ainsi les performances.</p>
+<p>Chaque registre de configuration d'un périphérique est accessible via une adresse spécifique. Par exemple :</p>
+<ul>
+<li>GPIOA commence à l'adresse 0x40020000</li>
+<li>USART2 à 0x40004400</li>
+<li>TIM2 à 0x40000000</li>
+</ul>
+<p>Le reference manual (<a href="https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf">RM0368 pour le F401</a>) fournit des tableaux détaillés. En programmation bas niveau, on utilise des structures C pour représenter ces registres, comme le font les <a href="https://arm-software.github.io/CMSIS_6/latest/Core/modules.html">CMSIS</a> (Cortex Microcontroller Software Interface Standard).</p>
+<p>Exemple de structure pour GPIO :</p>
+<pre><code class="language-c">typedef struct {
+    volatile uint32_t MODER;   // Offset 0x00
+    volatile uint32_t OTYPER;  // Offset 0x04
+    volatile uint32_t OSPEEDR; // Offset 0x08
+    // ...
+} GPIO_TypeDef;
+
+#define GPIOA ((GPIO_TypeDef *) 0x40020000)
+</code></pre>
+<p>Quand on programme en bas niveau il est conseillé de toujours lire le <a href="https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf">Reference Manual</a> (pas la datasheet) pour les détails des registres. La datasheet donne les caractéristiques électriques, le manuel de référence explique la programmation. Egalement vérifier les enable clocks avant d'accéder à un périphérique. Pour les variables partagées utiliser <em>volatile</em> entre une ISR et le code principal.</p>
+<hr />
+<p><br></p>
+<h3 id="gestion-des-horloges-rcc"><strong>Gestion des horloges (RCC)</strong></h3>
+<p>Le système d'horloge est le cœur battant du microcontrôleur. Il détermine la vitesse d'exécution et la consommation. Le STM32F4 dispose de plusieurs sources d'horloge :</p>
+<ul>
+<li><strong>HSI (High Speed Internal)</strong> : oscillateur RC interne 16 MHz, moins précis mais toujours disponible.</li>
+<li><strong>HSE (High Speed External)</strong> : oscillateur à quartz externe de 25 MHz plus précis.</li>
+<li><strong>PLL (Phase-Locked Loop)</strong> : multiplie la fréquence d'entrée pour atteindre des fréquences élevées (jusqu'à 100 MHz sur le F401).</li>
+</ul>
+<p><strong>Bus principaux</strong> :</p>
+<ul>
+<li><strong>SYSCLK</strong> : horloge système, alimente le CPU et la mémoire.</li>
+<li><strong>AHB (Advanced High-performance Bus)</strong> : bus principal vers la mémoire et les périphériques rapides.</li>
+<li><strong>APB (Advanced Peripheral Bus)</strong> : bus pour les périphériques plus lents (APB1 et APB2), avec des fréquences souvent divisées.</li>
+</ul>
+<p>Un bon équilibre entre performance et consommation passe par un choix judicieux des fréquences et l'activation sélective des horloges des périphériques via le registre RCC_AHB1ENR, RCC_APB1ENR, etc. Oublier d'activer l'horloge d'un périphérique est une erreur classique : le périphérique ne répondra pas.</p>
+<hr />
+<p><br></p>
+<h3 id="le-gestionnaire-dinterruption-nvic-nested-vectored-interrupt-controller"><strong>Le Gestionnaire d'Interruption NVIC (Nested Vectored Interrupt Controller)</strong></h3>
+<p>Le NVIC est le gestionnaire d'interruptions du Cortex-M. Il permet de :</p>
+<ul>
+<li>Activer/désactiver les sources d'interruptions.</li>
+<li>Définir les priorités (de 0 à 15, 0 étant la plus haute).</li>
+<li>Gérer la préemption : une interruption de haute priorité peut interrompre le traitement d'une interruption de basse priorité.</li>
+</ul>
+<p>Pour un système temps réel, la gestion des priorités est cruciale. Les interruptions associées à des tâches critiques (arrêt d'urgence, timer de contrôle) doivent avoir une priorité élevée. Les fonctions FreeRTOS comme xSemaphoreGiveFromISR nécessitent que la priorité de l'interruption soit inférieure ou égale à la priorité maximale configurée pour le noyau (généralement configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY).</p>
+<hr />
+<p><br></p>
+<h3 id="dma-direct-memory-access"><strong>DMA (Direct Memory Access)</strong></h3>
+<p>Le DMA permet de transférer des données entre périphériques et mémoire sans intervention du CPU, libérant ainsi le processeur pour d'autres tâches. C'est un outil essentiel pour :</p>
+<ul>
+<li>Acquérir des données ADC à haute fréquence (ex: 1 kHz) sans surcharger le CPU.</li>
+<li>Transmettre des trames UART en arrière-plan.</li>
+<li>Remplir un buffer audio en double buffer (ping-pong).</li>
+</ul>
+<p>Le STM32F4 dispose de deux contrôleurs DMA avec plusieurs streams et canaux. Chaque stream peut être configuré avec une priorité, une direction (mémoire → périphérique, périphérique → mémoire, mémoire → mémoire), et des modes circulaires.</p>
+<p>Exemple d'utilisation avec ADC :</p>
+<pre><code class="language-c">// Configuration du DMA pour l'ADC1
+DMA_Stream0-&gt;PAR = (uint32_t)&amp;ADC1-&gt;DR;      // Périphérique
+DMA_Stream0-&gt;M0AR = (uint32_t)adc_buffer;    // Mémoire
+DMA_Stream0-&gt;NDTR = buffer_size;              // Taille
+DMA_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
+</code></pre>
 <hr />
 <p><br></p>
 <h3 id="presentation-de-la-carte-de-developpement-utilisee"><strong>Présentation de la carte de développement utilisée</strong></h3>
+<p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (environ [10$])(https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/) et très répandue dans le monde de l'embarqué.</p>
+<p>Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (environ <a href="https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/">6$</a>. Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.</p>
 <hr />
+<p><br></p>
 <h3 id="lien-connexe">Lien connexe</h3>
 <p><a href="../stm32f4/gpio/index.md">GPIO et Interruptions</a></p></div>
             </div>
