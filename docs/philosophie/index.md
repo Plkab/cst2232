@@ -6,6 +6,10 @@
 ---
 
 <br>
+[Acceuil](../#Acceuil)
+  
+<br>
+<br>
 
 La philosophie de ce cours d'ingénierie repose sur l'étude approfondie du microcontrôleur : son architecture, ses périphériques et son interaction avec capteurs et actionneurs, dans le but de concevoir des systèmes numériques complets. Face à la complexité croissante des systèmes embarqués et aux contraintes temporelles sévères, nous utiliserons un **système d'exploitation temps réel (RTOS)** pour orchestrer l'ensemble des tâches.
 
