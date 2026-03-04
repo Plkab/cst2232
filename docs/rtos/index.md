@@ -132,7 +132,7 @@ FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqué
 On peut l'avoir sur le site web [freertos](https://www.freertos.org/)
 
 
-#### Création de Tâches (xTaskCreate)
+#### **Création de Tâches (xTaskCreate)**
 
 La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.
 
@@ -140,6 +140,7 @@ Dans un programme classique (sans OS), tout le code se trouve dans la fonction m
 
 Une tâche est typiquement une fonction qui ne doit jamais se terminer. Sa structure type est une boucle infinie :
 
+````c`
 void maTache(void * pvParameters) {
     while(1) { // Une tâche est une boucle infinie
         // Ton code ici (ex: lire un capteur)
@@ -149,6 +150,7 @@ void maTache(void * pvParameters) {
 
 **Création d'une tâche dans le main**
 
+````c`
 xTaskCreate(
     maTache,           // Nom de la fonction
     "Nom_Tache",       // Nom pour le debug
@@ -162,7 +164,7 @@ xTaskCreate(
 
 Après avoir créé les tâches, on appelle vTaskStartScheduler(). Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.
 
-
+````c`
 // Prototype de la tâche
 void maTache(void * pvParameters);
 
@@ -176,10 +178,11 @@ void main(void) {
     // Le code ici ne sera jamais atteint
 }
 
-#### Gestion du Temps (vTaskDelay)
+#### **Gestion du Temps (vTaskDelay)**
 
 Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked". Pendant ce temps, le CPU peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
 
+````c`
 void vTaskMoteur(void * pvParameters) {
     for(;;) { // Boucle infinie obligatoire
         ControleVitesse();
@@ -190,6 +193,7 @@ void vTaskMoteur(void * pvParameters) {
 
 Prenons un autre exemple qui fait du temps réel périodique précis: 
 
+````c`
 void Task_Stabilisation(void *pvParameters) {
  
      // Variable pour stocker l'instant du prochain réveil
@@ -223,7 +227,7 @@ void Task_Stabilisation(void *pvParameters) {
 - Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.
 
 
-#### Synchronisation par Sémaphores (xSemaphore)
+#### **Synchronisation par Sémaphores (xSemaphore)**
 
 Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART) ou pour synchroniser une tâche avec une interruption matérielle.
 
@@ -233,6 +237,7 @@ Imaginons que deux tâches doivent écrire sur le même port série (UART). Si e
 
 Déclaration et création :
 
+````c`
 SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
 
 void main() {
@@ -252,6 +257,7 @@ void main() {
 - xSemaphoreTake(xMutex, portMAX_DELAY) : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).
 - xSemaphoreGive(xMutex) : libère le jeton pour les autres tâches.
 
+````c`
 void vTaskA(void * pvParameters) {
     for(;;) {
         // 1. Tenter de prendre le jeton (attendre max 100 ms)
@@ -278,7 +284,8 @@ void vTaskA(void * pvParameters) {
 
 - **Le Sémaphore à Comptage** (xSemaphoreCreateCounting) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).
 
-#### Communication par files de messages : Queues (xQueue)
+
+#### **Communication par files de messages : Queues (xQueue)**
 
 CC'est la méthode propre pour échanger des données entre tâches. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
 
@@ -286,6 +293,7 @@ CC'est la méthode propre pour échanger des données entre tâches. Par exemple
 - **Poster un message** : xQueueSend(file, &donnee, delai);
 - **Lire un message** : xQueueReceive(file, &reception, delai);
 
+````c`
 // Envoyer une donnée
 xQueueSend(xQueueCapteurs, &valeurLue, 0);
 
@@ -295,7 +303,8 @@ if(xQueueReceive(xQueueCapteurs, &donneeRecue, pdMS_TO_TICKS(100))) {
 }
 
 
-#### Tois règles d'or a connaitre :
+
+#### **Trois règles d'or a connaitre :**
 
 - **Priorité** : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).
 - **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par vTaskDelete().
