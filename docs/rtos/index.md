@@ -28,6 +28,8 @@ Un système embarqué combine **matériel (hardware) et logiciel (software)** po
   
 ---
 
+<br>
+
 ### **Les Systèmes Temps Réels**
 
 Un système est dit **Temps Reel** lorsque les  résultats demeurent toujours pertitantes ou valides après leurs délivrance. Il ne suffit pas seulement de produire un résultat mais de le délivrer dans le délais requis faute de quoi il y aura des conséquences graves. 
@@ -42,7 +44,7 @@ Pour gérer ces contraintes, deux approches sont possibles sur un processeur :
 - Employer un **ordonnanceur** (scheduler) fourni par un système d'exploitation temps réel (RTOS) lorsqu'il faut coordonner plusieurs tâches avec des échéances prévisibles.
 
 
-### Les trois types de systèmes temps réel 
+#### **Les trois types de systèmes temps réel**
 
 On distingue classiquement trois catégories :
 
@@ -60,10 +62,13 @@ Exemple : Un flux vidéo en direct, un système de contrôle qualité sur une li
 
 
 ---
+<br>
 
 ### **Les Systèmes d'Exploitation Temps Réels**
 
 ---
+
+<br>
 
 ### **Introduction à FreeRTOS** {#introduction-a-freertos}
 
