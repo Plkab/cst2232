@@ -1,4 +1,4 @@
-# [CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur](index.md)  
+# CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur 
 
 *Ir Paul S. Kabidu, M.Eng. spaulkabidu@gmail.com*  
 *Enseignant à l'ISTA dans le département de génie électrique et informatique*  
@@ -11,6 +11,8 @@
 
 <br>
   
+### [Introduction Générale](index.md) 
+
 La Conception des Systèmes Embarqués Temps Réel à base du Microcontrôleur est un cours qui a pour objectif de former les étudiants à la conception de systèmes électroniques, avec un accent sur le développement multi-capteurs, le contrôle numérique, le traitement numérique du signal et la communication IoT.
 
 Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception cumulative (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
