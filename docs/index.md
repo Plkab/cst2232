@@ -11,7 +11,8 @@
 
 <br>
   
-### [Introduction Générale](index.md) 
+### Acceuil {#Acceuil} 
+  
 
 La Conception des Systèmes Embarqués Temps Réel à base du Microcontrôleur est un cours qui a pour objectif de former les étudiants à la conception de systèmes électroniques, avec un accent sur le développement multi-capteurs, le contrôle numérique, le traitement numérique du signal et la communication IoT.
 
