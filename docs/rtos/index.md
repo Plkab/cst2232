@@ -7,6 +7,8 @@
 
 <br>
 
+
+
 ### **Les Systèmes Embarquées et Systèmes Digitaux**
   
 Un **système embarqué** est un système numérique basé sur un processeur, généralement un microcontrôleur SoC (System On Chip). Il est conçu pour répondre à une **tâche spécifique et bien définie**. Il n'est ni généraliste ni polyvalent, contrairement à un PC qui doit savoir tout faire (bureautique, jeux, navigation web) ou à un smartphone qui exécute des applications diverses simultanément (banque, jeux, réseaux sociaux, outils de travail). 
@@ -29,6 +31,8 @@ Un système embarqué combine **matériel (hardware) et logiciel (software)** po
 ---
 
 <br>
+
+
 
 ### **Les Systèmes Temps Réels**
 
@@ -62,6 +66,8 @@ Exemple : Un flux vidéo en direct, un système de contrôle qualité sur une li
   
 ---
 <br>
+
+
 
 ### **Les Systèmes d'Exploitation Temps Réels (RTOS)**
 
@@ -113,18 +119,193 @@ Les tâches doivent souvent communiquer ou collaborer sans risquer de corrompre 
 
 Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréquence et place les échantillons dans une file ; une autre tâche, moins prioritaire, vide cette file pour afficher les valeurs sur le moniteur série. Cela découple la production rapide des données de leur consommation plus lente, sans perte d'information ni blocage.
 
-
 ---
 
 <br>
 
+
+
 ### **Introduction à FreeRTOS** {#introduction-a-freertos}
 
+FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqués, supportant plus de 40 microcontrôleurs. Il se présente sous la forme d'une API qui nous permet de mettre en œuvre des applications temps réel sur microcontrôleur. Nous allons apprendre à utiliser ses fonctions pré-écrites pour structurer nos projets de manière efficace.
+
+On peut l'avoir sur le site web [freertos](https://www.freertos.org/)
+
+
+#### Création de Tâches (xTaskCreate)
+
+La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.
+
+Dans un programme classique (sans OS), tout le code se trouve dans la fonction main(). Dans FreeRTOS, le rôle de main() est simplement de créer les tâches nécessaires, puis de lancer l'ordonnanceur qui prend le contrôle.
+
+Une tâche est typiquement une fonction qui ne doit jamais se terminer. Sa structure type est une boucle infinie :
+
+void maTache(void * pvParameters) {
+    while(1) { // Une tâche est une boucle infinie
+        // Ton code ici (ex: lire un capteur)
+        vTaskDelay(pdMS_TO_TICKS(100)); // On laisse respirer le CPU 100ms
+    }
+}
+
+**Création d'une tâche dans le main**
+
+xTaskCreate(
+    maTache,           // Nom de la fonction
+    "Nom_Tache",       // Nom pour le debug
+    2048,              // Taille de la pile (en mots, souvent 32 bits)
+    NULL,              // Paramètres à passer (optionnel)
+    2,                 // PRIORITÉ (plus le chiffre est élevé, plus la tâche est prioritaire)
+    NULL               // Handle pour manipuler la tâche plus tard
+);
+
+**Le lancement (vTaskStartScheduler)**
+
+Après avoir créé les tâches, on appelle vTaskStartScheduler(). Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.
+
+
+// Prototype de la tâche
+void maTache(void * pvParameters);
+
+void main(void) {
+    // Création : Fonction, Nom, Taille pile, Paramètre, Priorité, Handle
+    xTaskCreate(maTache, "TacheAExecuter", 1024, NULL, 5, NULL);
+    
+    // Lance l'ordonnanceur (le système prend le contrôle)
+    vTaskStartScheduler();
+
+    // Le code ici ne sera jamais atteint
+}
+
+#### Gestion du Temps (vTaskDelay)
+
+Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked". Pendant ce temps, le CPU peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
+
+void vTaskMoteur(void * pvParameters) {
+    for(;;) { // Boucle infinie obligatoire
+        ControleVitesse();
+        // Attend 20ms de manière déterministe
+        vTaskDelay(pdMS_TO_TICKS(20)); 
+    }
+}
+
+Prenons un autre exemple qui fait du temps réel périodique précis: 
+
+void Task_Stabilisation(void *pvParameters) {
+ 
+     // Variable pour stocker l'instant du prochain réveil
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    
+    // Période souhaitée : 20 ms (50 Hz)
+    const TickType_t xPeriod = pdMS_TO_TICKS(20);
+
+    for (;;) { // Boucle infinie de la tâche
+        // --- DEBUT DU TRAITEMENT ---
+        // 1. Lire les capteurs (ex: Accéléromètre)
+        // 2. Calculer l'algorithme (ex: PID de stabilisation)
+        // 3. Appliquer la correction aux moteurs
+        
+        // --- SYNCHRONISATION ---
+        // On attend "jusqu'à" la prochaine échéance fixe
+        vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    }
+}
+
+**Pourquoi utiliser vTaskDelayUntil plutôt que vTaskDelay ?**
+
+- **vTaskDelay** : spécifie un délai relatif à partir de l'appel. Si le code à l'intérieur de la tâche prend du temps, la prochaine exécution sera décalée (dérive temporelle).
+
+- **vTaskDelayUntil** : spécifie un instant absolu de réveil. Il garantit que la tâche s'exécute à une fréquence fixe, sans dérive, quelle que soit la durée du traitement (tant qu'il reste inférieur à la période). Il permet d'éviter la dérive temporelle.
+
+**Remarques importantes**
+
+- Initialisation : xLastWakeTime doit être initialisée avec l'heure courante avant la première utilisation.
+- Premier appel : vTaskDelayUntil attendra que xLastWakeTime + xPeriod soit atteint. La première exécution effective aura donc lieu après une période complète.
+- Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.
+
+
+#### Synchronisation par Sémaphores (xSemaphore)
+
+Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART) ou pour synchroniser une tâche avec une interruption matérielle.
+
+**Le Mutex (Le type de sémaphore pour les ressources partagées)**
+
+Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex agit comme un jeton : une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.
+
+Déclaration et création :
+
+SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
+
+void main() {
+    // Création du mutex
+    xMutexUART = xSemaphoreCreateMutex();
+    
+    if(xMutexUART != NULL) {
+        // Création des tâches seulement si le mutex est prêt
+        xTaskCreate(vTaskA, "Tache A", 1000, NULL, 1, NULL);
+        xTaskCreate(vTaskB, "Tache B", 1000, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+}
+
+**Utilisation dans les tâches: xSemaphoreTake et xSemaphoreGive**
+
+- xSemaphoreTake(xMutex, portMAX_DELAY) : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).
+- xSemaphoreGive(xMutex) : libère le jeton pour les autres tâches.
+
+void vTaskA(void * pvParameters) {
+    for(;;) {
+        // 1. Tenter de prendre le jeton (attendre max 100 ms)
+        if(xSemaphoreTake(xMutexUART, pdMS_TO_TICKS(100)) == pdPASS) {
+            
+            // 2. Jeton obtenu → accès exclusif à l'UART
+            printf("Je suis la Tache A et je contrôle l'UART\n");
+            
+            // 3. Important : rendre le jeton
+            xSemaphoreGive(xMutexUART);
+        } else {
+            // Échec : le jeton n'a pas pu être obtenu dans le délai imparti
+            // On peut prendre une action corrective ou signaler une erreur
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+**On a 3 types de Sémaphores à connaître :**
+
+- **Le Mutex** (xSemaphoreCreateMutex) : Utilisé pour protéger une ressource partagée (Écran, I2C, Moteur). Il intègre un mécanisme d'héritage de priorité qui évite qu'une tâche de priorité moyenne ne bloque indéfiniment une tâche haute priorité.
+
+- **Le Sémaphore Binaire** (xSemaphoreCreateBinary) : utilisé pour la synchronisation simple. Par exemple, une interruption matérielle (appui sur un bouton) "donne" le sémaphore, et une tâche qui "attendait" se réveille instantanément.
+
+- **Le Sémaphore à Comptage** (xSemaphoreCreateCounting) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).
+
+#### Communication par files de messages : Queues (xQueue)
+
+CC'est la méthode propre pour échanger des données entre tâches. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
+
+- **Créer la file** : xQueueCreate(taille, taille_d'un_élément);
+- **Poster un message** : xQueueSend(file, &donnee, delai);
+- **Lire un message** : xQueueReceive(file, &reception, delai);
+
+// Envoyer une donnée
+xQueueSend(xQueueCapteurs, &valeurLue, 0);
+
+// Recevoir la donnée (attend si la queue est vide)
+if(xQueueReceive(xQueueCapteurs, &donneeRecue, pdMS_TO_TICKS(100))) {
+    // Traiter la donnée
+}
+
+
+#### Tois règles d'or a connaitre :
+
+- **Priorité** : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).
+- **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par vTaskDelete().
+- **Section Critique** : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser taskENTER_CRITICAL() et taskEXIT_CRITICAL() pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.
 
 
 ---
 <br>
   
+
 ### Lien connexe
 
 - [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
