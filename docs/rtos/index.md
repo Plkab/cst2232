@@ -244,7 +244,7 @@ Cette fonction garantit que la tâche _Stabilisation()_ s'exécutera exactement 
 - Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.
 
 
-#### **Synchronisation par Sémaphores (xSemaphore)**
+#### **Synchronisation par Sémaphores (xSemaphore)**{#Semaphores}
 
 Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle.
 
