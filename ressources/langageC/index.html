@@ -174,7 +174,7 @@ GPIOA-&gt;MODER |= (1 &lt;&lt; 0); // Manipulation élégante et lisible !
 </code></pre>
 <hr />
 <p><br></p>
-<h3 id="lunion"><strong>L'Union'</strong></h3>
+<h3 id="lunion"><strong>L'Union</strong></h3>
 <p>Une <strong>union</strong> permet de stocker des variables de types différents au même emplacement mémoire. La taille de l'union est celle de son plus grand élément.</p>
 <pre><code class="language-c">union Paquet {
     uint32_t motComplet;    // Accès aux 32 bits d'un coup
@@ -189,27 +189,104 @@ monRegistre.motComplet = 0x12345678;
 <p><br></p>
 <h3 id="les-operateurs-arithmetiques-de-comparaison-et-logiques"><strong>Les Opérateurs Arithmétiques, de Comparaison et Logiques</strong></h3>
 <p><strong>Opérateurs Arithmétiques</strong></p>
-<p>|Opérateur  |Nom    Usage sur STM32|
-|+  |Addition   |Calcul d'offsets mémoire ou de compteurs.|
-|-  |Soustraction   |Calcul d'écarts de temps (Ticks).|
-|*  |Multiplication |Mise à l'échelle de valeurs (ex: conversion ADC).|
-|/  |Division   |Moyenne de mesures (Attention : Division entière).|
-|%  |Modulo |Reste d'une division. Très utile pour créer des boucles| circulaires ou faire une action tous les X cycles.|</p>
+<table>
+<thead>
+<tr>
+<th>Opérateur</th>
+<th>Nom    Usage sur STM32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+</td>
+<td>Addition</td>
+</tr>
+<tr>
+<td>-</td>
+<td>Soustraction</td>
+</tr>
+<tr>
+<td>*</td>
+<td>Multiplication</td>
+</tr>
+<tr>
+<td>/</td>
+<td>Division</td>
+</tr>
+<tr>
+<td>%</td>
+<td>Modulo</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Opérateurs de Comparaison</strong></p>
-<p>|Opérateur  |Nom    Signification|
-|== |Égal à |Vrai si les deux valeurs sont identiques.|
-|!= |Différent de   |Vrai si les deux valeurs ne sont pas identiques.|
-|&gt;  |Supérieur à    |Vrai si la valeur de gauche est strictement plus grande.|
-|&lt;  |Inférieur à    |Vrai si la valeur de gauche est strictement plus petite.|
-|&gt;= |Supérieur ou égal  |Vrai si la valeur est égale ou plus grande.|
-|&lt;= |Inférieur ou égal  |Vrai si la valeur est égale ou plus petite.|</p>
+<table>
+<thead>
+<tr>
+<th>Opérateur</th>
+<th>Nom    Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>==</td>
+<td>Égal à</td>
+</tr>
+<tr>
+<td>!=</td>
+<td>Différent de</td>
+</tr>
+<tr>
+<td>&gt;</td>
+<td>Supérieur à</td>
+</tr>
+<tr>
+<td>&lt;</td>
+<td>Inférieur à</td>
+</tr>
+<tr>
+<td>&gt;=</td>
+<td>Supérieur ou égal</td>
+</tr>
+<tr>
+<td>&lt;=</td>
+<td>Inférieur ou égal</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Opérateurs Logiques</strong></p>
 <p>En langage C, les <strong>opérateurs logiques</strong> servent à combiner plusieurs conditions entre elles (généralement dans un if, while ou for). Ils renvoient toujours un résultat booléen (Vrai ou Faux).
 On a 3 opérateurs logiques &amp;&amp; (ET), || (OU), ! (NON) :</p>
-<p>|Opérateur  |Nom    |Description    |Exemple|
-|&amp;&amp; |ET (AND)   |Vrai si toutes les conditions sont vraies. |if (temp &gt; 25 &amp;&amp; ventilateur == OFF)|
-||| |OU (OR)    |Vrai si au moins une condition est vraie.  |if (bouton == PRESSED || urgence == 1)|
-|!  |NON (NOT)  |Inverse l'état de la condition (Vrai devient Faux).    |if (!systeme_pret) (Si le système n'est PAS prêt)|</p>
+<table>
+<thead>
+<tr>
+<th>Opérateur</th>
+<th>Nom</th>
+<th>Description</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&amp;&amp;</td>
+<td>ET (AND)</td>
+<td>Vrai si toutes les conditions sont vraies.</td>
+<td>if (temp &gt; 25 &amp;&amp; ventilateur == OFF)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>OU (OR)</td>
+</tr>
+<tr>
+<td>!</td>
+<td>NON (NOT)</td>
+<td>Inverse l'état de la condition (Vrai devient Faux).</td>
+<td>if (!systeme_pret) (Si le système n'est PAS prêt)</td>
+</tr>
+</tbody>
+</table>
 <p>En langage C, <strong>0</strong> est considéré comme <strong>Faux (FALSE)</strong>. Et tout ce qui n'est pas 0 (1, -5, 100...) est considéré comme <strong>Vrai (TRUE)</strong>.</p>
 <hr />
 <p><br></p>
