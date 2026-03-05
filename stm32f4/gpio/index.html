@@ -76,6 +76,27 @@
 <li><strong>IDR / ODR</strong> : Lecture (Input) et Écriture (Output).</li>
 <li><strong>BSRR</strong> : Modification atomique (Set/Reset) sans lire le registre au préalable (plus sûr en multitâche).</li>
 </ul>
+<p><strong>A. Configuration d'une Sortie (LED sur PC13)</strong></p>
+<p>Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :</p>
+<ul>
+<li>Activer l'horloge du port (RCC) : Sans énergie, le périphérique ne répond pas.</li>
+<li>Configurer le mode (MODER) : Déclarer la broche en "Sortie".</li>
+<li>Piloter l'état (BSRR/ODR) : Envoyer 0V ou 3.3V.</li>
+</ul>
+<pre><code class="language-c">// Code Bare Metal pur (Sans RTOS)
+void Blink_Simple(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));            // 2. PC13 en Sortie
+
+    while(1) {
+        GPIOC-&gt;BSRR = (1 &lt;&lt; 29);                // LED ON (Reset bit 13)
+        for(int i=0; i&lt;500000; i++);            // Attente logicielle (Bloque le CPU)
+        GPIOC-&gt;BSRR = (1 &lt;&lt; 13);                // LED OFF (Set bit 13)
+        for(int i=0; i&lt;500000; i++);
+    }
+}
+</code></pre>
+<p>Problème ici est que : Pendant le temps de la boucle <code>for</code>, le processeur ne peut rien faire d'autre. Si un bouton est pressé, il sera ignoré.</p>
 <h3 id="gestion-des-entreessorties-dans-une-tache"><strong>Gestion des Entrées/Sorties dans une Tâche</strong></h3>
 <p>Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.</p>
 <pre><code class="language-c">void vTaskBlink(void *pvParameters) {
@@ -89,15 +110,18 @@
     }
 }
 </code></pre>
-<p><strong>Les Interruptions Externes (EXTI)</strong></p>
-<p>L'interruption est le moyen le plus efficace pour réagir à un événement asynchrone (appui bouton, capteur). Sur STM32F4, elle nécessite :
-- L'activation de l'horloge <code>SYSCFG</code>.
-- Le multiplexage de la ligne EXTI vers le port souhaité.
-- La configuration du front (montant/descendant).
-- L'activation dans le <code>NVIC</code>.</p>
+<p><strong>L'Approche Interruptions Externes (EXTI)</strong></p>
+<p>L'interruption est le moyen le plus efficace pour réagir à un événement asynchrone (appui bouton, capteur). Quand une interruption survient le matériel "stoppe" le programme principal pour exécuter une fonction spécifique : le Handler ou ISR.</p>
+<p>Sur STM32F4, elle nécessite :</p>
+<ul>
+<li>L'activation de l'horloge <code>SYSCFG</code>.</li>
+<li>Le multiplexage de la ligne EXTI vers le port souhaité.</li>
+<li>La configuration du front (montant/descendant).</li>
+<li>L'activation dans le <code>NVIC</code>.</li>
+</ul>
 <p><strong>Synchronisation ISR vers Tâche (Sémaphore)</strong></p>
-<p>C'est le concept le plus important est que l'interruption ne doit pas traiter la donnée, elle doit simplement "réveiller" une tâche de traitement. On utilise un <strong><a href="../rtos/#Semaphores">Sémaphore Binaire</a></strong>.</p>
-<p>A. Le Handler d'Interruption (ISR)</p>
+<p>C'est le concept le plus important est que l'interruption ne doit pas traiter la donnée, elle doit simplement "réveiller" une tâche de traitement. On utilise un <a href="rtos/#Semaphores">Sémaphore Binaire</a>.</p>
+<p><strong>A. Le Handler d'Interruption (ISR)</strong></p>
 <pre><code class="language-c">void EXTI0_IRQHandler(void) {
     BaseType_t xWoken = pdFALSE;
 
@@ -112,7 +136,7 @@
     }
 }
 </code></pre>
-<p>B. La Tâche de Traitement</p>
+<p><strong>B. La Tâche de Traitement</strong></p>
 <pre><code class="language-c">void vTaskBouton(void *pvParameters) {
     for (;;) {
         // Attend le sémaphore indéfiniment (0% CPU en attente)
@@ -123,9 +147,7 @@
     }
 }
 </code></pre>
-<ol>
-<li>Règles d'Or des Interruptions sous FreeRTOS</li>
-</ol>
+<p>Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d'une interruption utilisant FreeRTOS doit être numériquement supérieure ou égale à configMAX_SYSCALL_INTERRUPT_PRIORITY (généralement entre 5 et 15). Une priorité de 0 (trop haute) fera planter le noyau.</p>
 <hr />
 <p><br></p>
 <h3 id="lien-connexe">Lien connexe</h3>
