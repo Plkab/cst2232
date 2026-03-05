@@ -1,4 +1,4 @@
-# GPIO et Interruptions
+# Introduction au Langage C embarqué
 
 *Ir Paul S. Kabidu, M.Eng. <spaulkabidu@gmail.com>*
 {: style="text-align: center;" }
@@ -10,4 +10,4 @@
 <br>
 <br>
 
-### **GPIO**
+### **Le Langage C**
