@@ -16,7 +16,10 @@
 - Dans le menu, allez dans Project → New uVision Project....
 - Choisissez un dossier de destination pour votre projet (par exemple, un dossier Blink/) et donnez un nom à votre projet (par exemple, Blink). Cliquez sur Save.
 
-### ** Étape 2 : Sélectionner le microcontrôleur cible**
+---
+<br>
+
+### **Étape 2 : Sélectionner le microcontrôleur cible**
 
 - Une fenêtre "Select Device for Target" s'ouvre.
 - Dans la barre de recherche, tapez "STM32F401CC".
@@ -24,7 +27,10 @@
 
     Note : La première fois que vous sélectionnez un microcontrôleur de cette famille, Keil vous proposera d'installer les packs (Packs Installer). Acceptez pour télécharger et installer le pack Keil::STM32F4xx_DFP (Device Family Pack) si ce n'est pas déjà fait. Cela ajoutera tous les fichiers de définition (SVD, Flash, etc.) et les exemples nécessaires.
 
-### ** Étape 3 : Gérer les "Run-Time Environment" (RTE)**
+---
+<br>
+
+### **Étape 3 : Gérer les "Run-Time Environment" (RTE)**
 
 Après avoir sélectionné le microcontrôleur, la fenêtre "Manage Run-Time Environment" s'ouvre. C'est là que vous choisissez les composants logiciels à inclure. Pour notre approche bare metal sans HAL, vous allez décocher la plupart des options.
 
@@ -33,11 +39,17 @@ Après avoir sélectionné le microcontrôleur, la fenêtre "Manage Run-Time Env
 - Vérifiez que sous "CMSIS", la case "CORE" est bien cochée.
 - Cliquez sur OK.
 
-### ** Étape 4 : Comprendre la structure du projet**
+---
+<br>
+
+### **Étape 4 : Comprendre la structure du projet**
 
 Votre projet dans la fenêtre "Project" (à gauche) contient désormais un dossier "Target 1" qui lui-même contient un dossier "Source Group 1". Vous allez maintenant ajouter les fichiers nécessaires.
 
-### ** Étape 5 : Ajouter les fichiers de démarrage (Startup) et système**
+---
+<br>
+
+### **Étape 5 : Ajouter les fichiers de démarrage (Startup) et système**
 
 Pour un projet bare metal, vous avez besoin de deux fichiers essentiels, fournis par le pack que vous avez installé.
 
@@ -55,6 +67,9 @@ Pour un projet bare metal, vous avez besoin de deux fichiers essentiels, fournis
     C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Source\
     - Ajoutez le fichier system_stm32f4xx.c. Ce fichier contient les fonctions essentielles comme SystemInit() qui configure l'horloge de base.
 
+---
+<br>
+
 ### **Étape 6 : Ajouter les fichiers d'en-tête CMSIS**
 
 Le fichier system_stm32f4xx.c a besoin de fichiers d'en-tête pour compiler. Le plus important est stm32f401xe.h (ou un nom similaire), qui contient les définitions de tous les registres.
@@ -66,13 +81,16 @@ Le fichier system_stm32f4xx.c a besoin de fichiers d'en-tête pour compiler. Le 
 C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
 (Remplacez <version> par le numéro de version que vous avez installé, par exemple 2.16.0).
 
+---
+<br>
+
 ### **Étape 7 : Créer votre fichier source principal**
 
 - Créez un nouveau fichier dans Keil : File → New.
 - Enregistrez-le immédiatement dans votre dossier de projet (à côté de votre .uvprojx) en lui donnant un nom, par exemple main.c.
 - Écrivez votre code "bare metal". Voici un exemple minimal qui fait clignoter la LED sur la carte Black Pill (généralement sur la broche PC13) :
 
-    ```c
+```c
     #include "stm32f401xe.h"
 
     // Fonction de délai simple (dépend de la vitesse CPU)
@@ -107,15 +125,21 @@ C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
             delay(1000000);
         }
     }
-    ```
+```
 
 - Ajoutez ce main.c à votre "Source Group 1" en utilisant "Add Existing Files...".
 
-### **Étape 8 : Compiler, téléverser et tester
+---
+<br>
+
+### **Étape 8 : Compiler, téléverser et tester**
 
 - Compilez votre projet : Project → Build target (ou la touche F7).
 - Si la compilation est réussie, téléversez le code sur la carte : Flash → Download (ou la touche F8).
 - Si vous avez coché "Reset and Run", la LED sur PC13 devrait se mettre à clignoter. Sinon, appuyez sur le bouton reset de la carte.
+
+---
+<br>
 
 ### **Structure finale de votre projet**
 

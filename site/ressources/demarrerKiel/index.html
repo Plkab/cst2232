@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/ressources/demarrerKiel/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>demarrerKiel - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Création d'un projet Keil uVision pour STM32F401CCU6 en bare metal C - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,12 +53,143 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#creation-dun-projet-keil-uvision-pour-stm32f401ccu6-en-bare-metal-c" class="nav-link">Création d'un projet Keil uVision pour STM32F401CCU6 en bare metal C</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="1"><a href="#include-stm32f401xeh" class="nav-link">include "stm32f401xe.h"</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# D‚marrer un projet avec Keil uVision" </p></div>
+<h1 id="creation-dun-projet-keil-uvision-pour-stm32f401ccu6-en-bare-metal-c">Création d'un projet Keil uVision pour STM32F401CCU6 en bare metal C</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="etape-1-creer-un-nouveau-projet"><strong>Étape 1 : Créer un nouveau projet</strong></h3>
+<ul>
+<li>Lancez Keil uVision.</li>
+<li>Dans le menu, allez dans Project → New uVision Project....</li>
+<li>Choisissez un dossier de destination pour votre projet (par exemple, un dossier Blink/) et donnez un nom à votre projet (par exemple, Blink). Cliquez sur Save.</li>
+</ul>
+<h3 id="etape-2-selectionner-le-microcontroleur-cible">** Étape 2 : Sélectionner le microcontrôleur cible**</h3>
+<ul>
+<li>Une fenêtre "Select Device for Target" s'ouvre.</li>
+<li>Dans la barre de recherche, tapez "STM32F401CC".</li>
+<li>
+<p>Dans la liste des résultats, sélectionnez "STM32F401CC". La description doit mentionner "256KB Flash, 64KB RAM" pour le modèle U6 (Black Pill). Cliquez sur OK.</p>
+<p>Note : La première fois que vous sélectionnez un microcontrôleur de cette famille, Keil vous proposera d'installer les packs (Packs Installer). Acceptez pour télécharger et installer le pack Keil::STM32F4xx_DFP (Device Family Pack) si ce n'est pas déjà fait. Cela ajoutera tous les fichiers de définition (SVD, Flash, etc.) et les exemples nécessaires.</p>
+</li>
+</ul>
+<h3 id="etape-3-gerer-les-run-time-environment-rte">** Étape 3 : Gérer les "Run-Time Environment" (RTE)**</h3>
+<p>Après avoir sélectionné le microcontrôleur, la fenêtre "Manage Run-Time Environment" s'ouvre. C'est là que vous choisissez les composants logiciels à inclure. Pour notre approche bare metal sans HAL, vous allez décocher la plupart des options.</p>
+<ul>
+<li>Dans l'onglet "Software Components", désactivez l'option "CMSIS::CORE" ? Non, il faut le garder. Le CMSIS (Cortex Microcontroller Software Interface Standard) fournit les définitions de base pour accéder aux registres du Cortex-M. Vous en aurez besoin .</li>
+<li>Décochez toutes les cases sous "Device" qui commencent par "STM32Cube HAL" (comme ADC, GPIO, RCC, etc.). Vous n'utiliserez pas la HAL.</li>
+<li>Vérifiez que sous "CMSIS", la case "CORE" est bien cochée.</li>
+<li>Cliquez sur OK.</li>
+</ul>
+<h3 id="etape-4-comprendre-la-structure-du-projet">** Étape 4 : Comprendre la structure du projet**</h3>
+<p>Votre projet dans la fenêtre "Project" (à gauche) contient désormais un dossier "Target 1" qui lui-même contient un dossier "Source Group 1". Vous allez maintenant ajouter les fichiers nécessaires.</p>
+<h3 id="etape-5-ajouter-les-fichiers-de-demarrage-startup-et-systeme">** Étape 5 : Ajouter les fichiers de démarrage (Startup) et système**</h3>
+<p>Pour un projet bare metal, vous avez besoin de deux fichiers essentiels, fournis par le pack que vous avez installé.</p>
+<ul>
+<li>
+<p><strong>Fichier de démarrage (Startup)</strong> :</p>
+<ul>
+<li>C'est un fichier assembleur qui contient la table des vecteurs d'interruption et le code de démarrage initial.</li>
+<li>Faites un clic droit sur "Source Group 1" et sélectionnez "Add Existing Files to Group 'Source Group 1'...".</li>
+<li>Naviguez jusqu'au dossier d'installation de Keil (souvent C:\Keil_v5). Le chemin typique est :
+C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Source\ARM\</li>
+<li>Dans ce dossier, cherchez un fichier nommé startup_stm32f401xx.s. Sélectionnez-le et cliquez sur "Add".</li>
+</ul>
+</li>
+<li>
+<p><strong>Fichier système (System)</strong> :</p>
+<ul>
+<li>Toujours dans la même boîte de dialogue, naviguez vers :
+C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Source\</li>
+<li>Ajoutez le fichier system_stm32f4xx.c. Ce fichier contient les fonctions essentielles comme SystemInit() qui configure l'horloge de base.</li>
+</ul>
+</li>
+</ul>
+<h3 id="etape-6-ajouter-les-fichiers-den-tete-cmsis"><strong>Étape 6 : Ajouter les fichiers d'en-tête CMSIS</strong></h3>
+<p>Le fichier system_stm32f4xx.c a besoin de fichiers d'en-tête pour compiler. Le plus important est stm32f401xe.h (ou un nom similaire), qui contient les définitions de tous les registres.</p>
+<ul>
+<li>Allez dans le menu Project → Options for Target 'Target 1'... (ou cliquez sur l'icône de configuration).</li>
+<li>Allez dans l'onglet "C/C++ (AC6)" (ou "C/C++" selon votre compilateur).</li>
+<li>Dans la zone "Include Paths", vous devez ajouter le chemin vers les fichiers d'en-tête CMSIS. Cliquez sur le bouton "..." à côté de la zone de texte.</li>
+<li>Ajoutez le chemin suivant :
+C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
+(Remplacez <version> par le numéro de version que vous avez installé, par exemple 2.16.0).</li>
+</ul>
+<h3 id="etape-7-creer-votre-fichier-source-principal"><strong>Étape 7 : Créer votre fichier source principal</strong></h3>
+<ul>
+<li>Créez un nouveau fichier dans Keil : File → New.</li>
+<li>Enregistrez-le immédiatement dans votre dossier de projet (à côté de votre .uvprojx) en lui donnant un nom, par exemple main.c.</li>
+<li>
+<p>Écrivez votre code "bare metal". Voici un exemple minimal qui fait clignoter la LED sur la carte Black Pill (généralement sur la broche PC13) :</p>
+<p>```c</p>
+<h1 id="include-stm32f401xeh">include "stm32f401xe.h"</h1>
+<p>// Fonction de délai simple (dépend de la vitesse CPU)
+void delay(volatile uint32_t count) {
+    while(count--) {
+        __NOP(); // No Operation, pour éviter que l'optimisation ne supprime la boucle
+    }
+}</p>
+<p>int main(void) {
+    // 1. Activer l'horloge sur le port C (où se trouve la LED)
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;</p>
+<pre><code>// 2. Configurer PC13 en sortie push-pull
+// MODER : 00=Entrée, 01=Sortie, 10=Fonction Alternée, 11=Analogique
+GPIOC-&gt;MODER &amp;= ~(3U &lt;&lt; (13 * 2));  // Reset des 2 bits de la broche 13
+GPIOC-&gt;MODER |=  (1U &lt;&lt; (13 * 2));  // Mise à 01 (Sortie standard)
+
+// OTYPER : 0=Push-Pull (standard), 1=Open-Drain
+GPIOC-&gt;OTYPER &amp;= ~(1U &lt;&lt; 13);       // Force en Push-Pull
+
+while(1) {
+    // Allumer la LED (Sur la Black Pill, PC13 est reliée à la masse)
+    // On écrit dans le registre BSRR (Bit Set Reset Register)
+    // BR13 (Bit Reset) met la sortie à 0V -&gt; La LED s'allume
+    GPIOC-&gt;BSRR = (1U &lt;&lt; (13 + 16)); 
+    delay(1000000);
+
+    // Éteindre la LED
+    // BS13 (Bit Set) met la sortie à 3.3V -&gt; La LED s'éteint
+    GPIOC-&gt;BSRR = (1U &lt;&lt; 13); 
+    delay(1000000);
+}
+</code></pre>
+<p>}
+```</p>
+</li>
+<li>
+<p>Ajoutez ce main.c à votre "Source Group 1" en utilisant "Add Existing Files...".</p>
+</li>
+</ul>
+<h3 id="etape-8-compiler-televerser-et-tester">**Étape 8 : Compiler, téléverser et tester</h3>
+<ul>
+<li>Compilez votre projet : Project → Build target (ou la touche F7).</li>
+<li>Si la compilation est réussie, téléversez le code sur la carte : Flash → Download (ou la touche F8).</li>
+<li>Si vous avez coché "Reset and Run", la LED sur PC13 devrait se mettre à clignoter. Sinon, appuyez sur le bouton reset de la carte.</li>
+</ul>
+<h3 id="structure-finale-de-votre-projet"><strong>Structure finale de votre projet</strong></h3>
+<p>Votre projet Keil devrait maintenant ressembler à ceci dans la fenêtre "Project" :</p>
+<p><code>py
+Target 1
+ |-- Source Group 1
+ |    |-- startup_stm32f401xx.s
+ |    |-- system_stm32f4xx.c
+ |    |-- main.c</code></p></div>
             </div>
         </div>
 
