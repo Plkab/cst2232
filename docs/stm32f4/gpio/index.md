@@ -301,26 +301,35 @@ int main(void) {
 }
 ```
 
+  
 **La Phase d'Initialisation (L'Installation de l'usine)**
+
 Dans la fonction Prv_SetupHardware, nous préparons le terrain en Bare Metal.
+
 - Les Horloges (RCC) : On active l'électricité pour les ports A et C. Sans cela, les registres restent "morts".
 - Le Mode (MODER) : On dit à la broche PC13 d'être une sortie (pour la LED) et à PA0 d'être une entrée (pour le bouton).
 - L'Interruption (EXTI & NVIC) : On configure le matériel pour qu'il surveille tout seul la pin PA0. Le NVIC est le "vigile" qui autorise cette interruption à stopper le processeur.
 
 **L'Interruption : Le "Signal de Réveil"**
+
 La fonction EXTI0_IRQHandler est déclenchée instantanément par le matériel dès que vous appuyez sur le bouton.
+
 - Pourquoi est-elle courte ? Elle ne fait qu'une chose : "donner un jeton" au sémaphore (xSemaphoreGiveFromISR).
 - Le passage de témoin : Elle réveille la tâche vTaskBouton qui dormait, puis s'arrête. Le processeur n'est resté bloqué dans l'interruption que quelques microsecondes.
 
 **La Tâche "Lecteur" : Le Filtrage Intelligent**
+
 C'est ici que la magie de FreeRTOS opère.
+
 - L'attente efficace : xSemaphoreTake met la tâche en sommeil profond (0% CPU) tant que le bouton n'est pas touché.
 - Le Debounce (Anti-rebond) : Quand elle se réveille, elle attend 20ms avec vTaskDelay. Pendant ce temps, FreeRTOS peut faire autre chose !
 - La Lecture réelle (IDR) : Après le délai, on vérifie via le registre IDR si le bouton est toujours pressé. Cela permet d'ignorer les parasites électriques (étincelles de contact).
 - Le Message : Si l'appui est confirmé, elle envoie un "ordre" dans la file (xQueueSend).
 
 **La Tâche "Actionneur" : L'Exécution**
+
 Cette tâche gère uniquement la LED.
+
 - Séparation des rôles : Elle ne sait pas qu'il y a un bouton. Elle attend simplement un message dans sa boîte aux lettres (xQueueReceive).
 - L'Écriture (ODR) : Dès qu'elle reçoit un message, elle utilise l'opérateur XOR (^) sur le registre ODR pour inverser l'état de la LED (Toggle).
 
