@@ -66,6 +66,9 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ### Projets d’Application
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](projects/imu_compl/index.md)
+- [**Système de Contrôle de LED (Anti-rebond & Queue)**](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
+
+
 
 ---
 <br>
