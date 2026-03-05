@@ -463,3 +463,5 @@ int main(void) {
 ### Lien connexe
 
 - [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
+- [Création Projet sous Keil uVision](../ressources/demarrerKiel.md)
+- [Configuration FreeRTOS sous Kiel pour STM32F4](../ressources/configRtosKiel.md)
