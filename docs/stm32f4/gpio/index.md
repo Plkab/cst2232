@@ -1,13 +1,13 @@
-# 
+# GPIO et Interruptions
 
-Contenu Ã  rÃ©diger...
-
-
+*Ir Paul S. Kabidu, M.Eng. <spaulkabidu@gmail.com>*
+{: style="text-align: center;" }
 
 ---
 
-<br>
-[Acceuil](../#Acceuil)
+[Accueil](../../#Accueil)
   
 <br>
 <br>
+
+### **GPIO**
