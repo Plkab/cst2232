@@ -165,7 +165,7 @@ Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d
   
 Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.
 
-![la carte Black Pill](\stm32f4\gpio\blakpill_board.png) {: width="500px" style="display: block; margin: 0 auto;" }
+![la carte Black Pill](\stm32f4\gpio\STM32F411CEU6_WeAct_Black_Pill_V3.0-2.jpg) {: width="500px" style="display: block; margin: 0 auto;" }
 
 **Cahier des Charges**
 
