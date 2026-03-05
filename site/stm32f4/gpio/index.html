@@ -181,9 +181,9 @@ void vTaskBouton(void *pvParameters) {
 <p>Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d'une interruption utilisant FreeRTOS doit être numériquement supérieure ou égale à configMAX_SYSCALL_INTERRUPT_PRIORITY (généralement entre 5 et 15). Une priorité de 0 (trop haute) fera planter le noyau.</p>
 <hr />
 <p><br></p>
-<h3 id="projet-gpio-interrupt-freertos">[<strong>Système de Contrôle de LED avec Anti-rebond et File de Messages</strong>]</h3>
+<h3 id="projet-gpio-interrupt-freertos"><strong>[Système de Contrôle de LED avec Anti-rebond et File de Messages]</strong></h3>
 <p>Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.</p>
-<p><img alt="la carte Black Pill" src="\stm32f4\gpio\STM32F411CEU6_WeAct_Black_Pill_V3.0-2.jpg" /> {: width="500px" style="display: block; margin: 0 auto;" }</p>
+<p><img alt="la carte Black Pill" src="/stm32f4/gpio/STM32F411CEU6_WeAct_Black_Pill_V3.0-2.jpg" /> {: width="500px" style="display: block; margin: 0 auto;" }</p>
 <p><strong>Cahier des Charges</strong></p>
 <ol>
 <li>

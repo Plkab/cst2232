@@ -13,13 +13,16 @@
 
 ### **GPIO**
 
-Les GPIO (General Purpose Input-Output) est un phreipherique d'entree - sortie numerique. le STM32F4 possede 7 ports nommees (GPIOA, GPIOB, etc.). Chaque GPIOx possede ses propres registres de configuration. on a :
+Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
 
-- **MODER** : Définit la direction (00: Entrée, 01: Sortie).
-- **IDR / ODR** : Lecture (Input) et Écriture (Output).
-- **BSRR** : Modification atomique (Set/Reset) sans lire le registre au préalable (plus sûr en multitâche). C'est une écriture directe au niveau matériel. On ne peut pas corrompre les autres bits du port. C'est une garantie de sécurité logicielle.
+**Registres principaux :**
 
-Ces registres sont de 32 bits.
+|Registre	|Nom	|Description|
+|-----------|-------|-----------|
+|MODER	|Mode Register	|Configure la direction de chaque broche (00: Entrée, 01: Sortie, 10: Fonction alternative, 11: Analogique).|
+|IDR	|Input Data Register	|Permet de lire l'état logique présent sur les broches configurées en entrée.|
+|ODR	|Output |Data Register	|Permet d’écrire (ou de lire) l’état des broches configurées en sortie. Attention : une opération comme `ODR |= (1<<13)` n’est pas atomique (lecture-modification-écriture) et peut être interrompue.|
+|BSRR	|Bit Set/Reset Register	|Permet de modifier l’état de manière **atomique** en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.|
 
 ---
 <br>
@@ -76,7 +79,7 @@ Problème ici est que : Pendant le temps de la boucle `for`, le processeur ne pe
 
 Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.
 
-Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace for(delay) par vTaskDelay().
+Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace  l'attente logicielle for(delay) par vTaskDelay(), ce qui libère le CPU pour d'autres tâches.
 
 ```c
 void vTaskBlink(void *pvParameters) {
