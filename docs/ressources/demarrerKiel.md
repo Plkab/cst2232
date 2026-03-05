@@ -138,17 +138,6 @@ C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
 - Si la compilation est réussie, téléversez le code sur la carte : Flash → Download (ou la touche F8).
 - Si vous avez coché "Reset and Run", la LED sur PC13 devrait se mettre à clignoter. Sinon, appuyez sur le bouton reset de la carte.
 
----
+
 <br>
 
-### **Structure finale de votre projet**
-
-Votre projet Keil devrait maintenant ressembler à ceci dans la fenêtre "Project" :
-
-```py
-Target 1
- |-- Source Group 1
- |    |-- startup_stm32f401xx.s
- |    |-- system_stm32f4xx.c
- |    |-- main.c
- ```
