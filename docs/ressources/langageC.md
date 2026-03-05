@@ -106,7 +106,7 @@ GPIOA->MODER |= (1 << 0); // Manipulation élégante et lisible !
 ---
 <br>
 
-### **L'Union'**
+### **L'Union**
 
 Une **union** permet de stocker des variables de types différents au même emplacement mémoire. La taille de l'union est celle de son plus grand élément.
 
@@ -129,6 +129,7 @@ monRegistre.motComplet = 0x12345678;
 **Opérateurs Arithmétiques**
 
 |Opérateur	|Nom	Usage sur STM32|
+|-----------|----------------------|
 |+	|Addition	|Calcul d'offsets mémoire ou de compteurs.|
 |-	|Soustraction	|Calcul d'écarts de temps (Ticks).|
 |*	|Multiplication	|Mise à l'échelle de valeurs (ex: conversion ADC).|
@@ -138,6 +139,7 @@ monRegistre.motComplet = 0x12345678;
 **Opérateurs de Comparaison**
 
 |Opérateur 	|Nom	Signification|
+|-----------|--------------------|
 |==	|Égal à	|Vrai si les deux valeurs sont identiques.|
 |!=	|Différent de	|Vrai si les deux valeurs ne sont pas identiques.|
 |>	|Supérieur à	|Vrai si la valeur de gauche est strictement plus grande.|
@@ -151,6 +153,7 @@ En langage C, les **opérateurs logiques** servent à combiner plusieurs conditi
 On a 3 opérateurs logiques && (ET), || (OU), ! (NON) :
 
 |Opérateur	|Nom	|Description	|Exemple|
+|-----------|-------|---------------|-------|
 |&&	|ET (AND)	|Vrai si toutes les conditions sont vraies.	|if (temp > 25 && ventilateur == OFF)|
 |||	|OU (OR)	|Vrai si au moins une condition est vraie.	|if (bouton == PRESSED || urgence == 1)|
 |!	|NON (NOT)	|Inverse l'état de la condition (Vrai devient Faux).	|if (!systeme_pret) (Si le système n'est PAS prêt)|
