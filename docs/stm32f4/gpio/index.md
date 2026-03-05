@@ -24,7 +24,7 @@ Ces registres sont de 32 bits.
 ---
 <br>
 
-**Configuration d'une Sortie (LED sur PC13)**
+### **Configuration d'une Sortie (LED sur PC13)**
 
 Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :
 
@@ -75,11 +75,12 @@ Problème ici est que : Pendant le temps de la boucle `for`, le processeur ne pe
 ### **Gestion des Entrées/Sorties dans une Tâche**
 
 Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.
+
 Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace for(delay) par vTaskDelay().
 
 ```c
 void vTaskBlink(void *pvParameters) {
-    // Configuration Bare Metal de PC13
+    // Configuration de PC13
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
     GPIOC->MODER |= (1 << (13 * 2));
 
@@ -159,7 +160,7 @@ Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d
 <br>
 
 
-### **[Système de Contrôle de LED avec Anti-rebond et File de Messages]** {#projet-gpio-interrupt-freertos}
+### [Système de Contrôle de LED avec Anti-rebond et File de Messages]{#projet-gpio-interrupt-freertos}
 
   
 Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.
