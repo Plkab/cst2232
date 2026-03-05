@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/ressources/configRtosKiel/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>configRtosKiel - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Configuration FreeRTOS pour STM32F4 sous Keil - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,17 +53,244 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#configuration-freertos-pour-stm32f4-sous-keil" class="nav-link">Configuration FreeRTOS pour STM32F4 sous Keil</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#gestion-du-tick-systick_handler" class="nav-link">Gestion du tick (SysTick_Handler) :</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#gestion-des-autres-interruptions" class="nav-link">Gestion des autres interruptions :</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#resolution-des-problemes-courants" class="nav-link">Résolution des problèmes courants</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# Configuration FreeRTOS pour STM32F4 sous Keil" </p>
+<h1 id="configuration-freertos-pour-stm32f4-sous-keil">Configuration FreeRTOS pour STM32F4 sous Keil</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
+<p><a href="../../#Accueil">Accueil</a></p>
 <p><br>
-<a href="../#Acceuil">Acceuil</a></p>
-<p><br>
-<br></p></div>
+<br></p>
+<p>Voici un guide pas-à-pas pour intégrer manuellement FreeRTOS dans un projet Keil pour le STM32F401CCU6.</p>
+<h3 id="telechargement-et-organisation-des-sources"><strong>Téléchargement et organisation des sources</strong></h3>
+<ul>
+<li>Télécharge la dernière version de FreeRTOS depuis le <a href="https://www.freertos.org/">site officiel</a>.</li>
+<li>Crée dans le projet Keil un dossier FreeRTOS/ à la racine.</li>
+<li>Copie les dossiers suivants depuis l'archive téléchargée vers FreeRTOS/ :<ul>
+<li>Source/include (tous les en-têtes)</li>
+<li>Source/portable (uniquement les sous-dossiers MemMang et RVDS/ARM_CM4F) </li>
+<li>Source/*.c (tous les fichiers .c de la racine de Source/)</li>
+</ul>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="configuration-de-lenvironnement-keil"><strong>Configuration de l'environnement Keil</strong></h3>
+<ul>
+<li>
+<p>Ajoute les fichiers au projet :</p>
+<ul>
+<li>Crée deux nouveaux groupes : FreeRTOS_CORE et FreeRTOS_PORT.</li>
+<li>
+<p>Dans FreeRTOS_CORE, ajoute tous les fichiers .c de FreeRTOS/Source/ (sauf ceux dans portable/).</p>
+</li>
+<li>
+<p>Dans FreeRTOS_PORT, ajoute :</p>
+<ul>
+<li>FreeRTOS/Source/portable/MemMang/heap_4.c (le gestionnaire de mémoire recommandé).</li>
+<li>FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c (la couche de portage pour votre processeur avec FPU) .</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Ajoute les chemins d'inclusion :</p>
+<ul>
+<li>Dans les options du projet, allez dans C/C++ &gt; Include Paths</li>
+<li>Ajoute les chemins suivants  :<ul>
+<li>.\FreeRTOS\Source\include</li>
+<li>.\FreeRTOS\Source\portable\RVDS\ARM_CM4F</li>
+<li>Le dossier où on a place FreeRTOSConfig.h (ex: .\User\Config)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="le-fichier-de-configuration-freertosconfigh"><strong>Le fichier de configuration FreeRTOSConfig.h</strong></h3>
+<p>C'est le fichier le plus important. Il définit le comportement du RTOS. On peut partir d'un exemple fourni dans les démos FreeRTOS, par exemple dans FreeRTOS/Demo/CORTEX_M4F_STM32F407ZG-SK/.</p>
+<p>Crée ce fichier dans un dossier Config/ du projet avec le contenu adapté à F401. Voici une version épurée et commentée avec les paramètres essentiels :</p>
+<pre><code class="language-c">#ifndef FREERTOS_CONFIG_H
+#define FREERTOS_CONFIG_H
+
+/*-----------------------------------------------------------
+ * Application spécifique
+ *----------------------------------------------------------*/
+#define configUSE_PREEMPTION                    1               // 1 = Préemptif, 0 = Coopératif [citation:4][citation:9]
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 1               // 1 = Sélection optimisée (utilise l'instruction CLZ du Cortex-M4) [citation:4]
+#define configCPU_CLOCK_HZ                      84000000        // Fréquence du CPU (84 MHz pour le F401) [citation:4]
+#define configTICK_RATE_HZ                       1000            // Tick à 1kHz (1ms) pour HAL_IncTick() [citation:4][citation:8]
+#define configMAX_PRIORITIES                     32              // Nombre maximum de priorités [citation:4]
+#define configMINIMAL_STACK_SIZE                 128             // Taille de pile minimale (en mots) [citation:4]
+#define configTOTAL_HEAP_SIZE                    (15 * 1024)     // Taille totale du heap pour malloc (15 Ko pour un F401 avec 64 Ko de RAM) [citation:4]
+#define configMAX_TASK_NAME_LEN                   16             // Longueur max du nom des tâches [citation:4]
+#define configUSE_16_BIT_TICKS                     0             // 0 = tick sur 32 bits, 1 = sur 16 bits [citation:4]
+#define configIDLE_SHOULD_YIELD                     1             // L'idle laisse la main aux tâches de même priorité [citation:4]
+#define configUSE_MUTEXES                           1             // Activer les Mutex [citation:4]
+#define configUSE_RECURSIVE_MUTEXES                 1             // Activer les Mutex récursifs [citation:4]
+#define configUSE_COUNTING_SEMAPHORES               1             // Activer les sémaphores compteurs [citation:4]
+#define configUSE_QUEUE_SETS                        1             // Activer les Queue Sets [citation:4]
+#define configUSE_TASK_NOTIFICATIONS                 1             // Activer les notifications de tâches [citation:4]
+#define configSUPPORT_DYNAMIC_ALLOCATION             1             // 1 = Allocation dynamique activée [citation:4]
+#define configSUPPORT_STATIC_ALLOCATION              0             // 0 = Allocation statique désactivée (pour simplifier)
+#define configUSE_IDLE_HOOK                          0             // Désactiver les hooks inutilisés [citation:3][citation:4][citation:9]
+#define configUSE_TICK_HOOK                          0
+#define configCHECK_FOR_STACK_OVERFLOW               0
+#define configUSE_MALLOC_FAILED_HOOK                 0
+#define configUSE_TRACE_FACILITY                     1             // Nécessaire pour certaines fonctions de stats
+#define configUSE_STATS_FORMATTING_FUNCTIONS         1             // Pour vTaskList() et vTaskGetRunTimeStats()
+#define configGENERATE_RUN_TIME_STATS                0             // Génération de stats (nécessite un timer)
+#define configUSE_CO_ROUTINES                         0             // Pas de coroutines
+#define configUSE_TIMERS                             1             // Activer les timers logiciels [citation:4]
+#define configTIMER_TASK_PRIORITY          (configMAX_PRIORITIES-1) // Priorité max pour la tâche des timers
+#define configTIMER_QUEUE_LENGTH                     10
+#define configTIMER_TASK_STACK_DEPTH         (configMINIMAL_STACK_SIZE * 2)
+
+/*-----------------------------------------------------------
+ * Inclusions des fonctions API optionnelles
+ *----------------------------------------------------------*/
+#define INCLUDE_vTaskPrioritySet                1
+#define INCLUDE_uxTaskPriorityGet                1
+#define INCLUDE_vTaskDelete                     1
+#define INCLUDE_vTaskSuspend                     1
+#define INCLUDE_xTaskGetSchedulerState           1
+#define INCLUDE_vTaskDelayUntil                   1
+#define INCLUDE_vTaskDelay                        1
+#define INCLUDE_eTaskGetState                     1
+#define INCLUDE_xTimerPendFunctionCall            1
+
+/*-----------------------------------------------------------
+ * Définitions liées aux interruptions (crucial pour le bare metal)
+ *----------------------------------------------------------*/
+#ifdef __NVIC_PRIO_BITS
+    #define configPRIO_BITS       __NVIC_PRIO_BITS
+#else
+    #define configPRIO_BITS       4                   // 4 bits de priorité pour le STM32F4 [citation:4]
+#endif
+
+#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY         15          // Priorité la plus basse
+#define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    5           // Priorité max autorisée pour les appels depuis une ISR [citation:4]
+
+#define configKERNEL_INTERRUPT_PRIORITY         ( configLIBRARY_LOWEST_INTERRUPT_PRIORITY &lt;&lt; (8 - configPRIO_BITS) )
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY &lt;&lt; (8 - configPRIO_BITS) )
+
+/*-----------------------------------------------------------
+ * Aliases pour les handlers d'interruptions (Keil/ARMCC)
+ *----------------------------------------------------------*/
+#define xPortPendSVHandler  PendSV_Handler
+#define vPortSVCHandler     SVC_Handler
+#define xPortSysTickHandler SysTick_Handler
+
+#endif /* FREERTOS_CONFIG_H */
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="modification-des-fichiers-systeme"><strong>Modification des fichiers système</strong></h3>
+<p>FreeRTOS doit etre intégre au gestion de temps et d'interruptions.</p>
+<ul>
+<li>Dans le startup_stm32f401xx.s : assure-toi que les handlers SVC_Handler, PendSV_Handler et SysTick_Handler sont bien présents dans la table des vecteurs. Ils seront redéfinis par FreeRTOS via les alias de FreeRTOSConfig.h.</li>
+<li>Dans votre fichier principal (ex: main.c) :<ul>
+<li>Inclue "FreeRTOS.h" et "task.h".</li>
+<li>Écrive les tâches.</li>
+<li>Lance le scheduler avec <em>vTaskStartScheduler()</em>.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+
+// Prototypes des tâches
+void vTask1(void *pvParameters);
+void vTask2(void *pvParameters);
+
+int main(void)
+{
+    // Configuration matérielle basique (horloges, GPIO, etc.)
+    // ... (le code bare metal)
+
+    // Création des tâches
+    xTaskCreate(vTask1, &quot;Task 1&quot;, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    xTaskCreate(vTask2, &quot;Task 2&quot;, configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+
+    // Lancement du scheduler
+    vTaskStartScheduler();
+
+    // Ne devrait jamais arriver
+    while(1);
+}
+
+void vTask1(void *pvParameters)
+{
+    for(;;) {
+        // Code de la tâche 1
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Attend 1 seconde
+    }
+}
+
+void vTask2(void *pvParameters)
+{
+    for(;;) {
+        // Code de la tâche 2
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h2 id="gestion-du-tick-systick_handler"><strong>Gestion du tick (SysTick_Handler)</strong> :</h2>
+<p>On doit écrire notre propre handler SysTick_Handler qui appelle la fonction de tick de FreeRTOS, et éventuellement notre propre incrémenteur de tick si on en a besoin.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+
+extern void xPortSysTickHandler(void);
+
+void SysTick_Handler(void)
+{
+    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
+        xPortSysTickHandler(); // Donne le tick à FreeRTOS
+    }
+    // 
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h2 id="gestion-des-autres-interruptions"><strong>Gestion des autres interruptions :</strong></h2>
+<p>Si on utilise des périphériques avec interruptions, écrit les handlers normalement. Si une interruption doit réveiller une tâche, utilisez les fonctions FromISR de FreeRTOS (comme <em>xSemaphoreGiveFromISR()</em>) en respectant les priorités définies dans FreeRTOSConfig.h .</p>
+<hr />
+<p><br></p>
+<h2 id="resolution-des-problemes-courants"><strong>Résolution des problèmes courants</strong></h2>
+<ul>
+<li><strong>Erreur "FreeRTOSConfig.h not found"</strong> : Vérifie tes chemins d'inclusion.</li>
+<li><strong>Erreurs de liens "multiple definition"</strong> : Commente ou supprime les handlers SVC_Handler, PendSV_Handler et SysTick_Handler de ton fichier startup_*.s ou de tout autre fichier où ils seraient définis. FreeRTOS fournit les siens via les alias dans FreeRTOSConfig.h .</li>
+<li><strong>Le système ne démarre pas, ou une seule tâche s'exécute :</strong><ul>
+<li>Vérifiez que SysTick_Handler est correctement implémenté et appelle xPortSysTickHandler().</li>
+<li>Assures-toi que la fonction vApplicationIdleHook() n'est pas requise (si configUSE_IDLE_HOOK est à 0).</li>
+<li>Vérifie que tu n'avais pas d'interruption de plus haute priorité qui bloque le tick .</li>
+</ul>
+</li>
+<li><strong>Problèmes de mémoire</strong> : Ajuste la taille du configTOTAL_HEAP_SIZE. Pour un F401 avec 64 Ko de RAM, commence avec 15-20 Ko et ajuste selon tes besoins.</li>
+</ul></div>
             </div>
         </div>
 
