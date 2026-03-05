@@ -20,7 +20,7 @@ Un **microcontrôleur (MCU)** est un circuit intégré qui rassemble sur une seu
 
 On parle de **système sur puce (SoC, System-on-Chip)**. Le microcontrôleur est conçu pour contrôler un système spécifique en temps réel, avec un minimum de composants externes.
 
-**Les trois éléments clés** :
+**Les trois éléments importants** :
 
 - **Mémoire Flash (ROM)** : stocke le code programme (firmware) de manière non volatile. C'est ici que résident votre application et le noyau FreeRTOS.
 - **Mémoire SRAM (RAM)** : stocke les variables, la pile et les données temporaires pendant l'exécution. Elle est volatile.
@@ -50,7 +50,10 @@ Le manuel de référence pour le [STM32F401x](https://www.st.com/resource/en/dat
     - 256 Ko de mémoire Flash
     - 64 Ko de RAM
  
-  
+ ![Architecture de STM32F401](archi1.webp){ align=center } 
+
+![Schéma électrique du STM32F401CCU6](pin_stm32f401ccu6.png){ align=center }
+
 ---
 <br>
 
@@ -128,6 +131,8 @@ Le DMA permet de transférer des données entre périphériques et mémoire sans
 
 Le STM32F4 dispose de deux contrôleurs DMA avec plusieurs streams et canaux. Chaque stream peut être configuré avec une priorité, une direction (mémoire → périphérique, périphérique → mémoire, mémoire → mémoire), et des modes circulaires.
 
+![Le controleur DMA](dma.png){ align=center }
+
 Exemple d'utilisation avec ADC :
 
 ```c
@@ -145,8 +150,30 @@ DMA_Stream0->CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 ### **Présentation de la carte de développement utilisée**
 
 La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse ([environ 10$](https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/)) et très répandue dans le monde de l'embarqué.
+![La carte Black Pill](board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg){ align=center }
 
 Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 ([environ 6$](https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/)). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
+![L'Outil ST-LINK](st-link.jpg){ align=center }
+
+**Les broches de ST-LINK/V2** : 
+
+- Les broches SWDIO
+- SWCLK
+- GND
+- 3.3V
+- Parfois RST
+
+![La carte Black Pill](Broches_STM32-F401-CCU6-MOD-005.jpg){ align=center }
+
+
+**Le câblage minimal**:
+
+ST-Link      Black Pill
+-------------------------
+SWDIO   →    PA13
+SWCLK   →    PA14
+GND     →    GND
+3.3V    →    3.3V
 
 
 ---
