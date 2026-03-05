@@ -79,7 +79,7 @@
 <p>Ces registres sont de 32 bits.</p>
 <hr />
 <p><br></p>
-<p><strong>Configuration d'une Sortie (LED sur PC13)</strong></p>
+<h3 id="configuration-dune-sortie-led-sur-pc13"><strong>Configuration d'une Sortie (LED sur PC13)</strong></h3>
 <p>Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :</p>
 <ul>
 <li>Activer l'horloge du port (RCC) : Sans énergie, le périphérique ne répond pas. Exemple : RCC_AHB1ENR</li>
@@ -120,10 +120,10 @@ void main(void) {
 <hr />
 <p><br></p>
 <h3 id="gestion-des-entreessorties-dans-une-tache"><strong>Gestion des Entrées/Sorties dans une Tâche</strong></h3>
-<p>Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.
-Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace for(delay) par vTaskDelay().</p>
+<p>Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.</p>
+<p>Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace for(delay) par vTaskDelay().</p>
 <pre><code class="language-c">void vTaskBlink(void *pvParameters) {
-    // Configuration Bare Metal de PC13
+    // Configuration de PC13
     RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
     GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));
 
@@ -181,7 +181,7 @@ void vTaskBouton(void *pvParameters) {
 <p>Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d'une interruption utilisant FreeRTOS doit être numériquement supérieure ou égale à configMAX_SYSCALL_INTERRUPT_PRIORITY (généralement entre 5 et 15). Une priorité de 0 (trop haute) fera planter le noyau.</p>
 <hr />
 <p><br></p>
-<h3 id="projet-gpio-interrupt-freertos"><strong>[Système de Contrôle de LED avec Anti-rebond et File de Messages]</strong></h3>
+<h3 id="systeme-de-controle-de-led-avec-anti-rebond-et-file-de-messagesprojet-gpio-interrupt-freertos">[Système de Contrôle de LED avec Anti-rebond et File de Messages]{#projet-gpio-interrupt-freertos}</h3>
 <p>Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.</p>
 <p><strong>Cahier des Charges</strong></p>
 <ol>
