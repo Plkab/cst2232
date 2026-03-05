@@ -56,10 +56,6 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#presentation-architecturale-du-microcontroleur-stm32f4" class="nav-link">Présentation architecturale du Microcontrôleur STM32F4</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#st-link-black-pill" class="nav-link">ST-Link Black Pill</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
               </ul>
             </li>
         </ul>
@@ -166,7 +162,7 @@
 <li>Remplir un buffer audio en double buffer (ping-pong).</li>
 </ul>
 <p>Le STM32F4 dispose de deux contrôleurs DMA avec plusieurs streams et canaux. Chaque stream peut être configuré avec une priorité, une direction (mémoire → périphérique, périphérique → mémoire, mémoire → mémoire), et des modes circulaires.</p>
-<p><img align="center" alt="Le controleur DMA" src="dma.png" width="400," /></p>
+<p><img align="center" alt="Le controleur DMA" src="dma.png" width="500," /></p>
 <p>Exemple d'utilisation avec ADC :</p>
 <pre><code class="language-c">// Configuration du DMA pour l'ADC1
 DMA_Stream0-&gt;PAR = (uint32_t)&amp;ADC1-&gt;DR;      // Périphérique
@@ -177,10 +173,10 @@ DMA_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 <hr />
 <p><br></p>
 <h3 id="presentation-de-la-carte-de-developpement-utilisee"><strong>Présentation de la carte de développement utilisée</strong></h3>
-<p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (<a href="https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/">environ 10$</a>) et très répandue dans le monde de l'embarqué.
-<img align="center" alt="La carte Black Pill" src="board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg" width="200," /></p>
-<p>Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (<a href="https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/">environ 6$</a>). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
-<img align="center" alt="L'Outil ST-LINK" src="st-link.jpg" width="200," /></p>
+<p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (<a href="https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/">environ 10$</a>) et très répandue dans le monde de l'embarqué.</p>
+<p><img align="center" alt="La carte Black Pill" src="board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg" width="250," /></p>
+<p>Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (<a href="https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/">environ 6$</a>). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.</p>
+<p><img align="center" alt="L'Outil ST-LINK" src="st-link.jpg" width="250," /></p>
 <p><strong>Les broches de ST-LINK/V2</strong> : </p>
 <ul>
 <li>Les broches SWDIO</li>
@@ -189,13 +185,34 @@ DMA_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 <li>3.3V</li>
 <li>Parfois RST</li>
 </ul>
-<p><img align="center" alt="La carte Black Pill" src="Broches_STM32-F401-CCU6-MOD-005.jpg" /></p>
-<p><strong>Le câblage minimal</strong>:</p>
-<h2 id="st-link-black-pill">ST-Link      Black Pill</h2>
-<p>SWDIO   →    PA13
-SWCLK   →    PA14
-GND     →    GND
-3.3V    →    3.3V</p>
+<p><img align="center," alt="La carte Black Pill" src="Broches_STM32-F401-CCU6-MOD-005.jpg" width="500" /></p>
+<p><strong>Connexions entre ST-Link et Black Pill :</strong></p>
+<table>
+<thead>
+<tr>
+<th>ST-Link</th>
+<th>Black Pill</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SWDIO</td>
+<td>PA13</td>
+</tr>
+<tr>
+<td>SWCLK</td>
+<td>PA14</td>
+</tr>
+<tr>
+<td>GND</td>
+<td>GND</td>
+</tr>
+<tr>
+<td>3.3V</td>
+<td>3.3V</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <p><br></p>
 <h3 id="lien-connexe">Lien connexe</h3>

@@ -50,7 +50,7 @@ Le manuel de référence pour le [STM32F401x](https://www.st.com/resource/en/dat
     - 256 Ko de mémoire Flash
     - 64 Ko de RAM
  
- ![Architecture de STM32F401](archi1.webp){ align=center } 
+![Architecture de STM32F401](archi1.webp){ align=center } 
 
 ![Schéma électrique du STM32F401CCU6](pin_stm32f401ccu6.png){ align=center }
 
@@ -155,7 +155,7 @@ La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte pe
 
 Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 ([environ 6$](https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/)). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
 
-![L'Outil ST-LINK](st-link.jpg){ width=250, align=center }
+![L'Outil ST-LINK](st-link.jpg){ align=center, width=250 }
 
 **Les broches de ST-LINK/V2** : 
 
@@ -165,7 +165,7 @@ Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK
 - 3.3V
 - Parfois RST
 
-![La carte Black Pill](Broches_STM32-F401-CCU6-MOD-005.jpg){ align=center, width=500 }
+![La carte Black Pill](Broches_STM32-F401-CCU6-MOD-005.jpg){ align=center, width=800 }
 
 
 **Connexions entre ST-Link et Black Pill :**
