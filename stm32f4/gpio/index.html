@@ -70,8 +70,68 @@
 <p><br>
 <br></p>
 <h3 id="gpio"><strong>GPIO</strong></h3>
+<p>Les GPIO (General Purpose Input-Output) est un phreipherique d'entree - sortie numerique. le STM32F4 possede 7 ports nommees (GPIOA, GPIOB, etc.). Chaque GPIOx possede ses propres registres de configuration. on a :</p>
+<ul>
+<li><strong>MODER</strong> : Définit la direction (00: Entrée, 01: Sortie).</li>
+<li><strong>IDR / ODR</strong> : Lecture (Input) et Écriture (Output).</li>
+<li><strong>BSRR</strong> : Modification atomique (Set/Reset) sans lire le registre au préalable (plus sûr en multitâche).</li>
+</ul>
+<h3 id="gestion-des-entreessorties-dans-une-tache"><strong>Gestion des Entrées/Sorties dans une Tâche</strong></h3>
+<p>Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.</p>
+<pre><code class="language-c">void vTaskBlink(void *pvParameters) {
+    // Configuration Bare Metal de PC13
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));
+
+    for (;;) {
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);           // Toggle LED
+        vTaskDelay(pdMS_TO_TICKS(500));    // Délai non-bloquant de 500ms
+    }
+}
+</code></pre>
+<p><strong>Les Interruptions Externes (EXTI)</strong></p>
+<p>L'interruption est le moyen le plus efficace pour réagir à un événement asynchrone (appui bouton, capteur). Sur STM32F4, elle nécessite :
+- L'activation de l'horloge <code>SYSCFG</code>.
+- Le multiplexage de la ligne EXTI vers le port souhaité.
+- La configuration du front (montant/descendant).
+- L'activation dans le <code>NVIC</code>.</p>
+<p><strong>Synchronisation ISR vers Tâche (Sémaphore)</strong></p>
+<p>C'est le concept le plus important est que l'interruption ne doit pas traiter la donnée, elle doit simplement "réveiller" une tâche de traitement. On utilise un <strong><a href="../rtos/#Semaphores">Sémaphore Binaire</a></strong>.</p>
+<p>A. Le Handler d'Interruption (ISR)</p>
+<pre><code class="language-c">void EXTI0_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+
+    if (EXTI-&gt;PR &amp; EXTI_PR_PR0) {    // Vérifie le flag EXTI0
+        EXTI-&gt;PR = EXTI_PR_PR0;      // Acquitte l'interruption
+
+        // Débloque la tâche associée
+        xSemaphoreGiveFromISR(xSemBouton, &amp;xWoken);
+
+        // Force le changement de contexte immédiat
+        portYIELD_FROM_ISR(xWoken);
+    }
+}
+</code></pre>
+<p>B. La Tâche de Traitement</p>
+<pre><code class="language-c">void vTaskBouton(void *pvParameters) {
+    for (;;) {
+        // Attend le sémaphore indéfiniment (0% CPU en attente)
+        if (xSemaphoreTake(xSemBouton, portMAX_DELAY) == pdPASS) {
+            // Traitement lourd ici (ex: envoyer un message UART)
+            Action_Apres_Appui();
+        }
+    }
+}
+</code></pre>
+<ol>
+<li>Règles d'Or des Interruptions sous FreeRTOS</li>
+</ol>
+<hr />
+<p><br></p>
 <h3 id="lien-connexe">Lien connexe</h3>
-<p><a href="../stm32f4/gpio/index.md">GPIO et Interruptions</a></p></div>
+<ul>
+<li><a href="stm32f4/timer/index.md">Timer et Interruption</a></li>
+</ul></div>
             </div>
         </div>
 

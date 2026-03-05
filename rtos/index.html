@@ -256,7 +256,7 @@ void main(void) {
 <li>Premier appel : vTaskDelayUntil attendra que xLastWakeTime + xPeriod soit atteint. La première exécution effective aura donc lieu après une période complète.</li>
 <li>Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.</li>
 </ul>
-<h4 id="synchronisation-par-semaphores-xsemaphore"><strong>Synchronisation par Sémaphores (xSemaphore)</strong></h4>
+<h4 id="synchronisation-par-semaphores-xsemaphore"><strong id="Semaphores">Synchronisation par Sémaphores (xSemaphore)</strong></h4>
 <p>Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle.</p>
 <p><strong>Le Mutex (Le type de sémaphore pour les ressources partagées)</strong></p>
 <p>Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex (MUTual EXclusion) agit comme un jeton, une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.</p>
