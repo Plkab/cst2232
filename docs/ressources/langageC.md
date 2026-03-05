@@ -470,6 +470,8 @@ int main(void) {
 
 Les avantages de cette méthode est que l'on a un code réutilisable, on peut copier ces fichiers dans n'importe quel projet. Le code est facilement maintenable si on change de pin (ex: de PC13 à PA5), on ne modifie que le fichier led.h. On a aussi une clarté, le main.c ne contient que la logique applicative, pas les détails techniques des registres.
 
+---
+<br>
 
 ### Lien connexe
 
