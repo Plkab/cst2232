@@ -85,7 +85,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 - [Datasheet de STM32F401x](https://www.st.com/resource/en/datasheet/stm32f401re.pdf)
 - [Manuel de Références pour Cortex-M](ressources/rfm2.md)
 - [The FreeRTOS Reference Manual ](https://www.freertos.org/media/2018/FreeRTOS_Reference_Manual_V10.0.0.pdf)
-- [Mastering the FreeRTOS Real Time Kernel par Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf))
+- [Mastering the FreeRTOS Real Time Kernel par Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf)
 - [Création Projet sous Keil uVision](ressources/demarrerKiel.md)
 - [Configuration FreeRTOS ous Kiel pour STM32F4](ressources/configRtosKiel.md)
 - [Introduction au Langage C embarqué](ressources/langageC.md)
