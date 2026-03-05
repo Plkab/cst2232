@@ -58,11 +58,6 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            
-            <li class="nav-item" data-bs-level="1"><a href="#include-stm32f401xeh" class="nav-link">include "stm32f401xe.h"</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
         </ul>
     </div>
 </div></div>
@@ -80,7 +75,9 @@
 <li>Dans le menu, allez dans Project → New uVision Project....</li>
 <li>Choisissez un dossier de destination pour votre projet (par exemple, un dossier Blink/) et donnez un nom à votre projet (par exemple, Blink). Cliquez sur Save.</li>
 </ul>
-<h3 id="etape-2-selectionner-le-microcontroleur-cible">** Étape 2 : Sélectionner le microcontrôleur cible**</h3>
+<hr />
+<p><br></p>
+<h3 id="etape-2-selectionner-le-microcontroleur-cible"><strong>Étape 2 : Sélectionner le microcontrôleur cible</strong></h3>
 <ul>
 <li>Une fenêtre "Select Device for Target" s'ouvre.</li>
 <li>Dans la barre de recherche, tapez "STM32F401CC".</li>
@@ -89,7 +86,9 @@
 <p>Note : La première fois que vous sélectionnez un microcontrôleur de cette famille, Keil vous proposera d'installer les packs (Packs Installer). Acceptez pour télécharger et installer le pack Keil::STM32F4xx_DFP (Device Family Pack) si ce n'est pas déjà fait. Cela ajoutera tous les fichiers de définition (SVD, Flash, etc.) et les exemples nécessaires.</p>
 </li>
 </ul>
-<h3 id="etape-3-gerer-les-run-time-environment-rte">** Étape 3 : Gérer les "Run-Time Environment" (RTE)**</h3>
+<hr />
+<p><br></p>
+<h3 id="etape-3-gerer-les-run-time-environment-rte"><strong>Étape 3 : Gérer les "Run-Time Environment" (RTE)</strong></h3>
 <p>Après avoir sélectionné le microcontrôleur, la fenêtre "Manage Run-Time Environment" s'ouvre. C'est là que vous choisissez les composants logiciels à inclure. Pour notre approche bare metal sans HAL, vous allez décocher la plupart des options.</p>
 <ul>
 <li>Dans l'onglet "Software Components", désactivez l'option "CMSIS::CORE" ? Non, il faut le garder. Le CMSIS (Cortex Microcontroller Software Interface Standard) fournit les définitions de base pour accéder aux registres du Cortex-M. Vous en aurez besoin .</li>
@@ -97,9 +96,13 @@
 <li>Vérifiez que sous "CMSIS", la case "CORE" est bien cochée.</li>
 <li>Cliquez sur OK.</li>
 </ul>
-<h3 id="etape-4-comprendre-la-structure-du-projet">** Étape 4 : Comprendre la structure du projet**</h3>
+<hr />
+<p><br></p>
+<h3 id="etape-4-comprendre-la-structure-du-projet"><strong>Étape 4 : Comprendre la structure du projet</strong></h3>
 <p>Votre projet dans la fenêtre "Project" (à gauche) contient désormais un dossier "Target 1" qui lui-même contient un dossier "Source Group 1". Vous allez maintenant ajouter les fichiers nécessaires.</p>
-<h3 id="etape-5-ajouter-les-fichiers-de-demarrage-startup-et-systeme">** Étape 5 : Ajouter les fichiers de démarrage (Startup) et système**</h3>
+<hr />
+<p><br></p>
+<h3 id="etape-5-ajouter-les-fichiers-de-demarrage-startup-et-systeme"><strong>Étape 5 : Ajouter les fichiers de démarrage (Startup) et système</strong></h3>
 <p>Pour un projet bare metal, vous avez besoin de deux fichiers essentiels, fournis par le pack que vous avez installé.</p>
 <ul>
 <li>
@@ -121,6 +124,8 @@ C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Source\</li>
 </ul>
 </li>
 </ul>
+<hr />
+<p><br></p>
 <h3 id="etape-6-ajouter-les-fichiers-den-tete-cmsis"><strong>Étape 6 : Ajouter les fichiers d'en-tête CMSIS</strong></h3>
 <p>Le fichier system_stm32f4xx.c a besoin de fichiers d'en-tête pour compiler. Le plus important est stm32f401xe.h (ou un nom similaire), qui contient les définitions de tous les registres.</p>
 <ul>
@@ -131,57 +136,62 @@ C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Source\</li>
 C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
 (Remplacez <version> par le numéro de version que vous avez installé, par exemple 2.16.0).</li>
 </ul>
+<hr />
+<p><br></p>
 <h3 id="etape-7-creer-votre-fichier-source-principal"><strong>Étape 7 : Créer votre fichier source principal</strong></h3>
 <ul>
 <li>Créez un nouveau fichier dans Keil : File → New.</li>
 <li>Enregistrez-le immédiatement dans votre dossier de projet (à côté de votre .uvprojx) en lui donnant un nom, par exemple main.c.</li>
-<li>
-<p>Écrivez votre code "bare metal". Voici un exemple minimal qui fait clignoter la LED sur la carte Black Pill (généralement sur la broche PC13) :</p>
-<p>```c</p>
-<h1 id="include-stm32f401xeh">include "stm32f401xe.h"</h1>
-<p>// Fonction de délai simple (dépend de la vitesse CPU)
-void delay(volatile uint32_t count) {
-    while(count--) {
-        __NOP(); // No Operation, pour éviter que l'optimisation ne supprime la boucle
-    }
-}</p>
-<p>int main(void) {
-    // 1. Activer l'horloge sur le port C (où se trouve la LED)
-    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;</p>
-<pre><code>// 2. Configurer PC13 en sortie push-pull
-// MODER : 00=Entrée, 01=Sortie, 10=Fonction Alternée, 11=Analogique
-GPIOC-&gt;MODER &amp;= ~(3U &lt;&lt; (13 * 2));  // Reset des 2 bits de la broche 13
-GPIOC-&gt;MODER |=  (1U &lt;&lt; (13 * 2));  // Mise à 01 (Sortie standard)
-
-// OTYPER : 0=Push-Pull (standard), 1=Open-Drain
-GPIOC-&gt;OTYPER &amp;= ~(1U &lt;&lt; 13);       // Force en Push-Pull
-
-while(1) {
-    // Allumer la LED (Sur la Black Pill, PC13 est reliée à la masse)
-    // On écrit dans le registre BSRR (Bit Set Reset Register)
-    // BR13 (Bit Reset) met la sortie à 0V -&gt; La LED s'allume
-    GPIOC-&gt;BSRR = (1U &lt;&lt; (13 + 16)); 
-    delay(1000000);
-
-    // Éteindre la LED
-    // BS13 (Bit Set) met la sortie à 3.3V -&gt; La LED s'éteint
-    GPIOC-&gt;BSRR = (1U &lt;&lt; 13); 
-    delay(1000000);
-}
-</code></pre>
-<p>}
-```</p>
-</li>
-<li>
-<p>Ajoutez ce main.c à votre "Source Group 1" en utilisant "Add Existing Files...".</p>
-</li>
+<li>Écrivez votre code "bare metal". Voici un exemple minimal qui fait clignoter la LED sur la carte Black Pill (généralement sur la broche PC13) :</li>
 </ul>
-<h3 id="etape-8-compiler-televerser-et-tester">**Étape 8 : Compiler, téléverser et tester</h3>
+<pre><code class="language-c">    #include &quot;stm32f401xe.h&quot;
+
+    // Fonction de délai simple (dépend de la vitesse CPU)
+    void delay(volatile uint32_t count) {
+        while(count--) {
+            __NOP(); // No Operation, pour éviter que l'optimisation ne supprime la boucle
+        }
+    }
+
+    int main(void) {
+        // 1. Activer l'horloge sur le port C (où se trouve la LED)
+        RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+
+        // 2. Configurer PC13 en sortie push-pull
+        // MODER : 00=Entrée, 01=Sortie, 10=Fonction Alternée, 11=Analogique
+        GPIOC-&gt;MODER &amp;= ~(3U &lt;&lt; (13 * 2));  // Reset des 2 bits de la broche 13
+        GPIOC-&gt;MODER |=  (1U &lt;&lt; (13 * 2));  // Mise à 01 (Sortie standard)
+
+        // OTYPER : 0=Push-Pull (standard), 1=Open-Drain
+        GPIOC-&gt;OTYPER &amp;= ~(1U &lt;&lt; 13);       // Force en Push-Pull
+
+        while(1) {
+            // Allumer la LED (Sur la Black Pill, PC13 est reliée à la masse)
+            // On écrit dans le registre BSRR (Bit Set Reset Register)
+            // BR13 (Bit Reset) met la sortie à 0V -&gt; La LED s'allume
+            GPIOC-&gt;BSRR = (1U &lt;&lt; (13 + 16)); 
+            delay(1000000);
+
+            // Éteindre la LED
+            // BS13 (Bit Set) met la sortie à 3.3V -&gt; La LED s'éteint
+            GPIOC-&gt;BSRR = (1U &lt;&lt; 13); 
+            delay(1000000);
+        }
+    }
+</code></pre>
+<ul>
+<li>Ajoutez ce main.c à votre "Source Group 1" en utilisant "Add Existing Files...".</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="etape-8-compiler-televerser-et-tester"><strong>Étape 8 : Compiler, téléverser et tester</strong></h3>
 <ul>
 <li>Compilez votre projet : Project → Build target (ou la touche F7).</li>
 <li>Si la compilation est réussie, téléversez le code sur la carte : Flash → Download (ou la touche F8).</li>
 <li>Si vous avez coché "Reset and Run", la LED sur PC13 devrait se mettre à clignoter. Sinon, appuyez sur le bouton reset de la carte.</li>
 </ul>
+<hr />
+<p><br></p>
 <h3 id="structure-finale-de-votre-projet"><strong>Structure finale de votre projet</strong></h3>
 <p>Votre projet Keil devrait maintenant ressembler à ceci dans la fenêtre "Project" :</p>
 <p><code>py
