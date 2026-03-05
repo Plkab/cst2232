@@ -327,25 +327,33 @@ int main(void) {
     while(1);
 }
 </code></pre>
-<p><strong>La Phase d'Initialisation (L'Installation de l'usine)</strong>
-Dans la fonction Prv_SetupHardware, nous préparons le terrain en Bare Metal.
-- Les Horloges (RCC) : On active l'électricité pour les ports A et C. Sans cela, les registres restent "morts".
-- Le Mode (MODER) : On dit à la broche PC13 d'être une sortie (pour la LED) et à PA0 d'être une entrée (pour le bouton).
-- L'Interruption (EXTI &amp; NVIC) : On configure le matériel pour qu'il surveille tout seul la pin PA0. Le NVIC est le "vigile" qui autorise cette interruption à stopper le processeur.</p>
-<p><strong>L'Interruption : Le "Signal de Réveil"</strong>
-La fonction EXTI0_IRQHandler est déclenchée instantanément par le matériel dès que vous appuyez sur le bouton.
-- Pourquoi est-elle courte ? Elle ne fait qu'une chose : "donner un jeton" au sémaphore (xSemaphoreGiveFromISR).
-- Le passage de témoin : Elle réveille la tâche vTaskBouton qui dormait, puis s'arrête. Le processeur n'est resté bloqué dans l'interruption que quelques microsecondes.</p>
-<p><strong>La Tâche "Lecteur" : Le Filtrage Intelligent</strong>
-C'est ici que la magie de FreeRTOS opère.
-- L'attente efficace : xSemaphoreTake met la tâche en sommeil profond (0% CPU) tant que le bouton n'est pas touché.
-- Le Debounce (Anti-rebond) : Quand elle se réveille, elle attend 20ms avec vTaskDelay. Pendant ce temps, FreeRTOS peut faire autre chose !
-- La Lecture réelle (IDR) : Après le délai, on vérifie via le registre IDR si le bouton est toujours pressé. Cela permet d'ignorer les parasites électriques (étincelles de contact).
-- Le Message : Si l'appui est confirmé, elle envoie un "ordre" dans la file (xQueueSend).</p>
-<p><strong>La Tâche "Actionneur" : L'Exécution</strong>
-Cette tâche gère uniquement la LED.
-- Séparation des rôles : Elle ne sait pas qu'il y a un bouton. Elle attend simplement un message dans sa boîte aux lettres (xQueueReceive).
-- L'Écriture (ODR) : Dès qu'elle reçoit un message, elle utilise l'opérateur XOR (^) sur le registre ODR pour inverser l'état de la LED (Toggle).</p>
+<p><strong>La Phase d'Initialisation (L'Installation de l'usine)</strong></p>
+<p>Dans la fonction Prv_SetupHardware, nous préparons le terrain en Bare Metal.</p>
+<ul>
+<li>Les Horloges (RCC) : On active l'électricité pour les ports A et C. Sans cela, les registres restent "morts".</li>
+<li>Le Mode (MODER) : On dit à la broche PC13 d'être une sortie (pour la LED) et à PA0 d'être une entrée (pour le bouton).</li>
+<li>L'Interruption (EXTI &amp; NVIC) : On configure le matériel pour qu'il surveille tout seul la pin PA0. Le NVIC est le "vigile" qui autorise cette interruption à stopper le processeur.</li>
+</ul>
+<p><strong>L'Interruption : Le "Signal de Réveil"</strong></p>
+<p>La fonction EXTI0_IRQHandler est déclenchée instantanément par le matériel dès que vous appuyez sur le bouton.</p>
+<ul>
+<li>Pourquoi est-elle courte ? Elle ne fait qu'une chose : "donner un jeton" au sémaphore (xSemaphoreGiveFromISR).</li>
+<li>Le passage de témoin : Elle réveille la tâche vTaskBouton qui dormait, puis s'arrête. Le processeur n'est resté bloqué dans l'interruption que quelques microsecondes.</li>
+</ul>
+<p><strong>La Tâche "Lecteur" : Le Filtrage Intelligent</strong></p>
+<p>C'est ici que la magie de FreeRTOS opère.</p>
+<ul>
+<li>L'attente efficace : xSemaphoreTake met la tâche en sommeil profond (0% CPU) tant que le bouton n'est pas touché.</li>
+<li>Le Debounce (Anti-rebond) : Quand elle se réveille, elle attend 20ms avec vTaskDelay. Pendant ce temps, FreeRTOS peut faire autre chose !</li>
+<li>La Lecture réelle (IDR) : Après le délai, on vérifie via le registre IDR si le bouton est toujours pressé. Cela permet d'ignorer les parasites électriques (étincelles de contact).</li>
+<li>Le Message : Si l'appui est confirmé, elle envoie un "ordre" dans la file (xQueueSend).</li>
+</ul>
+<p><strong>La Tâche "Actionneur" : L'Exécution</strong></p>
+<p>Cette tâche gère uniquement la LED.</p>
+<ul>
+<li>Séparation des rôles : Elle ne sait pas qu'il y a un bouton. Elle attend simplement un message dans sa boîte aux lettres (xQueueReceive).</li>
+<li>L'Écriture (ODR) : Dès qu'elle reçoit un message, elle utilise l'opérateur XOR (^) sur le registre ODR pour inverser l'état de la LED (Toggle).</li>
+</ul>
 <hr />
 <p><br></p>
 <h3 id="liens-connexe">Liens connexe</h3>

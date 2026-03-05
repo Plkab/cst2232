@@ -160,7 +160,7 @@ Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d
 <br>
 
 
-### [Système de Contrôle de LED avec Anti-rebond et File de Messages]{#projet-gpio-interrupt-freertos}
+### [**Système de Contrôle de LED avec Anti-rebond et File de Messages**] {#projet-gpio-interrupt-freertos}
 
   
 Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.
