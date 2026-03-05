@@ -31,22 +31,22 @@ Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée
 
 Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :
 
-- Activer l'horloge du port (RCC) : Sans énergie, le périphérique ne répond pas. Exemple : RCC_AHB1ENR
-- Configurer le mode (MODER) : Déclarer la broche en "Sortie".
-- Piloter l'état (BSRR/ODR) : Envoyer 0V ou 3.3V.
+- Activer l’horloge du port (RCC) : Sans horloge, le périphérique est inactif. Exemple : RCC_AHB1ENR
+- Configurer la broche en sortie via le registre MODER.
+- Piloter l’état en écrivant dans BSRR ou ODR.
 
 Exemple Pratique : Faire clignoter la LED (PC13)
 
 ```c
-// Code Bare Metal pur (Sans RTOS)
+// Code Sans RTOS
 void main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
-    // 2. PC13 en sortie (Bits 26-27 à 01)
+    // 2. Configurer PC13 en sortie (Bits 26-27 à 01)
     GPIOC->MODER |= (1 << (13 * 2));            // 2. PC13 en Sortie
 
     while(1) {
-        GPIOC->BSRR = (1 << 29);                // LED ON (Reset bit 13)
+        GPIOC->BSRR = (1 << (13 + 16));         // LED ON (Reset bit 13)
         for(int i=0; i<500000; i++);            // Attente logicielle (Bloque le CPU)
         GPIOC->BSRR = (1 << 13);                // LED OFF (Set bit 13)
         for(int i=0; i<500000; i++);
@@ -70,7 +70,9 @@ void main(void) {
 }
 ```
 
-Problème ici est que : Pendant le temps de la boucle `for`, le processeur ne peut rien faire d'autre. Si vous appuyez sur un bouton pendant le `for`, le processeur est trop occupé à compter. Il vous ignore.
+**Problème des boucles `for` :**
+
+Pendant ces attentes, le processeur est totalement occupé à décrémenter un compteur. Si un événement externe survient (appui sur un bouton), il ne pourra pas y réagir avant la fin de la boucle. C'est pourquoi, dans un système temps réel, on préfère des mécanismes non bloquants comme les interruptions ou les délais gérés par un RTOS (par exemple vTaskDelay() sous FreeRTOS).
 
 ---
 <br>
