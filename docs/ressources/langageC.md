@@ -247,7 +247,7 @@ Dans l'embarqué, le processeur ne doit jamais s'arrêter. Les boucles permetten
 
 **Boucle : for**
 
-Idéale quand le nombre de répétitions est connu à l'avance. Sa structure est : for (initialisation ; condition ; incrémentation)
+Idéale quand le nombre de répétitions est connu à l'avance. Sa structure est : `for (initialisation ; condition ; incrémentation)`
 
 Exemple : Parcourir un tableau de données capteurs ou moyenner 10 mesures ADC.
 
@@ -263,7 +263,7 @@ uint32_t moyenne = somme / 10;
 
 **Boucle : do...while**
 
-Contrairement au while, cette boucle exécute le code au moins une fois avant de tester la condition.
+Contrairement au `while`, cette boucle exécute le code au moins une fois avant de tester la condition.
 
 ```c
 uint8_t tentative = 0;
@@ -297,7 +297,9 @@ while (!Signal_Recu && timeout > 0) {
 }
 ```
 
-Pour le flux en embarqué sur STM32, le processeur ne doit jamais s'arrêter, on utilise la boucle infinie while(1). Si le main se termine, le comportement devient imprévisible. On verrouille donc toujours la fin du programme :
+**Boucle infinie : while(1)**
+
+Pour le flux en embarqué sur STM32, le processeur ne doit jamais s'arrêter, on utilise la boucle infinie `while(1)`. Si le main se termine, le comportement devient imprévisible. On verrouille donc toujours la fin du programme :
 
 ```c
 int main(void) {
@@ -317,7 +319,7 @@ int main(void) {
 
 ### **Manipulation de bits (Opérateurs Bitwise)**
 
-Dans la programmation baremetal C, on utilise largement la manipulation des bits Ce sont les outils les plus utilisés pour configurer les registres du microcontrôleur. Contrairement aux opérateurs logiques (&&, ||, !), ceux-ci agissent sur chaque bit individuellement.
+Dans la programmation _baremetal C_, on utilise largement la manipulation des bits Ce sont les outils les plus utilisés pour configurer les registres du microcontrôleur. Contrairement aux opérateurs logiques (&&, ||, !), ceux-ci agissent sur chaque bit individuellement.
 
 - L'operateur **<< (décalage gauche)** permet de positionner un bit à un emplacement précis.
 - L'operateur **>> (décalage droite)** permet de lire la valeur d'un bit spécifique.
@@ -327,21 +329,18 @@ Le	OU (OR)	permet de mettre un ou plusieurs bits à 1 sans modifier les autres.
     // Mettre le bit 13 à 1 (Activer PC13 en sortie)
     GPIOC->MODER |= (1 << 26); 
 ```
-
 - **CLEAR (Mise un bit à 0)** : REG &= ~(1 << 5); (Met le bit 5 à 0).
 Le 	ET (AND) permet de vérifier l'état d'un bit ou le mettre à 0. Et le NON (NOT) souvent utilisé avec & inverse tous les bits.
 ```c
     // Mettre le bit 13 à 0
     GPIOC->ODR &= ~(1 << 13); 
 ```
-
 - **TOGGLE (Basculer un bit)** : REG ^= (1 << 5); (Inverse l'état du bit 5).
 Le OU Exclusif (XOR) permet d'inverser (TOGGLE) l'état d'un bit (ex: faire clignoter une LED).
 ```c
     // Change l'état de la LED à chaque passage
     GPIOC->ODR ^= (1 << 13); 
 ```
-
 - **CHECK (Tester un bit)** : if (REG & (1 << 5)) (Vérifie si le bit 5 est à 1).
 ```c
     // Vérifier si le bouton sur PA0 est pressé (bit 0)
@@ -367,7 +366,7 @@ uint32_t *monPointeur = &variable; // monPointeur contient l'adresse de variable
 *monPointeur = 200; // La "variable" vaut maintenant 200
 ```
 
-Sur STM32, les structures de registres (ex: GPIOA->MODER) sont des pointeurs pointant vers des adresses physiques fixes du processeur.
+Sur STM32, les structures de registres (ex: `GPIOA->MODER`) sont des pointeurs pointant vers des adresses physiques fixes du processeur.
 Toutes fonctions du matériel est mappé en mémoire. Pour configurer le STM32, on crée des pointeurs vers des adresses fixes définies dans la datasheet.
 
 ```c
@@ -377,17 +376,16 @@ Toutes fonctions du matériel est mappé en mémoire. Pour configurer le STM32, 
 GPIOA_MODER |= (1 << 0); // On écrit directement dans le matériel
 ```
 
-on utilise l'opérateur Flèche -> comme un raccourci partout en embarqué (ex: GPIOA->ODR).
-- structure.membre : Accès direct si vous avez la variable.
-- pointeur->membre : Accès si vous avez l'adresse de la structure.
+on utilise l'opérateur Flèche `->` comme un raccourci partout en embarqué (ex: GPIOA->ODR).
+- `structure.membre` : Accès direct si vous avez la variable.
+- `pointeur->membre` : Accès si vous avez l'adresse de la structure.
 
 ---
 <br>
 
 ### **Les Fonctions**
 
-Elles permettent de modulariser le code. Une fonction peut retrourner une valeur par exemple : void (rien), int, uint8_t, etc
-Une fonction peut avoir des donnees entrantes qu'on appele parametre. 
+Elles permettent de modulariser le code. Une fonction peut retrourner une valeur, par exemple : `void` (rien), `int`, `uint8_t`, etc, et peut recevoir des paramètres. 
 
 ```c
 int addition(int a, int b) {
@@ -400,9 +398,9 @@ int addition(int a, int b) {
 
 ### **Bibliotheque**
 
-Lorsqu'on a plusieurs fonction d'un objets (peripheriques) quelconque, on les regroupe dans deux fichiers : le Header (.h) et la Source (.c).
+Lorsqu'on a plusieurs fonctions pour un objet (périphérique) quelconque, on les regroupe dans deux fichiers : le header (`.h`) et la source (`.c`).
 
-**Le fichier Header : led.h (L'interface)**
+**Le fichier Header : `led.h` (L'interface)**
 
 C'est le "menu" de la bibliothèque. Il contient les prototypes des fonctions et les définitions.
 
@@ -425,7 +423,7 @@ void LED_Toggle(void);
 #endif
 ```
 
-**Le fichier Source : led.c (L'implémentation)**
+**Le fichier Source : `led.c` (L'implémentation)**
 
 C'est ici que l'on écrit la "recette" réelle des fonctions en manipulant les registres.
 
@@ -473,3 +471,6 @@ int main(void) {
 Les avantages de cette méthode est que l'on a un code réutilisable, on peut copier ces fichiers dans n'importe quel projet. Le code est facilement maintenable si on change de pin (ex: de PC13 à PA5), on ne modifie que le fichier led.h. On a aussi une clarté, le main.c ne contient que la logique applicative, pas les détails techniques des registres.
 
 
+### Lien connexe
+
+[GPIO et Interruptions](../stm32f4/gpio/index.md)
