@@ -152,11 +152,11 @@ monRegistre.motComplet = 0x12345678;
 En langage C, les **opérateurs logiques** servent à combiner plusieurs conditions entre elles (généralement dans un if, while ou for). Ils renvoient toujours un résultat booléen (Vrai ou Faux).
 On a 3 opérateurs logiques && (ET), || (OU), ! (NON) :
 
-|Opérateur	|Nom	|Description	|Exemple|
-|-----------|-------|---------------|-------|
-|&&	|ET (AND)	|Vrai si toutes les conditions sont vraies.	|if (temp > 25 && ventilateur == OFF)|
-| ||	|OU (OR)	|Vrai si au moins une condition est vraie.	|if (bouton == PRESSED || urgence == 1)|
-|!	|NON (NOT)	|Inverse l'état de la condition (Vrai devient Faux).	|if (!systeme_pret) (Si le système n'est PAS prêt)|
+| Opérateur | Nom      | Description                                         | Exemple                                      |
+|-----------|----------|-----------------------------------------------------|----------------------------------------------|
+| `&&`      | ET (AND) | Vrai si toutes les conditions sont vraies.          | `if (temp > 25 && ventilateur == OFF)`       |
+| `\|\|`    | OU (OR)  | Vrai si au moins une condition est vraie.           | `if (bouton == PRESSED \|\| urgence == 1)`   |
+| `!`       | NON (NOT)| Inverse l'état de la condition (Vrai devient Faux). | `if (!systeme_pret)` (si le système n'est PAS prêt) |
 
 En langage C, **0** est considéré comme **Faux (FALSE)**. Et tout ce qui n'est pas 0 (1, -5, 100...) est considéré comme **Vrai (TRUE)**.
 

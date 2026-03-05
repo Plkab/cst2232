@@ -350,7 +350,7 @@ switch (systemeStatut) {
 <h3 id="les-boucles-repetitions"><strong>Les Boucles (Répétitions)</strong></h3>
 <p>Dans l'embarqué, le processeur ne doit jamais s'arrêter. Les boucles permettent de gérer cette continuité.</p>
 <p><strong>Boucle : for</strong></p>
-<p>Idéale quand le nombre de répétitions est connu à l'avance. Sa structure est : for (initialisation ; condition ; incrémentation)</p>
+<p>Idéale quand le nombre de répétitions est connu à l'avance. Sa structure est : <code>for (initialisation ; condition ; incrémentation)</code></p>
 <p>Exemple : Parcourir un tableau de données capteurs ou moyenner 10 mesures ADC.</p>
 <pre><code class="language-c">uint32_t somme = 0;
 
@@ -361,7 +361,7 @@ for (int i = 0; i &lt; 10; i++) {
 uint32_t moyenne = somme / 10;
 </code></pre>
 <p><strong>Boucle : do...while</strong></p>
-<p>Contrairement au while, cette boucle exécute le code au moins une fois avant de tester la condition.</p>
+<p>Contrairement au <code>while</code>, cette boucle exécute le code au moins une fois avant de tester la condition.</p>
 <pre><code class="language-c">uint8_t tentative = 0;
 
 do {
@@ -383,7 +383,8 @@ while (!Signal_Recu &amp;&amp; timeout &gt; 0) {
     timeout--; // On évite de rester bloqué à l'infini
 }
 </code></pre>
-<p>Pour le flux en embarqué sur STM32, le processeur ne doit jamais s'arrêter, on utilise la boucle infinie while(1). Si le main se termine, le comportement devient imprévisible. On verrouille donc toujours la fin du programme :</p>
+<p><strong>Boucle infinie : while(1)</strong></p>
+<p>Pour le flux en embarqué sur STM32, le processeur ne doit jamais s'arrêter, on utilise la boucle infinie <code>while(1)</code>. Si le main se termine, le comportement devient imprévisible. On verrouille donc toujours la fin du programme :</p>
 <pre><code class="language-c">int main(void) {
 
     Init_Hardware();
@@ -398,7 +399,7 @@ while (!Signal_Recu &amp;&amp; timeout &gt; 0) {
 <hr />
 <p><br></p>
 <h3 id="manipulation-de-bits-operateurs-bitwise"><strong>Manipulation de bits (Opérateurs Bitwise)</strong></h3>
-<p>Dans la programmation baremetal C, on utilise largement la manipulation des bits Ce sont les outils les plus utilisés pour configurer les registres du microcontrôleur. Contrairement aux opérateurs logiques (&amp;&amp;, ||, !), ceux-ci agissent sur chaque bit individuellement.</p>
+<p>Dans la programmation <em>baremetal C</em>, on utilise largement la manipulation des bits Ce sont les outils les plus utilisés pour configurer les registres du microcontrôleur. Contrairement aux opérateurs logiques (&amp;&amp;, ||, !), ceux-ci agissent sur chaque bit individuellement.</p>
 <ul>
 <li>L'operateur <strong>&lt;&lt; (décalage gauche)</strong> permet de positionner un bit à un emplacement précis.</li>
 <li>L'operateur <strong>&gt;&gt; (décalage droite)</strong> permet de lire la valeur d'un bit spécifique.</li>
@@ -443,21 +444,20 @@ uint32_t *monPointeur = &amp;variable; // monPointeur contient l'adresse de vari
 
 *monPointeur = 200; // La &quot;variable&quot; vaut maintenant 200
 </code></pre>
-<p>Sur STM32, les structures de registres (ex: GPIOA-&gt;MODER) sont des pointeurs pointant vers des adresses physiques fixes du processeur.
+<p>Sur STM32, les structures de registres (ex: <code>GPIOA-&gt;MODER</code>) sont des pointeurs pointant vers des adresses physiques fixes du processeur.
 Toutes fonctions du matériel est mappé en mémoire. Pour configurer le STM32, on crée des pointeurs vers des adresses fixes définies dans la datasheet.</p>
 <pre><code class="language-c">// L'adresse du registre MODER du GPIOA est 0x40020000
 #define GPIOA_MODER *((volatile uint32_t *) 0x40020000)
 
 GPIOA_MODER |= (1 &lt;&lt; 0); // On écrit directement dans le matériel
 </code></pre>
-<p>on utilise l'opérateur Flèche -&gt; comme un raccourci partout en embarqué (ex: GPIOA-&gt;ODR).
-- structure.membre : Accès direct si vous avez la variable.
-- pointeur-&gt;membre : Accès si vous avez l'adresse de la structure.</p>
+<p>on utilise l'opérateur Flèche <code>-&gt;</code> comme un raccourci partout en embarqué (ex: GPIOA-&gt;ODR).
+- <code>structure.membre</code> : Accès direct si vous avez la variable.
+- <code>pointeur-&gt;membre</code> : Accès si vous avez l'adresse de la structure.</p>
 <hr />
 <p><br></p>
 <h3 id="les-fonctions"><strong>Les Fonctions</strong></h3>
-<p>Elles permettent de modulariser le code. Une fonction peut retrourner une valeur par exemple : void (rien), int, uint8_t, etc
-Une fonction peut avoir des donnees entrantes qu'on appele parametre. </p>
+<p>Elles permettent de modulariser le code. Une fonction peut retrourner une valeur, par exemple : <code>void</code> (rien), <code>int</code>, <code>uint8_t</code>, etc, et peut recevoir des paramètres. </p>
 <pre><code class="language-c">int addition(int a, int b) {
     return a + b;
 }
@@ -465,8 +465,8 @@ Une fonction peut avoir des donnees entrantes qu'on appele parametre. </p>
 <hr />
 <p><br></p>
 <h3 id="bibliotheque"><strong>Bibliotheque</strong></h3>
-<p>Lorsqu'on a plusieurs fonction d'un objets (peripheriques) quelconque, on les regroupe dans deux fichiers : le Header (.h) et la Source (.c).</p>
-<p><strong>Le fichier Header : led.h (L'interface)</strong></p>
+<p>Lorsqu'on a plusieurs fonctions pour un objet (périphérique) quelconque, on les regroupe dans deux fichiers : le header (<code>.h</code>) et la source (<code>.c</code>).</p>
+<p><strong>Le fichier Header : <code>led.h</code> (L'interface)</strong></p>
 <p>C'est le "menu" de la bibliothèque. Il contient les prototypes des fonctions et les définitions.</p>
 <pre><code class="language-c">#ifndef LED_H    // Garde d'inclusion : évite les erreurs si le fichier est inclus 2 fois
 #define LED_H
@@ -485,7 +485,7 @@ void LED_Toggle(void);
 
 #endif
 </code></pre>
-<p><strong>Le fichier Source : led.c (L'implémentation)</strong></p>
+<p><strong>Le fichier Source : <code>led.c</code> (L'implémentation)</strong></p>
 <p>C'est ici que l'on écrit la "recette" réelle des fonctions en manipulant les registres.</p>
 <pre><code class="language-c">#include &quot;led.h&quot;
 
@@ -522,7 +522,9 @@ int main(void) {
     }
 }
 </code></pre>
-<p>Les avantages de cette méthode est que l'on a un code réutilisable, on peut copier ces fichiers dans n'importe quel projet. Le code est facilement maintenable si on change de pin (ex: de PC13 à PA5), on ne modifie que le fichier led.h. On a aussi une clarté, le main.c ne contient que la logique applicative, pas les détails techniques des registres.</p></div>
+<p>Les avantages de cette méthode est que l'on a un code réutilisable, on peut copier ces fichiers dans n'importe quel projet. Le code est facilement maintenable si on change de pin (ex: de PC13 à PA5), on ne modifie que le fichier led.h. On a aussi une clarté, le main.c ne contient que la logique applicative, pas les détails techniques des registres.</p>
+<h3 id="lien-connexe">Lien connexe</h3>
+<p><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></p></div>
             </div>
         </div>
 
