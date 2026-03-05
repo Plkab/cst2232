@@ -166,7 +166,7 @@
 <li>Remplir un buffer audio en double buffer (ping-pong).</li>
 </ul>
 <p>Le STM32F4 dispose de deux contrôleurs DMA avec plusieurs streams et canaux. Chaque stream peut être configuré avec une priorité, une direction (mémoire → périphérique, périphérique → mémoire, mémoire → mémoire), et des modes circulaires.</p>
-<p><img align="center" alt="Le controleur DMA" src="dma.png" /></p>
+<p><img align="center" alt="Le controleur DMA" src="dma.png" width="400," /></p>
 <p>Exemple d'utilisation avec ADC :</p>
 <pre><code class="language-c">// Configuration du DMA pour l'ADC1
 DMA_Stream0-&gt;PAR = (uint32_t)&amp;ADC1-&gt;DR;      // Périphérique
@@ -178,9 +178,9 @@ DMA_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 <p><br></p>
 <h3 id="presentation-de-la-carte-de-developpement-utilisee"><strong>Présentation de la carte de développement utilisée</strong></h3>
 <p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (<a href="https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/">environ 10$</a>) et très répandue dans le monde de l'embarqué.
-<img align="center" alt="La carte Black Pill" src="board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg" /></p>
+<img align="center" alt="La carte Black Pill" src="board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg" width="200," /></p>
 <p>Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (<a href="https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/">environ 6$</a>). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.
-<img align="center" alt="L'Outil ST-LINK" src="st-link.jpg" /></p>
+<img align="center" alt="L'Outil ST-LINK" src="st-link.jpg" width="200," /></p>
 <p><strong>Les broches de ST-LINK/V2</strong> : </p>
 <ul>
 <li>Les broches SWDIO</li>
