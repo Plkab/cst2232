@@ -86,6 +86,8 @@ Une tâche (task) est une unité logicielle indépendante. Chaque tâche peut se
 - **Ready (prête)** : la tâche veut s'exécuter, mais une tâche de priorité supérieure occupe le processeur.
 - **Blocked (bloquée)** : la tâche attend un événement (par exemple, un signal provenant d'un capteur ou l'expiration d'un délai de 10 ms).
 
+![Etat d'une tache](tskstate.gif){ width=300, align=center }
+
 #### **Le Noyau**
 
 Le **cœur du système**, ou _kernel_, est le module responsable du partage du processeur entre les différentes tâches. Il est très léger (quelques kilo-octets), ce qui le rend adapté aux microcontrôleurs aux ressources limitées.
@@ -128,11 +130,11 @@ Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréque
 
 
 
-### **Introduction à FreeRTOS** {#introduction-a-freertos}
+### **Introduction pratique à FreeRTOS** {#introduction-a-freertos}
 
 FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqués, supportant plus de 40 microcontrôleurs. Il se présente sous la forme d'une API qui nous permet de mettre en œuvre des applications temps réel sur microcontrôleur. Nous allons apprendre à utiliser ses fonctions pré-écrites pour structurer nos projets de manière efficace.
 
-On peut avoir sur le site web le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible [freertos.](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
+On peut avoir sur le site web officiel le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible : [freertos.](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
 
 
 #### **Création de Tâches (xTaskCreate)**
@@ -141,12 +143,13 @@ La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous sou
 
 Dans un programme classique (sans OS), tout le code se trouve dans la fonction main(). Dans FreeRTOS, le rôle de main() est simplement de créer les tâches nécessaires, puis de lancer l'ordonnanceur qui prend le contrôle.
 
-Une tâche est typiquement une fonction qui ne doit jamais se terminer. Sa structure type est une boucle infinie :
+Une tâche est typiquement une fonction qui ne doit jamais se terminer, elle s'exécute en boucle infinie et possède sa propre pile mémoire. Sa structure type est une boucle infinie :
 
 ```c
 void maTache(void * pvParameters) {
     while(1) { // Une tâche est une boucle infinie
         // Ton code ici (ex: lire un capteur)
+        Action();
         vTaskDelay(pdMS_TO_TICKS(100)); // On laisse respirer le CPU 100ms
     }
 }
@@ -154,12 +157,14 @@ void maTache(void * pvParameters) {
 
 **Création d'une tâche dans le main**
 
+La fonction _xTaskCreate()_ est la porte d'entrée de FreeRTOS.
+
 ```c
 xTaskCreate(
-    maTache,           // Nom de la fonction
-    "Nom_Tache",       // Nom pour le debug
+    maTache,           // Nom de la fonction: Pointeur vers la fonction de la tâche
+    "Nom_Tache",       // Nom de la tâche (pour le debug)
     2048,              // Taille de la pile (en mots, souvent 32 bits)
-    NULL,              // Paramètres à passer (optionnel)
+    NULL,              // Paramètres à passer à la tâche (optionnel)
     2,                 // PRIORITÉ (plus le chiffre est élevé, plus la tâche est prioritaire)
     NULL               // Handle pour manipuler la tâche plus tard
 );
@@ -175,28 +180,30 @@ void maTache(void * pvParameters);
 
 void main(void) {
     // Création : Fonction, Nom, Taille pile, Paramètre, Priorité, Handle
-    xTaskCreate(maTache, "TacheAExecuter", 1024, NULL, 5, NULL);
+    xTaskCreate(maTache, "Tache1", 1024, NULL, 5, NULL);
     
     // Lance l'ordonnanceur (le système prend le contrôle)
     vTaskStartScheduler();
 
     // Le code ici ne sera jamais atteint
+    while(1); // Sécurité
 }
 ```
 
-#### **Gestion du Temps (vTaskDelay)**
+#### **Gestion du Temps (vTaskDelay) et (vTaskDelayUntil)**
 
-Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked". Pendant ce temps, le CPU peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
+Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked" pendant un nombre de ticks spécifié. Pendant ce temps, le CPU est libéré et peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
 
 ```c
 void vTaskMoteur(void * pvParameters) {
     for(;;) { // Boucle infinie obligatoire
         ControleVitesse();
         // Attend 20ms de manière déterministe
-        vTaskDelay(pdMS_TO_TICKS(20)); 
+        vTaskDelay(pdMS_TO_TICKS(20)); // Bloque la tâche pendant 20ms
     }
 }
 ```
+Pour cette fonction nous avons une limitation, si le code de traitement prend 10ms, et que l'on utilise _vTaskDelay(90ms)_, la période réelle sera de 100ms + temps de traitement, provoquant une dérive temporelle.
 
 Prenons un autre exemple qui fait du temps réel périodique précis: 
 
@@ -222,6 +229,8 @@ void Task_Stabilisation(void *pvParameters) {
 }
 ```
 
+Cette fonction garantit que la tâche _Stabilisation()_ s'exécutera exactement toutes les 20ms, sans dérive, même si le code de traitement varie (tant qu'il reste inférieur à la période)
+
 **Pourquoi utiliser vTaskDelayUntil plutôt que vTaskDelay ?**
 
 - **vTaskDelay** : spécifie un délai relatif à partir de l'appel. Si le code à l'intérieur de la tâche prend du temps, la prochaine exécution sera décalée (dérive temporelle).
@@ -237,16 +246,37 @@ void Task_Stabilisation(void *pvParameters) {
 
 #### **Synchronisation par Sémaphores (xSemaphore)**
 
-Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART) ou pour synchroniser une tâche avec une interruption matérielle.
+Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle.
 
 **Le Mutex (Le type de sémaphore pour les ressources partagées)**
 
-Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex agit comme un jeton : une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.
+Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex (MUTual EXclusion) agit comme un jeton, une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.
 
 Déclaration et création :
 
 ```c
 SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
+
+void vTaskA(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xMutexUART, portMAX_DELAY) == pdPASS) {
+            // Accès exclusif à l'UART
+            printf("Tâche A écrit sur UART\n");
+            xSemaphoreGive(xMutexUART);
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+void vTaskB(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xMutexUART, portMAX_DELAY) == pdPASS) {
+            printf("Tâche B écrit sur UART\n");
+            xSemaphoreGive(xMutexUART);
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
 
 void main() {
     // Création du mutex
@@ -286,7 +316,7 @@ void vTaskA(void * pvParameters) {
 }
 ```
 
-**On a 3 types de Sémaphores à connaître :**
+**On a trois types de Sémaphores à connaître :**
 
 - **Le Mutex** (xSemaphoreCreateMutex) : Utilisé pour protéger une ressource partagée (Écran, I2C, Moteur). Il intègre un mécanisme d'héritage de priorité qui évite qu'une tâche de priorité moyenne ne bloque indéfiniment une tâche haute priorité.
 
@@ -294,22 +324,127 @@ void vTaskA(void * pvParameters) {
 
 - **Le Sémaphore à Comptage** (xSemaphoreCreateCounting) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).
 
+**Exemple de synchronisation avec une ISR :**
+
+```c
+#include "FreeRTOS.h"
+#include "semphr.h"
+
+// Handle global pour le sémaphore
+SemaphoreHandle_t xSemaphoreBouton;
+
+// PROTOTYPES DE DÉMO (BARE METAL)
+void LowLevel_Init(void);         // Config GPIO & EXTI via registres
+void LowLevel_ClearIT(void);      // Acquitter le flag dans le registre PR
+void LowLevel_ToggleLED(void);    // Inverser bit dans le registre ODR
+
+// 1. Routine d'interruption (Vecteur EXTI0)
+void EXTI0_IRQHandler(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // Action Bare Metal : Effacer le flag d'interruption (registre Pending)
+    LowLevel_ClearIT();
+
+    // Signal à la tâche : Débloque vTaskBouton
+    xSemaphoreGiveFromISR(xSemaphoreBouton, &xHigherPriorityTaskWoken);
+
+    // Demande un changement de contexte si nécessaire
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+// 2. Tâche de gestion du bouton
+void vTaskBouton(void *pvParameters) {
+    for (;;) {
+        // Attend indéfiniment le signal de l'interruption
+        if (xSemaphoreTake(xSemaphoreBouton, portMAX_DELAY) == pdPASS) {
+            // Action Bare Metal : Basculer l'état de la LED
+            LowLevel_ToggleLED();
+        }
+    }
+}
+
+int main(void) {
+    // Initialisation matérielle (Horloges, GPIO, NVIC)
+    LowLevel_Init();
+
+    // Création du sémaphore binaire
+    xSemaphoreBouton = xSemaphoreCreateBinary();
+
+    if (xSemaphoreBouton != NULL) {
+        // Création de la tâche
+        xTaskCreate(vTaskBouton, "BTN_TASK", 128, NULL, 2, NULL);
+        
+        // Lancement du système
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+```
 
 #### **Communication par files de messages : Queues (xQueue)**
 
-C'est la méthode propre pour échanger des données entre tâches. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
+C'est la méthode propre pour échanger des données entre tâches de manière propre. Les données sont copiées dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
 
 - **Créer la file** : xQueueCreate(taille, taille_d'un_élément);
 - **Poster un message** : xQueueSend(file, &donnee, delai);
 - **Lire un message** : xQueueReceive(file, &reception, delai);
 
 ```c
-// Envoyer une donnée
-xQueueSend(xQueueCapteurs, &valeurLue, 0);
+#include "FreeRTOS.h"
+#include "queue.h"
 
-// Recevoir la donnée (attend si la queue est vide)
-if(xQueueReceive(xQueueCapteurs, &donneeRecue, pdMS_TO_TICKS(100))) {
-    // Traiter la donnée
+// 1. Handle global de la file
+QueueHandle_t xQueueCapteur;
+
+// Tâche Émettrice (Producteur)
+void vTacheEmettrice(void *pvParameters) {
+    uint32_t valeurADC = 0;
+    
+    for (;;) {
+        valeurADC++; // Simulation d'une acquisition
+
+        // 3. Envoyer la donnée ADC (Copie par valeur dans la file)
+        // Paramètres : Handle, Adresse donnée, Temps d'attente max si file pleine
+        if (xQueueSend(xQueueCapteur, &valeurADC, pdMS_TO_TICKS(10)) == pdPASS) {
+            // Envoi réussi
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50)); // Fréquence d'émission
+    }
+}
+
+// Tâche Réceptrice (Consommateur)
+void vTacheReceptrice(void *pvParameters) {
+    uint32_t donneeRecue;
+    
+    for (;;) {
+        // 4. Recevoir la donnée (Bloquant jusqu'à réception ou timeout)
+        // Paramètres : Handle, Adresse stockage, Temps d'attente max
+        if (xQueueReceive(xQueueCapteur, &donneeRecue, pdMS_TO_TICKS(100)) == pdPASS) {
+            // Traitement de la donnée reçue
+            printf("Valeur ADC reçue : %lu\n", donneeRecue);
+        } else {
+            // Timeout : aucune donnée reçue après 100ms
+        }
+    }
+}
+
+int main(void) {
+    // Initialisation du matériel (Générique)
+    Hardware_Init();
+
+    // 2. Création de la file : (Capacité, Taille d'un élément)
+    xQueueCapteur = xQueueCreate(5, sizeof(uint32_t));
+
+    if (xQueueCapteur != NULL) {
+        xTaskCreate(vTacheEmettrice, "Emetteur", 128, NULL, 1, NULL);
+        xTaskCreate(vTacheReceptrice, "Recepteur", 128, NULL, 1, NULL);
+
+        vTaskStartScheduler();
+    }
+
+    for(;;);
 }
 ```
 
@@ -317,7 +452,7 @@ if(xQueueReceive(xQueueCapteurs, &donneeRecue, pdMS_TO_TICKS(100))) {
 #### **Trois règles d'or a connaitre :**
 
 - **Priorité** : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).
-- **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par vTaskDelete().
+- **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par _vTaskDelete()_.
 - **Section Critique** : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser taskENTER_CRITICAL() et taskEXIT_CRITICAL() pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.
 
 
