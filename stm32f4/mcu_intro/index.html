@@ -89,7 +89,7 @@
 <p><br></p>
 <h3 id="stm32f401"><strong>STM32F401</strong></h3>
 <p>Le <strong>STM32F4</strong> est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur <strong>ARM Cortex-M4 32 bits</strong>, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (<strong>FPU, Floating Point Unit</strong>). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.</p>
-<p>Le manuel de référence pour le <a href="https://www.st.com/resource/en/datasheet/stm32f401re.pdf">STM32F401x</a>.</p>
+<p>Le manuel de référence pour le [STM32F401 (RM0368)] (https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres.</p>
 <p><strong>Caractéristiques principales</strong> :</p>
 <ul>
 <li><strong>Fréquence</strong> : généralement cadencé à 84 MHz, peut être overclocké via un multiplicateur de fréquence (PLL) jusqu'à 100 MHz. Cette puissance permet de faire tourner un noyau FreeRTOS avec plusieurs tâches concurrentes.</li>
