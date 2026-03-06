@@ -33,7 +33,7 @@ Le timer possède un compteur qui s'incrémente à chaque impulsion d'une horlog
 | `TIMx_CR1` | Control Register 1     | Utilisé notamment pour démarrer le timer (bit `CEN`)              |
 | `TIMx_SR`  | Status Register        | Contient le flag (`UIF`) qui indique si le temps est écoulé      |
 
-Tous ces registres sont décrits en détail dans le [**Reference Manual (RM0368)**](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres..
+Tous ces registres sont décrits en détail dans le [Reference Manual (RM0368)](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres..
 
 ---
 <br>
