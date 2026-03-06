@@ -453,3 +453,4 @@ Cette tâche gère uniquement la LED.
 ### Liens connexe
 
 - [Timer et Interruption](stm32f4/timer/index.md)
+- [Machine d’État Fini (FSM)](../technique-algos/fsm/index.md)

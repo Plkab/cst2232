@@ -39,7 +39,7 @@ Actuellement, les microcontrôleurs les plus populaires sont basés sur l'archit
 
 Le **STM32F4** est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur **ARM Cortex-M4 32 bits**, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (**FPU, Floating Point Unit**). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.
 
-Le manuel de référence pour le [STM32F401x](https://www.st.com/resource/en/datasheet/stm32f401re.pdf).
+Le manuel de référence pour le [STM32F401 (RM0368)] (https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres.
 
 **Caractéristiques principales** :
 
