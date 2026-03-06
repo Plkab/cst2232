@@ -281,22 +281,22 @@ Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton
 
     - L'appui sur le bouton PA0 doit être détecté par une interruption externe (EXTI) pour garantir une réaction immédiate, même si le processeur exécute d'autres calculs.
     - Le processeur ne doit rester dans l'interruption que le temps strictement nécessaire pour signaler l'événement.
-
+  
 2. Traitement du Signal (Fiabilité) :
 
     - Une tâche dédiée (vTaskBouton) doit attendre le signal de l'interruption via un Sémaphore Binaire.
     - Pour éviter les déclenchements intempestifs dus aux rebonds mécaniques du bouton, implémenter un anti-rebond (Debounce) logiciel de 20ms en utilisant les fonctions de délai non-bloquantes de FreeRTOS.
     - Après le délai, effectuer une lecture directe du registre IDR pour confirmer que le bouton est toujours pressé.
-
+  
 3. Communication Inter-tâches (Modularité) :
 
     - Une fois l'appui confirmé, la tâche de lecture doit envoyer un ordre de changement d'état ("Toggle") dans une File de messages (Queue).
     - Une tâche de sortie (vTaskLED) doit surveiller cette file. Dès qu'un message arrive, elle doit inverser l'état de la LED PC13 en manipulant le registre ODR.
-
+  
 4. Optimisation Énergétique :
 
     - Le système doit être conçu de manière à ce qu'aucune tâche ne consomme de cycles CPU lorsqu'il n'y a pas d'activité sur le bouton (utilisation de portMAX_DELAY).
-
+  
 5. Contraintes Techniques (Bare Metal):
 
     - RCC : Activer les horloges des GPIOA et GPIOC.
@@ -446,7 +446,7 @@ Cette tâche gère uniquement la LED.
 
 - Séparation des rôles : Elle ne sait pas qu'il y a un bouton. Elle attend simplement un message dans sa boîte aux lettres (xQueueReceive).
 - L'Écriture (ODR) : Dès qu'elle reçoit un message, elle utilise l'opérateur XOR (^) sur le registre ODR pour inverser l'état de la LED (Toggle).
-
+  
 ---
 <br>
 

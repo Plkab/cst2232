@@ -136,6 +136,8 @@ FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqué
 
 On peut avoir sur le site web officiel le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible : [freertos.](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
 
+---
+<br>
 
 #### **Création de Tâches (xTaskCreate)**
 
@@ -189,6 +191,8 @@ void main(void) {
     while(1); // Sécurité
 }
 ```
+---
+<br>
 
 #### **Gestion du Temps (vTaskDelay) et (vTaskDelayUntil)**
 
@@ -243,6 +247,8 @@ Cette fonction garantit que la tâche _Stabilisation()_ s'exécutera exactement 
 - Premier appel : vTaskDelayUntil attendra que xLastWakeTime + xPeriod soit atteint. La première exécution effective aura donc lieu après une période complète.
 - Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.
 
+---
+<br>
 
 #### **Synchronisation par Sémaphores (xSemaphore)** {#Semaphores}
 
@@ -382,6 +388,9 @@ int main(void) {
 }
 ```
 
+---
+<br>
+
 #### **Communication par files de messages : Queues (xQueue)**
 
 C'est la méthode propre pour échanger des données entre tâches de manière propre. Les données sont copiées dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
@@ -448,6 +457,8 @@ int main(void) {
 }
 ```
 
+---
+<br>
 
 #### **Trois règles d'or a connaitre :**
 
@@ -460,7 +471,7 @@ int main(void) {
 <br>
   
 
-### Lien connexe
+### Liens connexes
 
 - [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
 - [Création Projet sous Keil uVision](../ressources/demarrerKiel.md)
