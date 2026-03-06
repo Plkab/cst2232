@@ -25,5 +25,5 @@
 
 ### Liens connexes
 
-- [GPIO et Interruptions](../../gpio/index.md)
-- [Timer et Interruption](../../timer/index.md)
+- [GPIO et Interruptions](../gpio/index.md)
+- [Timer et Interruption](../timer/index.md)
