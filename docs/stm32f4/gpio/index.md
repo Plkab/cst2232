@@ -38,6 +38,8 @@ Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les
 Exemple Pratique : Faire clignoter la LED (PC13)
 
 ```c
+#include "stm32f4xx.h"
+
 // Code Sans RTOS
 void main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
@@ -56,6 +58,8 @@ void main(void) {
 
 Usage du registre ODR :
 ```c
+#include "stm32f4xx.h"
+
 // Code Bare Metal pur (Sans RTOS)
 void main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
@@ -79,53 +83,150 @@ Pendant ces attentes, le processeur est totalement occupé à décrémenter un c
 
 ### **Gestion des Entrées/Sorties dans une Tâche**
 
-Contrairement au Bare Metal classique où l'on utilise des boucles delay(), FreeRTOS permet de libérer le CPU pendant l'attente d'un clignotement ou d'un rafraîchissement.
+Dans une approche bare metal classique, on utilise des boucles d'attente active (`for(i=0; i<delay; i++);`) pour créer des temporisations `delay()`. Ces boucles monopolisent le processeur, l'empêchant de réagir à d'autres événements pendant toute leur durée.
 
-Avec FreeRTOS, la tâche dit : "Je dors pendant 500ms, réveille la tâche suivante !". C'est le vTaskDelay(). On remplace  l'attente logicielle for(delay) par vTaskDelay(), ce qui libère le CPU pour d'autres tâches.
+Avec FreeRTOS, la philosophie change : quand une tâche n'a rien d'utile à faire (par exemple en attendant qu'une LED clignote), elle doit rendre la main pour qu'une autre tâche puisse s'exécuter. C'est le rôle de `vTaskDelay()`.
+
+La fonction `vTaskDelay()` place la tâche courante dans l'état Blocked pendant une durée donnée. Pendant ce temps, le processeur peut exécuter d'autres tâches prêtes. À l'expiration du délai, la tâche repasse dans l'état Ready et sera automatiquement reprise par l'ordonnanceur.
 
 ```c
 void vTaskBlink(void *pvParameters) {
-    // Configuration de PC13
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
-    GPIOC->MODER |= (1 << (13 * 2));
+    // Configuration de la broche PC13 en sortie (une seule fois)
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;      // Activer horloge du port C
+    GPIOC->MODER |= (1 << (13 * 2));           // PC13 en sortie (01)
 
     for (;;) {
-        GPIOC->ODR ^= (1 << 13);           // Toggle LED
-        vTaskDelay(pdMS_TO_TICKS(500));    // Délai non-bloquant de 500ms
+        GPIOC->ODR ^= (1 << 13);               // Inverser l'état de la LED
+        vTaskDelay(pdMS_TO_TICKS(500));        // Délai non‑bloquant de 500 ms
     }
 }
 ```
 
+- La macro `pdMS_TO_TICKS(500)` convertit une durée en millisecondes en nombre de ticks système (dépend de `configTICK_RATE_HZ`). 
+- Pendant `pdMS_TO_TICKS(500)`, la tâche `vTaskBlink` dort et elle ne consomme 0% du CPU. L'ordonnanceur peut alors exécuter d'autres tâches de priorité inférieure ou égale.
 
 ---
 <br>
 
 ### **L'Approche Interruptions Externes (EXTI) : GPIO + Interruption + FreeRTOS**
 
-Pour ne plus ignorer le bouton, on utilise l'Interruption (EXTI). L'interruption est le moyen le plus efficace pour réagir à un événement asynchrone (appui bouton, capteur). Quand une interruption survient le matériel "stoppe" le programme principal pour exécuter une fonction spécifique : le Handler ou ISR. C'est comme une sonnette : peu importe ce que fait le processeur, il s'arrête, répond à la porte, puis reprend son travail.
+Pour ne plus ignorer un événement comme l'appui sur un bouton, on utilise le mécanisme des **interruptions externes (EXTI)**. Une interruption est un signal matériel qui force le processeur à suspendre temporairement le programme en cours pour exécuter une routine spécifique appelée **ISR (Interrupt Service Routine)**. C'est l'équivalent d'une sonnette : le processeur, quelle que soit sa tâche, s'arrête, répond à la sonnette, puis reprend son activité là où il s'était arrêté.
 
+Sur STM32F4, la configuration d'une interruption externe sur une broche (par exemple PA0) suit plusieurs étapes clés :
 
-Sur STM32F4, elle nécessite :
+- **Activer l'horloge du GPIO** et du module `SYSCF` (System Configuration Controller) qui permet de connecter la ligne d'interruption au bon port.
+- **Configurer la broche en entrée** avec éventuellement une résistance de pull-up/pull-down.
+- **Sélectionner la source EXTI** via les registres `SYSCFG_EXTICR`, on associe la ligne EXTI (par exemple EXTI0) au port souhaité (GPIOA).
+- **Configurer le front déclencheur**, on choisit si l'interruption se déclenche sur un front montant (`EXTI_RTSR`), descendant (`EXTI_FTSR`), ou les deux.
+- **Démasquer la ligne EXTI** : on autorise l'interruption pour cette ligne via le registre EXTI_IMR.
+- **Configurer et activer l'interruption dans le NVIC** : le _Nested Vectored Interrupt Controller_ (NVIC) est le gestionnaire d'interruptions du Cortex-M. On doit définir sa priorité et l'activer.
 
-- L'activation de l'horloge `SYSCFG`. Pour dire "Écoute la pin PA0".
-- Le multiplexage de la ligne EXTI vers le port souhaité.
-- La configuration du front (montant/descendant).
-- L'activation dans le `NVIC`. Ce dernier est le surveillant général qui autorise le processeur à être interrompu.
+Une fois ces étapes réalisées, chaque fois que le front configuré se produit sur la broche, le processeur exécute immédiatement la fonction handler correspondante (par exemple `EXTI0_IRQHandler`). L'ISR doit être **la plus courte possible**; son seul rôle est de signaler l'événement à une tâche (via un sémaphore ou une notification) pour que le traitement long soit effectué hors interruption, dans le contexte d'une tâche RTOS.
 
+Voici un exemple complet et détaillé de configuration d'une interruption externe (EXTI) sur la broche PA0 d'un STM32F4. Dans le handler ISR, on bascule l'état d'une LED sur PC13 (ou on incrémente un compteur).
 
+```c
+#include "stm32f4xx.h"  // Fichier d'en-tête CMSIS pour STM32F4
+
+// Définitions de broches pour plus de clarté
+#define BTN_PORT    GPIOA
+#define BTN_PIN     0
+#define LED_PORT    GPIOC
+#define LED_PIN     13
+
+// Compteur d'appuis (optionnel)
+volatile uint32_t buttonPressCount = 0;
+
+void GPIO_Init(void) {
+    // 1. Activer l'horloge pour les ports A et C
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN;
+
+    // Configuration de PA0 en entrée avec pull-up
+    // Mode : 00 = entrée (défaut après reset, mais on force pour être sûr)
+    BTN_PORT->MODER &= ~(3U << (BTN_PIN * 2));   // Bits 0-1 = 00
+    // Activer la résistance de pull-up : PUPDR bits 0-1 = 01
+    BTN_PORT->PUPDR |=  (1U << (BTN_PIN * 2));
+    BTN_PORT->PUPDR &= ~(2U << (BTN_PIN * 2));   // Bit suivant à 0
+
+    // Configuration de PC13 en sortie (pour la LED) 
+    LED_PORT->MODER |=  (1U << (LED_PIN * 2));   // Bits 26-27 = 01 (sortie)
+    LED_PORT->MODER &= ~(2U << (LED_PIN * 2));
+    // Par défaut, sortie push-pull (OTYPER = 0) et vitesse moyenne (OSPEEDR = 0)
+}
+
+void EXTI_Init(void) {
+    // 2. Activer l'horloge de SYSCFG (nécessaire pour EXTI)
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+
+    // 3. Connecter la ligne EXTI0 au port A
+    // SYSCFG_EXTICR1 contrôle les lignes EXTI0 à EXTI3.
+    // Chaque groupe de 4 bits correspond à une ligne.
+    // Pour EXTI0, les bits 0-3 de EXTICR1 doivent être 0000 pour GPIOA.
+    SYSCFG->EXTICR[0] &= ~SYSCFG_EXTICR1_EXTI0;   // Efface les bits (par défaut 0 = PA)
+
+    // 4. Sélectionner le front descendant comme déclencheur
+    EXTI->FTSR |= (1 << 0);   // Front descendant sur ligne 0
+    // (Si on voulait aussi le front montant, on utiliserait EXTI->RTSR)
+
+    // 5. Démasquer l'interruption pour la ligne 0
+    EXTI->IMR |= (1 << 0);
+
+    // 6. Configurer la priorité et activer l'interruption dans le NVIC
+    NVIC_SetPriority(EXTI0_IRQn, 1);      // Priorité 1 (plus haut = plus prioritaire)
+    NVIC_EnableIRQ(EXTI0_IRQn);            // Activer l'interruption
+}
+
+// Handler de l'interruption EXTI0
+void EXTI0_IRQHandler(void) {
+    // Vérifier que l'interruption vient bien de la ligne 0
+    if (EXTI->PR & (1 << 0)) {
+        // Effacer le flag d'interruption en écrivant 1 dans le registre PR
+        EXTI->PR = (1 << 0);
+
+        // Traitement de l'appui bouton 
+        // Exemple : basculer la LED
+        LED_PORT->ODR ^= (1 << LED_PIN);
+
+        // Exemple alternatif : incrémenter un compteur
+        buttonPressCount++;
+    }
+}
+
+int main(void) {
+    GPIO_Init();
+    EXTI_Init();
+
+    while (1) {
+        // Boucle principale vide : tout se passe dans l'interruption
+        // On pourrait aussi lire le compteur ou faire d'autres tâches
+        // Une petite temporisation pour éviter de saturer le CPU (optionnel)
+        for (volatile int i = 0; i < 1000000; i++);
+    }
+}
+```
 
 ---
 <br>
 
 ### **Synchronisation ISR vers Tâche (Sémaphore)**
 
-Le concept le plus important est que l'interruption ne doit pas traiter la donnée, elle doit simplement "réveiller" une tâche de traitement. On utilise un [Sémaphore Binaire](../../rtos/#Semaphores). L'interruption (ISR) donne un signal (Sémaphore) à une tâche qui attendait patiemment.
+Le principe fondamental dans un système temps réel est de **déléguer le traitement des événements matériels à des tâches**. L'interruption (ISR) doit être la plus courte possible : elle ne fait que signaler l'événement à une tâche qui, elle, effectuera le traitement long. C'est-a-dire tout simplement elle ne fait que "réveiller" une tâche de traitement. Pour cette signalisation, on utilise un [Sémaphore Binaire](../../rtos/#Semaphores).
 
-Exemple : Un bouton (PA0) réveille une tâche via une interruption.
+Un sémaphore binaire est un objet RTOS qui peut être soit disponible, soit non disponible. Une tâche qui attend un sémaphore (`xSemaphoreTake`) se bloque jusqu'à ce que le sémaphore soit donné (`xSemaphoreGive`). L'interruption donne le sémaphore, réveillant ainsi la tâche.
+
+Exemple : Un bouton (PA0) réveillant une tâche via une interruption EXTI.
 
 **A. Le Handler d'Interruption (ISR)**
 
 ```c
+#include "stm32f401xx.h"          // Définitions des registres STM32F4
+#include "FreeRTOS.h"             // Types et macros FreeRTOS
+#include "task.h"                 // API tâches
+#include "semphr.h"               // API sémaphores
+
+// Handle du sémaphore (déclaré externe ou global)
+extern SemaphoreHandle_t xSemBouton;
+
 // 1. L'Interruption (Courte et rapide)
 void EXTI0_IRQHandler(void) {
     BaseType_t xWoken = pdFALSE;
@@ -136,6 +237,7 @@ void EXTI0_IRQHandler(void) {
         // Dire à FreeRTOS : "Le bouton a été pressé, libère le sémaphore !"
         xSemaphoreGiveFromISR(xSemBouton, &xWoken);     // Débloque la tâche associée
         
+        // Si une tâche de plus haute priorité a été réveillée,
         // Force le changement de contexte immédiat
         portYIELD_FROM_ISR(xWoken);
     }
@@ -148,8 +250,7 @@ void EXTI0_IRQHandler(void) {
 // 2. La Tâche (Tranquille et organisée)
 void vTaskBouton(void *pvParameters) {
     for (;;) {
-        // 1. Attend l'alerte de l'interruption
-        // Attend le sémaphore indéfiniment (0% CPU en attente)
+        // Attend l'alerte de l'interruption, le sémaphore indéfiniment (bloqué jusqu'à réception) (0% CPU en attente)
         if (xSemaphoreTake(xSemBouton, portMAX_DELAY) == pdPASS) {
             // Traitement lourd ici (ex: envoyer un message UART)
             Action_Apres_Appui();
@@ -158,8 +259,10 @@ void vTaskBouton(void *pvParameters) {
 }
 ```
 
-Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d'une interruption utilisant FreeRTOS doit être numériquement supérieure ou égale à configMAX_SYSCALL_INTERRUPT_PRIORITY (généralement entre 5 et 15). Une priorité de 0 (trop haute) fera planter le noyau.
+**Remarque importante pour FreeRTOS :**
 
+- Dans une ISR, on ne peut pas appeler directement les fonctions FreeRTOS classiques comme `xSemaphoreTake()` ou `xQueueReceive()`. On utilise leurs versions spéciales suffixées `FromISR` (par exemple `xSemaphoreGiveFromISR()`, `xQueueSendFromISR`). 
+- De plus, la priorité de l'interruption doit être numériquement supérieure ou égale à `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY` (généralement définie à 5 dans `FreeRTOSConfig.h`) pour que ces fonctions puissent être appelées sans risque. Si la priorité est plus haute (chiffre plus petit), le noyau ne pourra pas gérer correctement les appels FromISR et le système pourrait planter. Une priorité de 0 (la plus haute) est réservée aux interruptions qui ne doivent jamais utiliser l'API FreeRTOS.
 
 ---
 <br>
@@ -170,7 +273,7 @@ Pratiquement une ISR doit être extrêmement courte. Sur STM32F4, la priorité d
   
 Concevoir un système robuste de pilotage d'une LED (PC13) à l'aide d'un bouton-poussoir (PA0) sur une carte Black Pill STM32F401. Le projet doit démontrer la capacité à mélanger la manipulation directe des registres et les mécanismes de synchronisation temps réel.
 
-![la carte Black Pill](/stm32f4/gpio/STM32F411CEU6_WeAct_Black_Pill_V3.0-2.jpg) {: width="500px" style="display: block; margin: 0 auto;" }
+![Carte Black Pill STM32F401CCU6](STM32F411CEU6_WeAct_Black_Pill_V3.0-2.jpg)
 
 **Cahier des Charges**
 
@@ -222,7 +325,7 @@ void Init_LED_PC13(void) {
     GPIOC->MODER |=  (1U << (13 * 2));
 }
 
-//Configuration des Entrées (Bouton)
+//Configuration du bouton (PA0) en entrée avec pull-up
 void Init_Bouton_PA0(void) {
     // 1. Activer l'horloge du Port A
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -231,18 +334,19 @@ void Init_Bouton_PA0(void) {
     GPIOA->PUPDR |=  (1U << (0 * 2));
 }
 
-// Configuration de l'Interruption (EXTI)
+// Configuration de l'interruption EXTI0 sur PA0
 void Init_Interruption_EXTI0(void) {
     // 1. Activer l'horloge système pour la configuration des interruptions
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;           // Activer SYSCFG
     // 2. Lier la ligne EXTI0 au Port A
     SYSCFG->EXTICR[0] &= ~SYSCFG_EXTICR1_EXTI0;     // Mapper PA0 sur EXTI0
+                                                    // Bits 0-3 = 0000 pour PA0
     // 3. Démasquer l'interruption et choisir le front descendant (appui)
     EXTI->IMR |= (1 << 0);      // Démasquer la ligne 0
     EXTI->FTSR |= (1 << 0);     // Détection Front Descendant
     // 4. Autoriser dans le NVIC avec une priorité compatible RTOS (>= 5)
-    NVIC_SetPriority(EXTI0_IRQn, 5);
-    NVIC_EnableIRQ(EXTI0_IRQn);
+    NVIC_SetPriority(EXTI0_IRQn, 5);    // 5 ≥ configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+    NVIC_EnableIRQ(EXTI0_IRQn);         // Activer l'interruption
 }
 
 // Interruption (ISR)
@@ -253,19 +357,21 @@ void EXTI0_IRQHandler(void) {
 
         // Libérer le sémaphore pour réveiller la tâche de lecture
         xSemaphoreGiveFromISR(xSemBouton, &xWoken);
+        // Forcer un changement de contexte si nécessaire
         portYIELD_FROM_ISR(xWoken);
     }
 }
 
-// Tâche bouton et debounce 
+// Tâche de gestion du bouton (lecture + anti-rebond)
 void vTaskBouton(void *pvParameters) {
     uint8_t commande = 2; // Code pour "Toggle"
+
     for (;;) {
         // Attend le signal de l'ISR
         if (xSemaphoreTake(xSemBouton, portMAX_DELAY) == pdPASS) {
             vTaskDelay(pdMS_TO_TICKS(20)); // Anti-rebond (Debounce)
 
-            // Vérifier si le bouton est toujours pressé
+            // Vérifier si le bouton est toujours pressé (PA0 = 0)
             if (!(GPIOA->IDR & (1 << 0))) {     // Si bouton toujours pressé
                 // Envoi de la commande à la LED via la QUEUE
                 xQueueSend(xQueueLED, &commande, 0);
@@ -277,6 +383,7 @@ void vTaskBouton(void *pvParameters) {
 // Tâche pour le pilotage de la LED 
 void vTaskLED(void *pvParameters) {
     uint8_t cmdRecue;
+
     for (;;) {
         // Attend une commande de la queue (Bloquant, 0% CPU)
         if (xQueueReceive(xQueueLED, &cmdRecue, portMAX_DELAY) == pdPASS) {
@@ -311,7 +418,7 @@ int main(void) {
   
 **La Phase d'Initialisation (L'Installation de l'usine)**
 
-Dans la fonction Prv_SetupHardware, nous préparons le terrain en Bare Metal.
+Dans les fonctions d'initialisation du materiel, nous préparons le terrain en Bare Metal.
 
 - Les Horloges (RCC) : On active l'électricité pour les ports A et C. Sans cela, les registres restent "morts".
 - Le Mode (MODER) : On dit à la broche PC13 d'être une sortie (pour la LED) et à PA0 d'être une entrée (pour le bouton).
