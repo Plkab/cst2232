@@ -24,7 +24,8 @@ L'objectif de ce chapitre est de vous montrer comment modéliser et implémenter
 ---
 <br>
 
-**Concepts de Base d'une FSM**
+
+### Concepts de Base d'une FSM
 
 Une machine à états finis est définie par :
 
@@ -46,6 +47,7 @@ En pratique, on utilise souvent un mixte des deux.
 2. **Robustesse** : La FSM permet de définir exactement ce qui se passe si un événement imprévu survient. C'est la base des systèmes critiques (médical, aéronautique).
 
 3. **Implémentation Propre** : En C, on utilise généralement une structure `switch(state)` à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes. 
+
 
 ---
 <br>
@@ -129,6 +131,11 @@ void FSM_Process(Event_t event) {
 
 Cette approche rend la machine plus facile à modifier et à étendre.
 
+
+---
+<br>
+
+
 ### Intégration avec FreeRTOS
 
 Dans un système temps réel, la FSM peut être implémentée comme une tâche dédiée. Les événements peuvent provenir :
@@ -154,6 +161,11 @@ void vTaskFSM(void *pvParameters) {
 ```
 
 Les événements sont envoyés dans la queue par d'autres parties du système (ISR, tâches, timers logiciels). Cela garantit que la FSM est réactive et ne bloque pas.
+
+
+---
+<br>
+
 
 ### Mise en Pratique : Le Mariage des Concepts
 
@@ -181,11 +193,10 @@ Pour notre étude, l'idéal est de construire une application qui fusionne tout 
 **Capteur de véhicule** (simulé par un bouton ou un interrupteur) : détecte la présence d'un véhicule pour prolonger le vert si nécessaire (optionnel, pour éviter les changements inutiles).
 
 **Cycle normal** :
-
-    1. Vert véhicules pendant 10 secondes.
-    2. Orange véhicules pendant 3 secondes.
-    3. Rouge véhicules et vert piétons pendant 8 secondes.
-    4. Retour au vert véhicules.
+1. Vert véhicules pendant 10 secondes.
+2. Orange véhicules pendant 3 secondes.
+3. Rouge véhicules et vert piétons pendant 8 secondes.
+4. Retour au vert véhicules.
 
 - **Demande piéton** : si le bouton est pressé pendant le vert véhicules, on passe à l'orange après un délai minimum (ex: 5 secondes de vert) pour ne pas interrompre trop tôt. Si le bouton est pressé pendant le rouge véhicules, le vert piéton reste actif le temps normal.
 
@@ -197,6 +208,7 @@ Pour notre étude, l'idéal est de construire une application qui fusionne tout 
 - Implémentation d'une FSM avec FreeRTOS (tâche dédiée, file d'événements).
 - Priorités : la tâche FSM doit avoir une priorité moyenne, les ISR doivent être courtes.
 
+  
 **Modélisation de la Machine à États**
 
 **États**
@@ -229,6 +241,7 @@ Pour notre étude, l'idéal est de construire une application qui fusionne tout 
 
 On pourrait ajouter une transition de `VEHICLE_RED` vers `VEHICLE_GREEN` avec une condition de détection de véhicule pour passer au vert plus tôt, mais ici on reste simple.
 
+  
 **Implémentation avec FreeRTOS**
 
 Le code complet est présenté ci‑dessous. Il suit la structure suivante :
