@@ -33,7 +33,7 @@ Le timer possède un compteur qui s'incrémente à chaque impulsion d'une horlog
 | `TIMx_CR1` | Control Register 1     | Utilisé notamment pour démarrer le timer (bit `CEN`)              |
 | `TIMx_SR`  | Status Register        | Contient le flag (`UIF`) qui indique si le temps est écoulé      |
 
-Tous ces registres sont décrits en détail dans le **Reference Manual (RM0368)**.
+Tous ces registres sont décrits en détail dans le [**Reference Manual (RM0368)**](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres..
 
 ---
 <br>
@@ -42,7 +42,7 @@ Tous ces registres sont décrits en détail dans le **Reference Manual (RM0368)*
 
 L'utilisation la plus simple d'un timer consiste à le faire compter jusqu'à une valeur (`ARR`) et à générer une interruption à chaque débordement. Cela permet de créer une base de temps régulière (par exemple 1 ms) sans occuper le CPU.
 
-#### Étapes de configuration (bare metal, sans RTOS)
+**Étapes de configuration (bare metal, sans RTOS)**
 
 1. **Activer l'horloge du timer** (via `RCC_APB1ENR` ou `RCC_APB2ENR` selon le timer).
 2. **Configurer le prescaler (`PSC`)** et la valeur de reload (`ARR`) pour obtenir la fréquence souhaitée.
@@ -50,7 +50,7 @@ L'utilisation la plus simple d'un timer consiste à le faire compter jusqu'à un
 4. **Configurer et activer l'interruption dans le NVIC** (priorité, activation).
 5. **Démarrer le timer** en positionnant le bit `CEN` (Counter Enable) dans `CR1`.
 
-#### Exemple : Chronomètre précis (polling)
+**Exemple : Chronomètre précis (polling)**
 
 ```c
 #include "stm32f4xx.h"
@@ -93,7 +93,7 @@ Au lieu de surveiller le registre `SR` (polling) comme precedement, on laisse le
 - On active l'interruption dans le timer : `TIM2->DIER |= TIM_DIER_UIE;`.
 - On active la ligne dans le gestionnaire d'interruptions : `NVIC_EnableIRQ(TIM2_IRQn);`.
 
-#### Exemple : Générer une interruption toutes les 100 ms avec TIM2.
+**Exemple : Générer une interruption toutes les 100 ms avec TIM2.**
 
 Sur la carte Black Pill, l'horloge système est généralement à 84 MHz. Le timer TIM2 est sur le bus APB1 dont la fréquence est aussi 84 MHz (car le prescaler de bus est à 1). Pour obtenir une interruption toutes les 100 ms, on peut choisir une résolution de 1 ms (1000 Hz) et un débordement après 100 ticks.
 
@@ -230,7 +230,7 @@ Pour utiliser ces timers, les constantes suivantes doivent être définies dans 
 #define configTIMER_QUEUE_LENGTH     10
 ```
 
-##### Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"**
+**Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"**
 
 ```c
 TimerHandle_t xAutoTimer;
@@ -259,14 +259,14 @@ void main_rtos(void) {
 }
 ```
 
-Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde/microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. 
+Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde / microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. 
 
 Plus d'informations sur ce sujet sont disponibles en consultant la documentation de l'API FreeRTOS et les fiches techniques du MCU.
 
 ---
 <br>
 
-### Réveil périodique précis pour acquisition de données
+### **Réveil périodique précis pour acquisition de données**
 
 Nous allons maintenant construire un système complet qui utilise un timer matériel pour générer une base de temps précise (1 seconde), et deux tâches FreeRTOS : l'une pour traiter l'événement (afficher un compteur sur UART), l'autre pour faire clignoter une LED indépendamment, afin de montrer le multitâche.
 

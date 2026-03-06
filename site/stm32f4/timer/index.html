@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/timer/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Timers et Interruptions - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Timers, interruptions matérielles et FreeRTOS - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#timers-et-interruptions" class="nav-link">Timers et Interruptions</a>
+            <li class="nav-item" data-bs-level="1"><a href="#timers-interruptions-materielles-et-freertos" class="nav-link">Timers, interruptions matérielles et FreeRTOS</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,22 +63,372 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="timers-et-interruptions">Timers et Interruptions</h1>
+<h1 id="timers-interruptions-materielles-et-freertos">Timers, interruptions matérielles et FreeRTOS</h1>
 <p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
 <p><a href="../../#Accueil">Accueil</a></p>
 <p><br>
 <br></p>
-<h3 id="gpio"><strong>GPIO</strong></h3>
+<h3 id="un-timer"><strong>Un Timer</strong></h3>
+<p>Un <strong>timer</strong> est un compteur matériel de précision, indépendant du CPU. Contrairement à une boucle <code>for</code>, il ne s'arrête jamais, même si le processeur exécute d'autres tâches. Il permet de générer des événements, des délais, et une synchronisation temporelle lorsque certaines valeurs sont atteintes.</p>
+<p>Le STM32F401 possède plusieurs blocs de temporisation : des timers généralistes 16/32 bits (TIM2, TIM3, TIM4, TIM5), des timers avancés (TIM1, TIM8) pour des fonctions complexes (PWM, capture/compare), et des timers de base (TIM6, TIM7) dédiés au déclenchement du DAC. Dans ce chapitre, nous nous concentrerons sur les timers généralistes en mode <strong>débordement (update event)</strong> , qui est la base de toute utilisation.</p>
+<p>Le timer possède un compteur qui s'incrémente à chaque impulsion d'une horloge. Le mécanisme repose sur trois registres principaux :</p>
+<ul>
+<li><strong>Prescaler (PSC)</strong> : divise la fréquence de l'horloge interne (souvent plusieurs MHz) pour ralentir le compteur.</li>
+<li><strong>Auto-Reload Register (ARR)</strong> : définit la valeur maximale du compteur. Quand le compteur <code>CNT</code> atteint <code>ARR</code>, un événement de mise à jour (update) est généré, et <code>CNT</code> est remis à zéro (en mode <em>upcounting</em>). C'est le <strong>débordement</strong>.</li>
+<li><strong>Compteur (CNT)</strong> : valeur actuelle du compteur (s'incrémente à chaque coup d'horloge).</li>
+</ul>
+<h4 id="registres-principaux">Registres principaux</h4>
+<table>
+<thead>
+<tr>
+<th>Registre</th>
+<th>Nom</th>
+<th>Fonction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TIMx_PSC</code></td>
+<td>Prescaler</td>
+<td>Divise la fréquence d'entrée : <code>f_timer = f_ck / (PSC + 1)</code></td>
+</tr>
+<tr>
+<td><code>TIMx_ARR</code></td>
+<td>Auto-Reload Register</td>
+<td>Définit la période du timer (la "cible")</td>
+</tr>
+<tr>
+<td><code>TIMx_DIER</code></td>
+<td>DMA/Interrupt Enable</td>
+<td>Permet d'activer l'interruption lors d'un débordement (bit <code>UIE</code>)</td>
+</tr>
+<tr>
+<td><code>TIMx_CR1</code></td>
+<td>Control Register 1</td>
+<td>Utilisé notamment pour démarrer le timer (bit <code>CEN</code>)</td>
+</tr>
+<tr>
+<td><code>TIMx_SR</code></td>
+<td>Status Register</td>
+<td>Contient le flag (<code>UIF</code>) qui indique si le temps est écoulé</td>
+</tr>
+</tbody>
+</table>
+<p>Tous ces registres sont décrits en détail dans le <strong>Reference Manual (RM0368)</strong>.</p>
 <hr />
 <p><br></p>
-<h3 id="_1">**</h3>
+<h3 id="configuration-dun-timer-en-mode-debordement-update-event"><strong>Configuration d’un timer en mode débordement (Update Event)</strong></h3>
+<p>L'utilisation la plus simple d'un timer consiste à le faire compter jusqu'à une valeur (<code>ARR</code>) et à générer une interruption à chaque débordement. Cela permet de créer une base de temps régulière (par exemple 1 ms) sans occuper le CPU.</p>
+<h4 id="etapes-de-configuration-bare-metal-sans-rtos">Étapes de configuration (bare metal, sans RTOS)</h4>
+<ol>
+<li><strong>Activer l'horloge du timer</strong> (via <code>RCC_APB1ENR</code> ou <code>RCC_APB2ENR</code> selon le timer).</li>
+<li><strong>Configurer le prescaler (<code>PSC</code>)</strong> et la valeur de reload (<code>ARR</code>) pour obtenir la fréquence souhaitée.</li>
+<li><strong>Activer l'interruption de mise à jour</strong> dans le registre <code>DIER</code>.</li>
+<li><strong>Configurer et activer l'interruption dans le NVIC</strong> (priorité, activation).</li>
+<li><strong>Démarrer le timer</strong> en positionnant le bit <code>CEN</code> (Counter Enable) dans <code>CR1</code>.</li>
+</ol>
+<h4 id="exemple-chronometre-precis-polling">Exemple : Chronomètre précis (polling)</h4>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void Timer2_Init(void) {
+    // 1. Activer l'horloge du Timer 2 (sur APB1)
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // 2. Configurer PSC et ARR pour 1 seconde
+    //    f_timer = 84 MHz / 84000 = 1 kHz (1 ms par tick)
+    //    ARR = 999 -&gt; période de 1 s (1000 ticks)
+    TIM2-&gt;PSC = 84000 - 1;
+    TIM2-&gt;ARR = 1000 - 1;
+
+    // 3. Lancer le timer
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+// Attente active mais précise (polling)
+void wait_one_second(void) {
+    TIM2-&gt;CNT = 0;                          // Reset compteur
+    while(!(TIM2-&gt;SR &amp; TIM_SR_UIF));        // Attendre le flag Update
+    TIM2-&gt;SR &amp;= ~TIM_SR_UIF;                 // Effacer le flag
+}
+</code></pre>
+<p>Remarque : Le calcul de la fréquence est :
+f_update = f_timer / (ARR + 1) = (f_ck / (PSC + 1)) / (ARR + 1).</p>
+<p>Dans l'exemple, avec f_ck = 84 MHz, PSC = 83999, ARR = 999, on obtient :
+f_update = 84e6 / 84000 / 1000 = 1 Hz.</p>
+<hr />
+<p><br></p>
+<h3 id="interruption-du-timer"><strong>Interruption du Timer</strong></h3>
+<p>Au lieu de surveiller le registre <code>SR</code> (polling) comme precedement, on laisse le matériel prévenir le CPU, le Timer prévient le processeur dès que le temps est écoulé via une ISR (Interrupt Service Routine). C'est l'usage du <strong>NVIC</strong> combiné au Timer.</p>
+<ul>
+<li>On active l'interruption dans le timer : <code>TIM2-&gt;DIER |= TIM_DIER_UIE;</code>.</li>
+<li>On active la ligne dans le gestionnaire d'interruptions : <code>NVIC_EnableIRQ(TIM2_IRQn);</code>.</li>
+</ul>
+<h4 id="exemple-generer-une-interruption-toutes-les-100-ms-avec-tim2">Exemple : Générer une interruption toutes les 100 ms avec TIM2.</h4>
+<p>Sur la carte Black Pill, l'horloge système est généralement à 84 MHz. Le timer TIM2 est sur le bus APB1 dont la fréquence est aussi 84 MHz (car le prescaler de bus est à 1). Pour obtenir une interruption toutes les 100 ms, on peut choisir une résolution de 1 ms (1000 Hz) et un débordement après 100 ticks.</p>
+<p>Calcul :</p>
+<ul>
+<li>On veut une période d'interruption de 100 ms = 0,1 s, soit une fréquence de 10 Hz.</li>
+<li>Si on choisit PSC = 8399 (soit 8400 - 1), alors f_timer = 84 MHz / 8400 = 10 kHz.</li>
+<li>Avec ARR = 999 (1000 - 1), on obtient une fréquence d'update de 10 kHz / 1000 = 10 Hz, soit une période de 100 ms.</li>
+</ul>
+<p>Ou plus simplement, on peut choisir PSC = 8399 et ARR = 999.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void Timer2_Init(void) {
+    // 1. Activer l'horloge du Timer 2 (sur APB1)
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN; 
+
+    // 2. Configurer PSC et ARR pour 100 ms
+    //    f_timer = 84 MHz / (8399+1) = 10 kHz
+    //    ARR = 999 -&gt; update toutes les 1000 ticks = 0.1 s
+    TIM2-&gt;PSC = 8399;       // Prescaler
+    TIM2-&gt;ARR = 999;        // Auto-reload
+
+    // 3. Activer l'interruption de mise à jour (update)
+    TIM2-&gt;DIER |= TIM_DIER_UIE;
+
+    // 4. Configurer et activer l'interruption dans le NVIC
+    NVIC_SetPriority(TIM2_IRQn, 2);       // Priorité (ajustable)
+    NVIC_EnableIRQ(TIM2_IRQn);
+
+    // 5. Démarrer le timer
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+// Handler d'interruption de TIM2
+void TIM2_IRQHandler(void) {
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {          // Vérifier le flag de mise à jour
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;           // Acquitter le flag (écrire 0)
+
+        // Action à effectuer toutes les 100 ms
+        // Exemple : basculer une LED sur PC13
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="timer-avec-freertos-creer-une-tache-periodique-precise"><strong>Timer avec FreeRTOS : Créer une Tâche Périodique Précise</strong></h3>
+<p>Dans un environnement RTOS, on peut utiliser un timer matériel pour réveiller périodiquement une tâche, de manière plus précise et indépendante du tick système que <code>vTaskDelayUntil()</code> (qui dépend de la résolution du tick). On combine alors l'interruption timer avec un <strong>sémaphore</strong> ou une <strong>notification de tâche</strong>.</p>
+<p><strong>Principe :</strong></p>
+<ul>
+<li>L'interruption timer donne un sémaphore (ou envoie une notification) à une tâche.</li>
+<li>La tâche attend ce sémaphore et exécute son code à chaque réveil.</li>
+<li>Ainsi, la tâche s'exécute exactement à la fréquence du timer, avec une gigue minimale.</li>
+</ul>
+<p><strong>Exemple : Tâche exécutée toutes les 100 ms via TIM2 (sémaphore)</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+
+SemaphoreHandle_t xSemTimer;
+
+void TIM2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+
+        // Donner le sémaphore depuis l'ISR
+        xSemaphoreGiveFromISR(xSemTimer, &amp;xWoken);
+        portYIELD_FROM_ISR(xWoken);
+    }
+}
+
+void vTaskPeriodic(void *pvParameters) {
+    for (;;) {
+        // Attendre le sémaphore (bloquant)
+        xSemaphoreTake(xSemTimer, portMAX_DELAY);
+
+        // Code exécuté toutes les 100 ms
+        // Par exemple : basculer une LED
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);
+
+        // Ou toute autre action périodique
+    }
+}
+
+int main(void) {
+    // Initialisation de la LED PC13
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));
+
+    // Initialisation du timer (comme ci-dessus, sans l'action dans l'ISR)
+    Timer_Init();  // on réutilise la fonction précédente, mais en enlevant le basculement dans l'ISR
+
+    // Création du sémaphore
+    xSemTimer = xSemaphoreCreateBinary();
+
+    if (xSemTimer != NULL) {
+        // Création de la tâche périodique
+        xTaskCreate(vTaskPeriodic, &quot;Periodic&quot;, 128, NULL, 2, NULL);
+
+        // Lancement de l'ordonnanceur
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<p>Cette architecture est très efficace : la tâche dort (0% CPU) entre les réveils, et l'ISR est ultra-courte.</p>
+<hr />
+<p><br></p>
+<h3 id="les-timers-logiciels-software-timers"><strong>Les Timers Logiciels (Software Timers)</strong></h3>
+<p>Contrairement aux timers matériels, les <strong>Software Timers</strong> sont gérés entièrement par le noyau FreeRTOS. Ils permettent de déclencher des fonctions (callbacks) sans mobiliser de périphériques matériels supplémentaires. Ils utilisent le timer SysTick, le même que celui du noyau. Un seul timer matériel (le SysTick) peut ainsi gérer des dizaines de timers logiciels.</p>
+<p><strong>Attention</strong> : La fonction callback exécutée à l'expiration ne doit jamais contenir de code bloquant (pas de <code>vTaskDelay</code> ou de sémaphore bloquant).</p>
+<p>Pour utiliser ces timers, les constantes suivantes doivent être définies dans <code>FreeRTOSConfig.h</code> :</p>
+<pre><code class="language-c">#define configUSE_TIMERS             1
+#define configTIMER_TASK_PRIORITY    (configMAX_PRIORITIES - 1)
+#define configTIMER_QUEUE_LENGTH     10
+</code></pre>
+<h5 id="exemple-pratique-timer-one-shot-vs-auto-reload">Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"**</h5>
+<pre><code class="language-c">TimerHandle_t xAutoTimer;
+
+// La fonction de rappel (Callback)
+void vTimerCallback(TimerHandle_t xTimer) {
+    // Action à effectuer à chaque expiration
+    GPIOC-&gt;ODR ^= (1 &lt;&lt; 13); 
+}
+
+void main_rtos(void) {
+    // Création d'un timer périodique de 500ms
+    xAutoTimer = xTimerCreate(
+        &quot;AutoTimer&quot;,            // Nom
+        pdMS_TO_TICKS(500),     // Période
+        pdTRUE,                 // pdTRUE = Auto-Reload, pdFALSE = One-Shot
+        (void *) 0,             // ID du timer
+        vTimerCallback          // Fonction à appeler
+    );
+
+    if (xAutoTimer != NULL) {
+        xTimerStart(xAutoTimer, 0); // Lancement du timer
+    }
+
+    vTaskStartScheduler();
+}
+</code></pre>
+<p>Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde/microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. </p>
+<p>Plus d'informations sur ce sujet sont disponibles en consultant la documentation de l'API FreeRTOS et les fiches techniques du MCU.</p>
+<hr />
+<p><br></p>
+<h3 id="reveil-periodique-precis-pour-acquisition-de-donnees">Réveil périodique précis pour acquisition de données</h3>
+<p>Nous allons maintenant construire un système complet qui utilise un timer matériel pour générer une base de temps précise (1 seconde), et deux tâches FreeRTOS : l'une pour traiter l'événement (afficher un compteur sur UART), l'autre pour faire clignoter une LED indépendamment, afin de montrer le multitâche.</p>
+<p><strong>Cahier des charges</strong></p>
+<ul>
+<li><strong>Timer matériel</strong> : configuré pour générer une interruption toutes les 1 seconde (PSC=8399, ARR=9999).</li>
+<li><strong>ISR</strong> : incrémente un compteur partagé et donne un sémaphore (ou envoie une notification) à une tâche d'affichage. L'ISR est courte : elle incrémente seconds et donne le sémaphore.</li>
+<li><strong>Tâche <code>vTaskDisplay</code></strong> : attend le sémaphore et affiche la valeur du compteur via UART. La tâche <code>vTaskDisplay</code> est bloquée sur <code>xSemaphoreTake</code> ; elle se réveille exactement à chaque seconde, sans consommer de CPU entre-temps.</li>
+<li><strong>Tâche <code>vTaskBlink</code></strong> : fait clignoter la LED PC13 à une fréquence de 2 Hz indépendamment (utilise <code>vTaskDelay</code>). On observe que les deux tâches coexistent parfaitement.</li>
+<li><strong>UART</strong> : configuré en sortie pour printf (exemple avec USART2). Configuré pour printf. Chaque seconde, le compteur s'affiche sur le terminal série.</li>
+</ul>
+<p>Ce projet illustre l'utilisation conjointe d'un timer matériel, d'une ISR respectant les règles FreeRTOS, d'un sémaphore pour la synchronisation, et d'une tâche périodique gérée par le RTOS.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+#include &lt;stdio.h&gt;
+
+// Sémaphore pour signaler la seconde
+SemaphoreHandle_t xSemSecond;
+
+// Compteur de secondes (partagé, doit être volatile)
+volatile uint32_t seconds = 0;
+
+// Initialisation du timer pour 1 seconde
+void Timer_Init_1s(void) {
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // f_timer = 84 MHz / 8400 = 10 kHz
+    TIM2-&gt;PSC = 8399;
+    // ARR = 9999 =&gt; 10 kHz / 10000 = 1 Hz
+    TIM2-&gt;ARR = 9999;
+
+    TIM2-&gt;DIER |= TIM_DIER_UIE;           // Interruption sur update
+
+    NVIC_SetPriority(TIM2_IRQn, 5);        // Priorité compatible FreeRTOS
+    NVIC_EnableIRQ(TIM2_IRQn);
+
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;               // Démarrer
+}
+
+// ISR du timer
+void TIM2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+
+        seconds++;                           // Incrémenter le compteur
+
+        // Donner le sémaphore
+        xSemaphoreGiveFromISR(xSemSecond, &amp;xWoken);
+        portYIELD_FROM_ISR(xWoken);
+    }
+}
+
+// Tâche d'affichage sur UART
+void vTaskDisplay(void *pvParameters) {
+    for (;;) {
+        xSemaphoreTake(xSemSecond, portMAX_DELAY);
+        printf(&quot;Seconde : %lu\n&quot;, seconds);
+    }
+}
+
+// Tâche de clignotement LED (2 Hz)
+void vTaskBlink(void *pvParameters) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));
+
+    for (;;) {
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);
+        vTaskDelay(pdMS_TO_TICKS(250));      // 250 ms -&gt; 2 Hz
+    }
+}
+
+// Initialisation UART (USART2 sur PA2)
+void UART_Init(uint32_t baud) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // PA2 en alternate function AF7 (USART2_TX)
+    GPIOA-&gt;MODER |= (2 &lt;&lt; (2*2));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4));
+
+    USART2-&gt;BRR = 84000000 / baud;         // 115200 bauds
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_UE;
+}
+
+// Réimplémentation de _write pour printf (via UART)
+int _write(int file, char *ptr, int len) {
+    for (int i = 0; i &lt; len; i++) {
+        while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+        USART2-&gt;DR = ptr[i];
+    }
+    return len;
+}
+
+int main(void) {
+    UART_Init(115200);
+    Timer_Init_1s();
+
+    xSemSecond = xSemaphoreCreateBinary();
+
+    if (xSemSecond != NULL) {
+        xTaskCreate(vTaskDisplay, &quot;Display&quot;, 256, NULL, 1, NULL);
+        xTaskCreate(vTaskBlink,   &quot;Blink&quot;,   128, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
 <hr />
 <p><br></p>
 <h3 id="liens-connexes">Liens connexes</h3>
 <ul>
-<li><a href="stm32f4/adc/index.md">Acquisition Analogique via ADC</a></li>
-<li><a href="../technique-algos/fsm/index.md">Machine d’État Fini (FSM)</a></li>
+<li><a href="../adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
 </ul></div>
             </div>
         </div>
