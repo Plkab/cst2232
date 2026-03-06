@@ -25,7 +25,7 @@ L'objectif de ce chapitre est de vous montrer comment modéliser et implémenter
 <br>
 
 
-### Concepts de Base d'une FSM
+### **Concepts de Base d'une FSM**
 
 Une machine à états finis est définie par :
 
@@ -52,7 +52,7 @@ En pratique, on utilise souvent un mixte des deux.
 ---
 <br>
 
-### Implémentation d'une FSM en C
+### **Implémentation d'une FSM en C**
 
 Plusieurs méthodes existent pour implémenter une FSM en C. Nous allons voir les deux plus courantes : le `switch-case` et la **table de transitions**.
 
@@ -136,7 +136,7 @@ Cette approche rend la machine plus facile à modifier et à étendre.
 <br>
 
 
-### Intégration avec FreeRTOS
+### **Intégration avec FreeRTOS**
 
 Dans un système temps réel, la FSM peut être implémentée comme une tâche dédiée. Les événements peuvent provenir :
 
@@ -167,7 +167,7 @@ Les événements sont envoyés dans la queue par d'autres parties du système (I
 <br>
 
 
-### Mise en Pratique : Le Mariage des Concepts
+### **Mise en Pratique : Le Mariage des Concepts**
 
 Pour notre étude, l'idéal est de construire une application qui fusionne tout :
 
@@ -179,7 +179,7 @@ Pour notre étude, l'idéal est de construire une application qui fusionne tout 
 ---
 <br>
 
-### Système de Feux Tricolores avec Bouton Piéton et Détection de Véhicule{#projet-fsm-timer-freertos}
+### **Système de Feux Tricolores avec Bouton Piéton et Détection de Véhicule**{#projet-fsm-timer-freertos}
 
  Nous allons concevoir une autre application classique de l'embarqué : un **système de feux tricolores** pour un carrefour routier, intégrant un bouton piéton et un capteur de détection de véhicule. Ce projet mettra en œuvre une machine à états finis (FSM) gérée par FreeRTOS, avec des temporisations précises (timers matériels ou logiciels), des entrées (bouton, capteur) et des sorties (LEDs). Il illustre la gestion d'événements asynchrones et la coordination de plusieurs tâches.
 

@@ -76,7 +76,7 @@
 <p>L'objectif de ce chapitre est de vous montrer comment modéliser et implémenter une FSM en C, en l'intégrant dans un environnement temps réel avec FreeRTOS, tout en réutilisant les concepts déjà acquis (GPIO, interruptions, timers).</p>
 <hr />
 <p><br></p>
-<p><strong>Concepts de Base d'une FSM</strong></p>
+<h3 id="concepts-de-base-dune-fsm">Concepts de Base d'une FSM</h3>
 <p>Une machine à états finis est définie par :</p>
 <ul>
 <li><strong>États</strong> : représentent les situations dans lesquelles le système peut se trouver (ex: <code>IDLE</code>, <code>WAITING</code>, <code>ACTIVE</code>).</li>
@@ -171,6 +171,8 @@ void FSM_Process(Event_t event) {
 }
 </code></pre>
 <p>Cette approche rend la machine plus facile à modifier et à étendre.</p>
+<hr />
+<p><br></p>
 <h3 id="integration-avec-freertos">Intégration avec FreeRTOS</h3>
 <p>Dans un système temps réel, la FSM peut être implémentée comme une tâche dédiée. Les événements peuvent provenir :</p>
 <ul>
@@ -192,6 +194,8 @@ void FSM_Process(Event_t event) {
 }
 </code></pre>
 <p>Les événements sont envoyés dans la queue par d'autres parties du système (ISR, tâches, timers logiciels). Cela garantit que la FSM est réactive et ne bloque pas.</p>
+<hr />
+<p><br></p>
 <h3 id="mise-en-pratique-le-mariage-des-concepts">Mise en Pratique : Le Mariage des Concepts</h3>
 <p>Pour notre étude, l'idéal est de construire une application qui fusionne tout :</p>
 <ul>
@@ -212,12 +216,11 @@ void FSM_Process(Event_t event) {
 <li><strong>Bouton piéton</strong> : permet de demander la traversée. La demande n'est prise en compte que si le feu véhicule n'est pas déjà en cours de changement.
 <strong>Capteur de véhicule</strong> (simulé par un bouton ou un interrupteur) : détecte la présence d'un véhicule pour prolonger le vert si nécessaire (optionnel, pour éviter les changements inutiles).</li>
 </ul>
-<p><strong>Cycle normal</strong> :</p>
-<pre><code>1. Vert véhicules pendant 10 secondes.
+<p><strong>Cycle normal</strong> :
+1. Vert véhicules pendant 10 secondes.
 2. Orange véhicules pendant 3 secondes.
 3. Rouge véhicules et vert piétons pendant 8 secondes.
-4. Retour au vert véhicules.
-</code></pre>
+4. Retour au vert véhicules.</p>
 <ul>
 <li><strong>Demande piéton</strong> : si le bouton est pressé pendant le vert véhicules, on passe à l'orange après un délai minimum (ex: 5 secondes de vert) pour ne pas interrompre trop tôt. Si le bouton est pressé pendant le rouge véhicules, le vert piéton reste actif le temps normal.</li>
 </ul>
