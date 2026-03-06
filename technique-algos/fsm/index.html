@@ -76,7 +76,7 @@
 <p>L'objectif de ce chapitre est de vous montrer comment modéliser et implémenter une FSM en C, en l'intégrant dans un environnement temps réel avec FreeRTOS, tout en réutilisant les concepts déjà acquis (GPIO, interruptions, timers).</p>
 <hr />
 <p><br></p>
-<h3 id="concepts-de-base-dune-fsm">Concepts de Base d'une FSM</h3>
+<h3 id="concepts-de-base-dune-fsm"><strong>Concepts de Base d'une FSM</strong></h3>
 <p>Une machine à états finis est définie par :</p>
 <ul>
 <li><strong>États</strong> : représentent les situations dans lesquelles le système peut se trouver (ex: <code>IDLE</code>, <code>WAITING</code>, <code>ACTIVE</code>).</li>
@@ -103,7 +103,7 @@
 </ol>
 <hr />
 <p><br></p>
-<h3 id="implementation-dune-fsm-en-c">Implémentation d'une FSM en C</h3>
+<h3 id="implementation-dune-fsm-en-c"><strong>Implémentation d'une FSM en C</strong></h3>
 <p>Plusieurs méthodes existent pour implémenter une FSM en C. Nous allons voir les deux plus courantes : le <code>switch-case</code> et la <strong>table de transitions</strong>.</p>
 <p>1.<strong>Implémentation par switch-case</strong></p>
 <p>C'est la méthode la plus simple et la plus lisible pour des machines de taille modeste.</p>
@@ -173,7 +173,7 @@ void FSM_Process(Event_t event) {
 <p>Cette approche rend la machine plus facile à modifier et à étendre.</p>
 <hr />
 <p><br></p>
-<h3 id="integration-avec-freertos">Intégration avec FreeRTOS</h3>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
 <p>Dans un système temps réel, la FSM peut être implémentée comme une tâche dédiée. Les événements peuvent provenir :</p>
 <ul>
 <li>D'interruptions matérielles (via sémaphores/queues).</li>
@@ -196,7 +196,7 @@ void FSM_Process(Event_t event) {
 <p>Les événements sont envoyés dans la queue par d'autres parties du système (ISR, tâches, timers logiciels). Cela garantit que la FSM est réactive et ne bloque pas.</p>
 <hr />
 <p><br></p>
-<h3 id="mise-en-pratique-le-mariage-des-concepts">Mise en Pratique : Le Mariage des Concepts</h3>
+<h3 id="mise-en-pratique-le-mariage-des-concepts"><strong>Mise en Pratique : Le Mariage des Concepts</strong></h3>
 <p>Pour notre étude, l'idéal est de construire une application qui fusionne tout :</p>
 <ul>
 <li><strong>Les Interruptions (Entrées)</strong> : Elles captent les événements extérieurs (bouton pressé, capteur activé) et envoient un signal à la FSM.</li>
@@ -206,7 +206,7 @@ void FSM_Process(Event_t event) {
 </ul>
 <hr />
 <p><br></p>
-<h3 id="systeme-de-feux-tricolores-avec-bouton-pieton-et-detection-de-vehiculeprojet-fsm-timer-freertos">Système de Feux Tricolores avec Bouton Piéton et Détection de Véhicule{#projet-fsm-timer-freertos}</h3>
+<h3 id="systeme-de-feux-tricolores-avec-bouton-pieton-et-detection-de-vehicule"><strong id="projet-fsm-timer-freertos">Système de Feux Tricolores avec Bouton Piéton et Détection de Véhicule</strong></h3>
 <p>Nous allons concevoir une autre application classique de l'embarqué : un <strong>système de feux tricolores</strong> pour un carrefour routier, intégrant un bouton piéton et un capteur de détection de véhicule. Ce projet mettra en œuvre une machine à états finis (FSM) gérée par FreeRTOS, avec des temporisations précises (timers matériels ou logiciels), des entrées (bouton, capteur) et des sorties (LEDs). Il illustre la gestion d'événements asynchrones et la coordination de plusieurs tâches.</p>
 <p><strong>Cahier des Charges</strong></p>
 <p><strong>Fonctionnalités</strong></p>
