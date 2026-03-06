@@ -429,5 +429,5 @@ int main(void) {
 
 ### Liens connexes
 
-- [GPIO et Interruptions](../stm32f4/gpio/)
-- [Timer et Interruption](../stm32f4/timer/)
+- [GPIO et Interruptions](/stm32f4/gpio/)
+- [Timer et Interruption](/stm32f4/timer/)
