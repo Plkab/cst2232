@@ -115,12 +115,12 @@
 </tr>
 </tbody>
 </table>
-<p>Tous ces registres sont décrits en détail dans le <strong>Reference Manual (RM0368)</strong>.</p>
+<p>Tous ces registres sont décrits en détail dans le <a href="https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf"><strong>Reference Manual (RM0368)</strong></a> détaille tous les registres..</p>
 <hr />
 <p><br></p>
 <h3 id="configuration-dun-timer-en-mode-debordement-update-event"><strong>Configuration d’un timer en mode débordement (Update Event)</strong></h3>
 <p>L'utilisation la plus simple d'un timer consiste à le faire compter jusqu'à une valeur (<code>ARR</code>) et à générer une interruption à chaque débordement. Cela permet de créer une base de temps régulière (par exemple 1 ms) sans occuper le CPU.</p>
-<h4 id="etapes-de-configuration-bare-metal-sans-rtos">Étapes de configuration (bare metal, sans RTOS)</h4>
+<p><strong>Étapes de configuration (bare metal, sans RTOS)</strong></p>
 <ol>
 <li><strong>Activer l'horloge du timer</strong> (via <code>RCC_APB1ENR</code> ou <code>RCC_APB2ENR</code> selon le timer).</li>
 <li><strong>Configurer le prescaler (<code>PSC</code>)</strong> et la valeur de reload (<code>ARR</code>) pour obtenir la fréquence souhaitée.</li>
@@ -128,7 +128,7 @@
 <li><strong>Configurer et activer l'interruption dans le NVIC</strong> (priorité, activation).</li>
 <li><strong>Démarrer le timer</strong> en positionnant le bit <code>CEN</code> (Counter Enable) dans <code>CR1</code>.</li>
 </ol>
-<h4 id="exemple-chronometre-precis-polling">Exemple : Chronomètre précis (polling)</h4>
+<p><strong>Exemple : Chronomètre précis (polling)</strong></p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 void Timer2_Init(void) {
@@ -164,7 +164,7 @@ f_update = 84e6 / 84000 / 1000 = 1 Hz.</p>
 <li>On active l'interruption dans le timer : <code>TIM2-&gt;DIER |= TIM_DIER_UIE;</code>.</li>
 <li>On active la ligne dans le gestionnaire d'interruptions : <code>NVIC_EnableIRQ(TIM2_IRQn);</code>.</li>
 </ul>
-<h4 id="exemple-generer-une-interruption-toutes-les-100-ms-avec-tim2">Exemple : Générer une interruption toutes les 100 ms avec TIM2.</h4>
+<p><strong>Exemple : Générer une interruption toutes les 100 ms avec TIM2.</strong></p>
 <p>Sur la carte Black Pill, l'horloge système est généralement à 84 MHz. Le timer TIM2 est sur le bus APB1 dont la fréquence est aussi 84 MHz (car le prescaler de bus est à 1). Pour obtenir une interruption toutes les 100 ms, on peut choisir une résolution de 1 ms (1000 Hz) et un débordement après 100 ticks.</p>
 <p>Calcul :</p>
 <ul>
@@ -282,7 +282,7 @@ int main(void) {
 #define configTIMER_TASK_PRIORITY    (configMAX_PRIORITIES - 1)
 #define configTIMER_QUEUE_LENGTH     10
 </code></pre>
-<h5 id="exemple-pratique-timer-one-shot-vs-auto-reload">Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"**</h5>
+<p><strong>Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"</strong></p>
 <pre><code class="language-c">TimerHandle_t xAutoTimer;
 
 // La fonction de rappel (Callback)
@@ -308,11 +308,11 @@ void main_rtos(void) {
     vTaskStartScheduler();
 }
 </code></pre>
-<p>Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde/microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. </p>
+<p>Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde / microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. </p>
 <p>Plus d'informations sur ce sujet sont disponibles en consultant la documentation de l'API FreeRTOS et les fiches techniques du MCU.</p>
 <hr />
 <p><br></p>
-<h3 id="reveil-periodique-precis-pour-acquisition-de-donnees">Réveil périodique précis pour acquisition de données</h3>
+<h3 id="reveil-periodique-precis-pour-acquisition-de-donnees"><strong>Réveil périodique précis pour acquisition de données</strong></h3>
 <p>Nous allons maintenant construire un système complet qui utilise un timer matériel pour générer une base de temps précise (1 seconde), et deux tâches FreeRTOS : l'une pour traiter l'événement (afficher un compteur sur UART), l'autre pour faire clignoter une LED indépendamment, afin de montrer le multitâche.</p>
 <p><strong>Cahier des charges</strong></p>
 <ul>
