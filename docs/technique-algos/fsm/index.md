@@ -13,9 +13,9 @@
 
 ### **La Machine d'Etats Finis**
 
-En ingénierie, on ne code pas une logique complexe par "essais et erreurs" avec des séries de `if/else` imbriqués (souvent appelés "code spaghetti"). On utilise la FSM pour garantir que le système est **déterministe** et **prévisible**.
+En ingénierie, on ne code pas une logique complexe par "essais et erreurs" avec des séries de `if/else` imbriqués (souvent appelés "code spaghetti"). On utilise la FSM pour garantir que le système est **déterministe** et **prévisible**, on utilise les **machines à états finis (FSM)**.
 
-Lorsque les systèmes complexes (comme un distributeur automatique, un digicode, ou une machine à états d'un protocole de communication) devient vite difficile de gérer toute la logique avec des if...else éparpillés. C'est là qu'interviennent les machines à états finis (FSM).
+Lorsque les systèmes deviennent complexes (comme un distributeur automatique, un digicode, ou un protocole de communication), il devient vite difficile de gérer toute la logique avec des `if...else` éparpillés. C'est là qu'interviennent les **machines à états finis (FSM)**.
 
 Une FSM est un modèle mathématique utilisé pour concevoir des systèmes séquentiels. Elle permet de représenter le comportement d'un système par un nombre fini d'**états**, de **transitions** entre ces états, et d'**actions** associées. Les FSM sont omniprésentes en ingénierie embarquée : contrôle de moteurs, protocoles de communication (UART, I2C), interfaces homme-machine, etc.
 
@@ -39,20 +39,22 @@ Il existe deux grands types de FSM :
 
 En pratique, on utilise souvent un mixte des deux.
 
-1. **Modélisation (Le Formalisme)** : Avant de coder, l'ingénieur dessine un **diagramme d'états**. Chaque état représente un comportement stable (ex: IDLE, MEASURING, ALARM), et chaque flèche représente une transition déclenchée par un événement (une interruption GPIO ou un overflow de Timer).
+**Démarche de conception**
+
+1. **Modélisation (Le Formalisme)** : Avant de coder, l'ingénieur dessine un **diagramme d'états**. Chaque état représente un comportement stable (ex: `IDLE`, `MEASURING`, `ALARM`), et chaque flèche représente une transition déclenchée par un événement (une interruption GPIO ou un overflow de Timer).
 
 2. **Robustesse** : La FSM permet de définir exactement ce qui se passe si un événement imprévu survient. C'est la base des systèmes critiques (médical, aéronautique).
 
-3. **Implémentation Propre** : En C, on utilise généralement une structure switch(state) à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes. 
+3. **Implémentation Propre** : En C, on utilise généralement une structure `switch(state)` à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes. 
 
 ---
 <br>
 
 ### Implémentation d'une FSM en C
 
-Plusieurs méthodes existent pour implémenter une FSM en C. Nous allons voir les deux plus courantes : le switch-case et la table de transitions.
+Plusieurs méthodes existent pour implémenter une FSM en C. Nous allons voir les deux plus courantes : le `switch-case` et la **table de transitions**.
 
-1. **Implémentation par switch-case**
+1.**Implémentation par switch-case**
 
 C'est la méthode la plus simple et la plus lisible pour des machines de taille modeste.
 
@@ -91,7 +93,7 @@ void FSM_Process(Event_t event) {
 }
 ```
 
-2. **Implémentation par table de transitions**
+2.**Implémentation par table de transitions**
 
 Pour des machines plus complexes ou pour faciliter la maintenance, on peut utiliser une table qui associe à chaque couple (état, événement) l'état suivant et une action.
 
@@ -229,10 +231,11 @@ On pourrait ajouter une transition de `VEHICLE_RED` vers `VEHICLE_GREEN` avec un
 
 **Implémentation avec FreeRTOS**
 
-**Structure du projet**
-- main.c : initialisations, création des objets FreeRTOS (queue, timers, tâches).
-- fsm.c : implémentation de la machine à états.
-- hardware.c : fonctions d'initialisation des GPIO, interruptions, timers matériels (optionnels).
+Le code complet est présenté ci‑dessous. Il suit la structure suivante :
+
+- Initialisation matérielle (GPIO, interruptions).
+- Création de la file d'événements et des timers logiciels.
+- Tâche FSM qui attend les événements et exécute la logique à états.
 
 ```c
 #include "FreeRTOS.h"
@@ -256,10 +259,6 @@ QueueHandle_t xEventQueue;
 
 // Handles des timers logiciels
 TimerHandle_t xTimerGreen, xTimerYellow, xTimerRed, xTimerMinGreen;
-
-// Prototypes
-void vTaskFSM(void *pvParameters);
-void Hardware_Init(void);
 
 // Callbacks des timers logiciels
 void vTimerGreenCallback(TimerHandle_t xTimer) {
@@ -286,8 +285,8 @@ void EXTI0_IRQHandler(void) {
         EXTI->PR = (1 << 0);
         Event_t ev = EV_PED_BUTTON;
         xQueueSendFromISR(xEventQueue, &ev, &xWoken);
+        portYIELD_FROM_ISR(xWoken);
     }
-    portYIELD_FROM_ISR(xWoken);
 }
 
 // ISR pour le capteur de véhicule (EXTI)
@@ -297,17 +296,14 @@ void EXTI1_IRQHandler(void) {
         EXTI->PR = (1 << 1);
         Event_t ev = EV_VEHICLE_DETECT;
         xQueueSendFromISR(xEventQueue, &ev, &xWoken);
+        portYIELD_FROM_ISR(xWoken);
     }
-    portYIELD_FROM_ISR(xWoken);
 }
 
 // Tâche FSM
 void vTaskFSM(void *pvParameters) {
     enum { VEHICLE_GREEN, VEHICLE_YELLOW, VEHICLE_RED, PED_REQUEST } state = VEHICLE_GREEN;
     Event_t ev;
-
-    // Initialiser les sorties (LEDs)
-    // ... (à faire dans Hardware_Init)
 
     // Démarrer le timer du vert initial
     xTimerStart(xTimerGreen, 0);
@@ -318,64 +314,56 @@ void vTaskFSM(void *pvParameters) {
         switch (state) {
             case VEHICLE_GREEN:
                 if (ev == EV_TIMER_GREEN) {
-                    // Fin du vert normal, passer à l'orange
                     state = VEHICLE_YELLOW;
-                    // Éteindre vert véhicule, allumer orange
-                    // Démarrer timer orange
+                    GPIOA->ODR &= ~(1<<5);   // éteint vert
+                    GPIOA->ODR |=  (1<<6);   // allume orange
                     xTimerStart(xTimerYellow, 0);
                 }
                 else if (ev == EV_PED_BUTTON) {
-                    // Demande piéton : on passe en état de requête
                     state = PED_REQUEST;
-                    // Démarrer un timer pour le délai minimum de vert (ex: 5s)
-                    xTimerStart(xTimerMinGreen, 0);
-                    // On laisse le vert allumé pendant ce délai
+                    xTimerStart(xTimerMinGreen, 0); // délai minimum 5s
                 }
-                // Ignorer les autres événements
                 break;
 
             case PED_REQUEST:
                 if (ev == EV_TIMER_MIN_GREEN) {
-                    // Fin du délai minimum, on passe à l'orange
                     state = VEHICLE_YELLOW;
-                    // Allumer orange, éteindre vert
-                    // Démarrer timer orange
+                    GPIOA->ODR &= ~(1<<5);
+                    GPIOA->ODR |=  (1<<6);
                     xTimerStart(xTimerYellow, 0);
                 }
-                // On pourrait aussi recevoir EV_TIMER_GREEN si le timer normal expire avant, mais on a déjà pris en compte la demande
                 break;
 
             case VEHICLE_YELLOW:
                 if (ev == EV_TIMER_YELLOW) {
-                    // Fin de l'orange, passer au rouge
                     state = VEHICLE_RED;
-                    // Éteindre orange, allumer rouge véhicule et vert piéton
-                    // Démarrer timer rouge
+                    GPIOA->ODR &= ~(1<<6);
+                    GPIOA->ODR |=  (1<<7);   // rouge véhicule
+                    GPIOC->ODR |=  (1<<8);   // vert piéton
                     xTimerStart(xTimerRed, 0);
                 }
                 break;
 
             case VEHICLE_RED:
                 if (ev == EV_TIMER_RED) {
-                    // Fin du rouge, retour au vert
                     state = VEHICLE_GREEN;
-                    // Éteindre rouge véhicule et vert piéton, allumer vert véhicule
-                    // Démarrer timer vert
+                    GPIOA->ODR &= ~((1<<5)|(1<<6)|(1<<7));
+                    GPIOC->ODR &= ~((1<<8)|(1<<9));
+                    GPIOA->ODR |=  (1<<5);   // vert véhicule
                     xTimerStart(xTimerGreen, 0);
                 }
-                // Ignorer les demandes piéton (déjà satisfaites)
                 break;
         }
     }
 }
 
+// Initialisation matérielle (GPIO, interruptions)
 void Hardware_Init(void) {
-    // Activer les horloges GPIO
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN;
 
-    // Configurer les LEDs (sorties)
-    // Exemple : PA5 = vert véhicule, PA6 = orange, PA7 = rouge véhicule, PC8 = vert piéton, PC9 = rouge piéton
-    GPIOA->MODER |= (1 << (5*2)) | (1 << (6*2)) | (1 << (7*2)); // sortie
+    // LEDs véhicules : PA5 vert, PA6 orange, PA7 rouge
+    GPIOA->MODER |= (1 << (5*2)) | (1 << (6*2)) | (1 << (7*2));
+    // LEDs piétons : PC8 vert, PC9 rouge
     GPIOC->MODER |= (1 << (8*2)) | (1 << (9*2));
     // Initialement éteint
     GPIOA->ODR &= ~((1<<5)|(1<<6)|(1<<7));
@@ -385,12 +373,12 @@ void Hardware_Init(void) {
     GPIOA->MODER &= ~(3U << (0*2)) & ~(3U << (1*2));
     GPIOA->PUPDR |= (1 << (0*2)) | (1 << (1*2));
 
-    // Activer SYSCFG pour EXTI
+    // Activation de SYSCFG pour EXTI
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
     SYSCFG->EXTICR[0] &= ~(SYSCFG_EXTICR1_EXTI0 | SYSCFG_EXTICR1_EXTI1);
-    // EXTI0 sur PA0, EXTI1 sur PA1 par défaut
+    // EXTI0 sur PA0, EXTI1 sur PA1
     EXTI->IMR |= (1 << 0) | (1 << 1);
-    EXTI->FTSR |= (1 << 0) | (1 << 1); // front descendant (appui)
+    EXTI->FTSR |= (1 << 0) | (1 << 1);   // front descendant (appui)
     NVIC_SetPriority(EXTI0_IRQn, 5);
     NVIC_SetPriority(EXTI1_IRQn, 5);
     NVIC_EnableIRQ(EXTI0_IRQn);
@@ -400,14 +388,12 @@ void Hardware_Init(void) {
 int main(void) {
     Hardware_Init();
 
-    // Création de la file d'événements
     xEventQueue = xQueueCreate(10, sizeof(Event_t));
 
-    // Création des timers logiciels (périodes en ms)
-    xTimerGreen = xTimerCreate("Green", pdMS_TO_TICKS(10000), pdFALSE, NULL, vTimerGreenCallback);
-    xTimerYellow = xTimerCreate("Yellow", pdMS_TO_TICKS(3000), pdFALSE, NULL, vTimerYellowCallback);
-    xTimerRed = xTimerCreate("Red", pdMS_TO_TICKS(8000), pdFALSE, NULL, vTimerRedCallback);
-    xTimerMinGreen = xTimerCreate("MinGreen", pdMS_TO_TICKS(5000), pdFALSE, NULL, vTimerMinGreenCallback);
+    xTimerGreen    = xTimerCreate("Green",    pdMS_TO_TICKS(10000), pdFALSE, NULL, vTimerGreenCallback);
+    xTimerYellow   = xTimerCreate("Yellow",   pdMS_TO_TICKS(3000),  pdFALSE, NULL, vTimerYellowCallback);
+    xTimerRed      = xTimerCreate("Red",      pdMS_TO_TICKS(8000),  pdFALSE, NULL, vTimerRedCallback);
+    xTimerMinGreen = xTimerCreate("MinGreen", pdMS_TO_TICKS(5000),  pdFALSE, NULL, vTimerMinGreenCallback);
 
     if (xEventQueue != NULL && xTimerGreen != NULL && xTimerYellow != NULL && xTimerRed != NULL && xTimerMinGreen != NULL) {
         xTaskCreate(vTaskFSM, "FSM", 256, NULL, 2, NULL);
@@ -420,8 +406,8 @@ int main(void) {
 
 **Explication**
 
-- **File d'événements** : xEventQueue reçoit les événements des ISR et des callbacks de timers.
-- **Timers logiciels** : utilisés pour les temporisations. Ils sont en mode "one-shot" (pdFALSE) car ils sont redémarrés à chaque cycle.
+- **File d'événements** : `xEventQueue` reçoit les événements des ISR et des callbacks de timers.
+- **Timers logiciels** : utilisés pour les temporisations. Ils sont en mode "one-shot" (`pdFALSE`) car ils sont redémarrés à chaque cycle.
 - **ISR** : très courtes, elles envoient juste l'événement dans la file.
 - **Tâche FSM** : boucle infinie qui attend un événement, puis selon l'état courant, effectue les actions et change d'état.
 
