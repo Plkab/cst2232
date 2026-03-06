@@ -183,4 +183,4 @@ Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK
 
 ### Lien connexe
 
-[GPIO et Interruptions](../stm32f4/gpio/index.md)
+[GPIO et Interruptions](stm32f4/gpio/index.md)
