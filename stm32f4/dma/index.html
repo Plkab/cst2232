@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/dma/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>L'Utilisation du DMA (Direct Memory Access) sur STM32F4 - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link"></a>
+            <li class="nav-item" data-bs-level="1"><a href="#lutilisation-du-dma-direct-memory-access-sur-stm32f4" class="nav-link">L'Utilisation du DMA (Direct Memory Access) sur STM32F4</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,8 +63,535 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="_1"></h1>
-<p>Contenu Ã  rÃ©diger...</p></div>
+<h1 id="lutilisation-du-dma-direct-memory-access-sur-stm32f4">L'Utilisation du DMA (Direct Memory Access) sur STM32F4</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-au-dma"><strong>Introduction au DMA</strong></h3>
+<p>Le <strong>DMA (Direct Memory Access)</strong> est un périphérique matériel qui permet de transférer des données entre deux zones mémoire (mémoire ↔ mémoire, périphérique ↔ mémoire, etc.) <strong>sans intervention du processeur</strong>. Pendant qu’une opération DMA est en cours, le CPU peut continuer à exécuter d’autres instructions ou rester en mode basse consommation, ce qui améliore considérablement les performances et la réactivité du système.</p>
+<p>Dans un système temps réel, le DMA est particulièrement utile pour :</p>
+<ul>
+<li>Acquérir des données à haute fréquence (ADC) sans surcharger le CPU.</li>
+<li>Transmettre ou recevoir de longues trames via USART/SPI/I2C sans bloquer les tâches.</li>
+<li>Remplir des buffers audio ou vidéo en continu (double buffer).</li>
+<li>Générer des signaux périodiques via DAC avec un tableau d’échantillons.</li>
+</ul>
+<p>Le STM32F401 intègre deux contrôleurs DMA (DMA1 et DMA2) avec plusieurs <strong>streams</strong> (flux) et canaux. Chaque stream peut être associé à une requête DMA provenant d’un périphérique (ADC, USART, TIM, etc.). La configuration est complexe mais très flexible.</p>
+<hr />
+<p><br></p>
+<h3 id="architecture-du-dma-sur-stm32f4"><strong>Architecture du DMA sur STM32F4</strong></h3>
+<ul>
+<li><strong>Deux contrôleurs</strong> : DMA1 (périphériques APB1/APB2) et DMA2 (périphériques AHB).</li>
+<li><strong>8 streams par contrôleur</strong> (DMA1_Stream0 à DMA1_Stream7, etc.).</li>
+<li>Chaque stream a une priorité programmable (très haute, haute, moyenne, basse).</li>
+<li>Chaque stream peut être lié à un canal spécifique (ex: canal 0 pour ADC1, canal 4 pour USART1_TX, etc.).</li>
+<li>Modes de transfert : périphérique → mémoire, mémoire → périphérique, mémoire → mémoire.</li>
+<li>Modes circulaire (auto-reload) et simple (one-shot).</li>
+<li>Accès à des données de 8, 16 ou 32 bits, avec possibilité d'incrémenter ou non les adresses.</li>
+</ul>
+<p>Les registres principaux d’un stream sont :</p>
+<ul>
+<li><code>CR</code> (Control Register) : configuration (mode, taille, incrément, etc.)</li>
+<li><code>NDTR</code> (Number of Data Register) : nombre de données à transférer.</li>
+<li><code>PAR</code> (Peripheral Address Register) : adresse du périphérique.</li>
+<li><code>M0AR</code> / <code>M1AR</code> (Memory Address Register) : adresse(s) mémoire (pour double buffer).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="configuration-generale-dun-transfert-dma"><strong>Configuration générale d’un transfert DMA</strong></h3>
+<ol>
+<li><strong>Activer l’horloge</strong> du contrôleur DMA (<code>RCC_AHB1ENR</code>).</li>
+<li>Désactiver le stream en mettant le bit <code>EN</code> du registre <code>CR</code> à 0.</li>
+<li><strong>Configurer le stream</strong> : choisir le canal, la direction, la taille des données, l’incrément des adresses, le mode circulaire, la priorité.<ul>
+<li>Choisir le canal (<code>CHSEL</code>).</li>
+<li>Définir la direction (<code>DIR</code>).</li>
+<li>Régler la taille des données (<code>PSIZE</code>, <code>MSIZE</code>).</li>
+<li>Activer ou non l’incrément des adresses (<code>PINC</code>, <code>MINC</code>).</li>
+<li>Choisir le mode circulaire (<code>CIRC</code>) ou simple.</li>
+<li>Définir la priorité (<code>PL</code>).</li>
+<li>Activer les interruptions souhaitées (<code>HTIE</code>, <code>TCIE</code>, <code>TEIE</code>).</li>
+</ul>
+</li>
+<li><strong>Définir l’adresse source et destination</strong> (<code>PAR</code> et <code>M0AR</code>/<code>M1AR</code>).</li>
+<li><strong>Spécifier le nombre de données</strong> (<code>NDTR</code>).</li>
+<li><strong>Activer le stream</strong> (bit <code>EN</code> dans <code>CR</code>).</li>
+<li>Optionnellement, activer les interruptions dans le NVIC (demi-transfert, transfert complet, erreur).</li>
+</ol>
+<hr />
+<p><br></p>
+<h3 id="dma-avec-lusart"><strong>DMA avec l’USART</strong></h3>
+<p>L’USART peut générer une requête DMA à chaque fois qu’un caractère est reçu (RXNE) ou que le buffer de transmission est vide (TXE). On configure le DMA pour transférer automatiquement les données.</p>
+<p><strong>Réception USART par DMA</strong></p>
+<p>L’exemple suivant configure USART2 en réception DMA. Les données sont transférées vers un buffer mémoire fixe. Une fois le buffer plein, un flag est positionné.</p>
+<p><strong>Exemple : Réception de 100 caractères via USART2 avec DMA (mode simple)</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+#define RX_BUFFER_SIZE 100
+uint8_t rxBuffer[RX_BUFFER_SIZE];
+
+void USART2_DMA_Init(uint32_t baud) {
+    // 1. Activer horloges GPIOA, USART2, DMA1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+
+    // 2. Configurer PA3 (RX) en alternate function AF7
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (3*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (3*2));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (3*4));
+
+    // 3. Configurer USART2
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR3 |= USART_CR3_DMAR;      // Activer DMA en réception
+    USART2-&gt;CR1 = USART_CR1_RE | USART_CR1_UE;
+
+    // 4. Configurer DMA1 Stream5 (canal 4 pour USART2_RX)
+    DMA1_Stream5-&gt;CR &amp;= ~DMA_SxCR_EN;   // Désactiver avant configuration
+
+    DMA1_Stream5-&gt;PAR = (uint32_t)&amp;USART2-&gt;DR;   // Adresse périphérique
+    DMA1_Stream5-&gt;M0AR = (uint32_t)rxBuffer;      // Adresse mémoire
+    DMA1_Stream5-&gt;NDTR = RX_BUFFER_SIZE;          // Nombre de données
+
+    DMA1_Stream5-&gt;CR = DMA_SxCR_CHSEL_4 |          // Canal 4
+                       DMA_SxCR_PL_1 |              // Priorité haute
+                       DMA_SxCR_MSIZE_0 |           // Mémoire 8 bits
+                       DMA_SxCR_PSIZE_0 |           // Périph 8 bits
+                       DMA_SxCR_MINC |              // Incrément mémoire
+                       DMA_SxCR_DIR_1;               // Direction périph → mémoire (bit DIR=1 pour périph-&gt;mem)
+    // NB: Sur DMA1, DIR[1:0] doit être 0b01 pour périph-&gt;mem. Le bit DIR_1 est à 1, DIR_0 à 0.
+    // Pour être sûr, on peut utiliser DMA_SxCR_DIR_0 | DMA_SxCR_DIR_1? Non, c'est un champ 2 bits.
+    // Il faut consulter le RM, mais avec CMSIS on peut faire:
+    // DMA1_Stream5-&gt;CR |= DMA_SxCR_DIR_0;  // 0b01 = périph-&gt;mem
+
+    // 5. Activer le stream
+    DMA1_Stream5-&gt;CR |= DMA_SxCR_EN;
+}
+
+// Fonction pour vérifier si le transfert est terminé
+uint8_t USART2_DMA_IsComplete(void) {
+    return (DMA1-&gt;LISR &amp; DMA_LISR_TCIF5) ? 1 : 0;
+}
+
+// Effacer le flag de fin
+void USART2_DMA_ClearComplete(void) {
+    DMA1-&gt;LIFCR |= DMA_LIFCR_CTCIF5;
+}
+</code></pre>
+<p><strong>Utilisation dans le main :</strong></p>
+<pre><code class="language-c">int main(void) {
+    USART2_DMA_Init(115200);
+    while (1) {
+        if (USART2_DMA_IsComplete()) {
+            // Traiter les données dans rxBuffer
+            USART2_DMA_ClearComplete();
+            // Recommencer un nouveau transfert si nécessaire
+            DMA1_Stream5-&gt;CR &amp;= ~DMA_SxCR_EN;
+            DMA1_Stream5-&gt;NDTR = RX_BUFFER_SIZE;
+            DMA1_Stream5-&gt;CR |= DMA_SxCR_EN;
+        }
+    }
+}
+</code></pre>
+<p>Utilisation : dans la boucle principale, on attend le flag, on traite les données, puis on relance le DMA en réinitialisant <code>NDTR</code> et en réactivant le stream.</p>
+<p><strong>Réception USART par DMA en mode circulaire (buffer tournant)</strong></p>
+<p>Le mode circulaire permet de recevoir en continu. On utilise les interruptions de demi‑transfert et de transfert complet pour traiter les données sans perte.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+
+#define RX_BUFFER_SIZE 256
+uint8_t rxBuffer[RX_BUFFER_SIZE];
+SemaphoreHandle_t xSemHalf, xSemFull;
+
+void USART2_DMA_Circular_Init(uint32_t baud) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_DMA1EN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (3*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (3*2));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (3*4));
+
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR3 |= USART_CR3_DMAR;
+    USART2-&gt;CR1 = USART_CR1_RE | USART_CR1_UE;
+
+    DMA1_Stream5-&gt;CR &amp;= ~DMA_SxCR_EN;
+    while (DMA1_Stream5-&gt;CR &amp; DMA_SxCR_EN);
+
+    DMA1_Stream5-&gt;PAR = (uint32_t)&amp;USART2-&gt;DR;
+    DMA1_Stream5-&gt;M0AR = (uint32_t)rxBuffer;
+    DMA1_Stream5-&gt;NDTR = RX_BUFFER_SIZE;
+
+    DMA1_Stream5-&gt;CR = DMA_SxCR_CHSEL_4 |
+                       DMA_SxCR_PL_1 |
+                       DMA_SxCR_MSIZE_0 |
+                       DMA_SxCR_PSIZE_0 |
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_CIRC |               // Mode circulaire
+                       DMA_SxCR_HTIE |                // Interruption demi-transfert
+                       DMA_SxCR_TCIE |                // Interruption transfert complet
+                       DMA_SxCR_DIR_1;
+
+    NVIC_SetPriority(DMA1_Stream5_IRQn, 5);
+    NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+
+    DMA1_Stream5-&gt;CR |= DMA_SxCR_EN;
+}
+
+void DMA1_Stream5_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (DMA1-&gt;LISR &amp; DMA_LISR_HTIF5) {
+        DMA1-&gt;LIFCR |= DMA_LIFCR_CHTIF5;
+        xSemaphoreGiveFromISR(xSemHalf, &amp;xWoken);
+    }
+    if (DMA1-&gt;LISR &amp; DMA_LISR_TCIF5) {
+        DMA1-&gt;LIFCR |= DMA_LIFCR_CTCIF5;
+        xSemaphoreGiveFromISR(xSemFull, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vTaskProcessUSART(void *pvParameters) {
+    for (;;) {
+        xSemaphoreTake(xSemHalf, portMAX_DELAY);
+        // Traiter la première moitié du buffer (0 à BUFFER_SIZE/2 -1)
+        // ...
+
+        xSemaphoreTake(xSemFull, portMAX_DELAY);
+        // Traiter la seconde moitié (BUFFER_SIZE/2 à BUFFER_SIZE-1)
+        // ...
+    }
+}
+</code></pre>
+<p><strong>Émission USART par DMA</strong></p>
+<p>Pour l’émission, on utilise le bit <code>DMAT</code> du registre <code>CR3</code> et une direction mémoire → périphérique.</p>
+<pre><code class="language-c">void USART2_DMA_Transmit(uint8_t *data, uint32_t size) {
+    // Désactiver stream si actif
+    DMA1_Stream6-&gt;CR &amp;= ~DMA_SxCR_EN;
+    while (DMA1_Stream6-&gt;CR &amp; DMA_SxCR_EN);
+
+    DMA1_Stream6-&gt;PAR = (uint32_t)&amp;USART2-&gt;DR;
+    DMA1_Stream6-&gt;M0AR = (uint32_t)data;
+    DMA1_Stream6-&gt;NDTR = size;
+
+    DMA1_Stream6-&gt;CR = DMA_SxCR_CHSEL_4 |      // Canal 4 pour USART2_TX
+                       DMA_SxCR_PL_0 |
+                       DMA_SxCR_MSIZE_0 |
+                       DMA_SxCR_PSIZE_0 |
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_DIR_0;          // Direction mémoire → périph (bit DIR=0)
+
+    USART2-&gt;CR3 |= USART_CR3_DMAT;             // Activer DMA en émission
+    DMA1_Stream6-&gt;CR |= DMA_SxCR_EN;
+}
+</code></pre>
+<p>On peut également ajouter une interruption de fin de transfert pour prévenir la tâche que l’émission est terminée.</p>
+<hr />
+<p><br></p>
+<h3 id="dma-avec-ladc"><strong>DMA avec l’ADC</strong></h3>
+<p>L’ADC peut être déclenché par un timer (mode régulier) et générer des requêtes DMA à chaque fin de conversion. On peut ainsi remplir un buffer avec les échantillons sans intervention CPU.</p>
+<p><strong>Exemple : ADC1 convertit en continu sur PA0, transfert DMA vers un buffer de 100 échantillons en mode circulaire continu</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+#define ADC_BUFFER_SIZE 100
+volatile uint16_t adcBuffer[ADC_BUFFER_SIZE];
+
+void ADC1_DMA_Init(void) {
+    // 1. Activer horloges GPIOA, ADC1, DMA2
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+    // 2. Configurer PA0 en analogique
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2));
+
+    // 3. Configurer ADC1
+    ADC1-&gt;CR2 = ADC_CR2_ADON;                  // Activer ADC
+    ADC1-&gt;SQR3 = 0;                              // Canal 0 en première position
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);                      // Temps d'échantillonnage max
+    ADC1-&gt;CR2 |= ADC_CR2_DMA;                    // Activer requête DMA
+    ADC1-&gt;CR2 |= ADC_CR2_DDS;                    // DMA requests continues (pour mode circulaire)
+    ADC1-&gt;CR2 |= ADC_CR2_CONT;                    // Mode continu
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;                    // Réveiller (doit être fait après config)
+
+    // 4. Configurer DMA2 Stream0 (canal 0 pour ADC1)
+    DMA2_Stream0-&gt;CR &amp;= ~DMA_SxCR_EN;
+    DMA2_Stream0-&gt;PAR = (uint32_t)&amp;ADC1-&gt;DR;
+    DMA2_Stream0-&gt;M0AR = (uint32_t)adcBuffer;
+    DMA2_Stream0-&gt;NDTR = ADC_BUFFER_SIZE;
+
+    DMA2_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 |          // Canal 0
+                       DMA_SxCR_PL_1 |              // Priorité haute
+                       DMA_SxCR_MSIZE_0 |           // Mémoire 16 bits
+                       DMA_SxCR_PSIZE_0 |           // Périph 16 bits
+                       DMA_SxCR_MINC |              // Incrément mémoire
+                       DMA_SxCR_CIRC |              // Mode circulaire
+                       DMA_SxCR_DIR_1;               // Périph → mémoire (DIR=1 pour DMA2)
+
+    DMA2_Stream0-&gt;CR |= DMA_SxCR_EN;
+}
+
+// Fonction pour récupérer le dernier échantillon
+uint16_t ADC_GetLastValue(void) {
+    // En mode circulaire, on peut lire adcBuffer[?] ou utiliser un index
+    // Simple approche : on lit le registre DR directement (mais c'est ce que DMA fait)
+    return ADC1-&gt;DR;  // attention, cela peut interférer avec DMA?
+    // Mieux : on garde un index calculé via NDTR (plus complexe)
+}
+</code></pre>
+<p><strong>Double buffer avec interruptions</strong></p>
+<p>Pour utiliser un double buffer, on peut soit configurer deux buffers avec M0AR et M1AR (mode double buffer du DMA), soit utiliser un seul buffer circulaire et les interruptions de demi‑transfert. Le double buffer matériel est plus élégant :</p>
+<pre><code class="language-c">DMA2_Stream0-&gt;M0AR = (uint32_t)buffer1;
+DMA2_Stream0-&gt;M1AR = (uint32_t)buffer2;
+DMA2_Stream0-&gt;CR |= DMA_SxCR_DBM;   // Double buffer mode
+</code></pre>
+<p>Les flags <code>HTIF</code> et <code>TCIF</code> indiquent respectivement que le premier ou le second buffer est plein.</p>
+<hr />
+<p><br></p>
+<h3 id="dma-avec-i2c"><strong>DMA avec I2C</strong></h3>
+<p>L’I2C peut aussi utiliser le DMA pour transmettre ou recevoir de longues séquences de données sans bloquer le CPU. La configuration est similaire : on active le DMA dans le registre <code>CR2</code> de l’I2C et on configure le stream approprié.</p>
+<p><strong>Exemple simplifié : transmission I2C1 par DMA</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void I2C1_DMA_Transmit(uint8_t *data, uint32_t size) {
+    // Activer l'horloge DMA1 si ce n'est pas déjà fait
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+
+    // Désactiver le stream (DMA1_Stream6 pour I2C1_TX)
+    DMA1_Stream6-&gt;CR &amp;= ~DMA_SxCR_EN;
+    while (DMA1_Stream6-&gt;CR &amp; DMA_SxCR_EN);
+
+    // Configurer
+    DMA1_Stream6-&gt;PAR = (uint32_t)&amp;I2C1-&gt;DR;
+    DMA1_Stream6-&gt;M0AR = (uint32_t)data;
+    DMA1_Stream6-&gt;NDTR = size;
+
+    DMA1_Stream6-&gt;CR = DMA_SxCR_CHSEL_6 |      // Canal 6 pour I2C1_TX
+                       DMA_SxCR_PL_0 |
+                       DMA_SxCR_MSIZE_0 |       // 8 bits
+                       DMA_SxCR_PSIZE_0 |
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_DIR_0;           // Mémoire -&gt; périphérique
+
+    // Activer DMA dans I2C1
+    I2C1-&gt;CR2 |= I2C_CR2_DMAEN;
+
+    DMA1_Stream6-&gt;CR |= DMA_SxCR_EN;
+}
+</code></pre>
+<p>Réception : utiliser <code>DIR = 01</code> et le canal approprié (ex: DMA1_Stream5 pour I2C1_RX). Penser à activer <code>I2C_CR2_LAST</code> si nécessaire.</p>
+<hr />
+<p><br></p>
+<h3 id="dma-avec-spi"><strong>DMA avec SPI</strong></h3>
+<p>Le SPI est un candidat idéal pour le DMA, surtout pour des transferts de blocs (écran, carte SD, etc.).</p>
+<p><strong>Exemple : réception SPI1 par DMA</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void SPI1_DMA_Receive(uint8_t *buffer, uint32_t size) {
+    // Activer DMA2 (SPI1 est sur AHB)
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+    // Désactiver le stream (DMA2_Stream0 pour SPI1_RX)
+    DMA2_Stream0-&gt;CR &amp;= ~DMA_SxCR_EN;
+    while (DMA2_Stream0-&gt;CR &amp; DMA_SxCR_EN);
+
+    DMA2_Stream0-&gt;PAR = (uint32_t)&amp;SPI1-&gt;DR;
+    DMA2_Stream0-&gt;M0AR = (uint32_t)buffer;
+    DMA2_Stream0-&gt;NDTR = size;
+
+    DMA2_Stream0-&gt;CR = DMA_SxCR_CHSEL_3 |      // Canal 3 pour SPI1_RX
+                       DMA_SxCR_PL_1 |
+                       DMA_SxCR_MSIZE_0 |       // 8 bits
+                       DMA_SxCR_PSIZE_0 |
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_DIR_1;           // Périphérique -&gt; mémoire
+
+    // Activer DMA dans SPI1
+    SPI1-&gt;CR2 |= SPI_CR2_RXDMAEN;
+
+    DMA2_Stream0-&gt;CR |= DMA_SxCR_EN;
+}
+</code></pre>
+<p>Pour l’émission, on utilise <code>DIR_0</code> et <code>SPI_CR2_TXDMAEN</code>.</p>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
+<p>L’utilisation du DMA libère le CPU, mais il faut quand même synchroniser les tâches avec la fin des transferts. On peut utiliser :</p>
+<ul>
+<li><strong>Sémaphore</strong> donné dans l’ISR de fin de DMA.</li>
+<li><strong>Notification de tâche</strong> pour un réveil rapide.</li>
+<li><strong>Queue</strong> pour passer les données (par exemple, l’ISR de demi‑transfert peut envoyer un pointeur sur le buffer actif).</li>
+</ul>
+<p><strong>Exemple avec ADC circulaire et double buffer</strong></p>
+<p>On configure le DMA en mode circulaire avec double buffer (M0AR et M1AR). Les interruptions de demi‑transfert et transfert complet indiquent quel buffer est prêt. Dans l’ISR, on donne un sémaphore à une tâche de traitement.</p>
+<pre><code class="language-c">SemaphoreHandle_t xSemBufferReady;
+
+void DMA2_Stream0_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (DMA2-&gt;LISR &amp; DMA_LISR_HTIF0) {
+        DMA2-&gt;LIFCR |= DMA_LIFCR_CHTIF0;  // Effacer flag demi-transfert
+        // Le premier buffer est plein
+        xSemaphoreGiveFromISR(xSemBufferReady, &amp;xWoken);
+    }
+    if (DMA2-&gt;LISR &amp; DMA_LISR_TCIF0) {
+        DMA2-&gt;LIFCR |= DMA_LIFCR_CTCIF0;  // Effacer flag transfert complet
+        // Le second buffer est plein
+        xSemaphoreGiveFromISR(xSemBufferReady, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vProcessTask(void *pvParameters) {
+    for (;;) {
+        xSemaphoreTake(xSemBufferReady, portMAX_DELAY);
+        // Déterminer quel buffer est prêt (par exemple en vérifiant un index)
+        // Traiter les données
+    }
+}
+</code></pre>
+<p>La tâche de traitement attend le sémaphore, détermine quel buffer est disponible, et traite les données.</p>
+<hr />
+<p><br></p>
+<h3 id="projet-acquisition-analogique-haute-frequence-avec-dma-et-freertos"><strong>Projet : Acquisition analogique haute fréquence avec DMA et FreeRTOS</strong></h3>
+<p>Nous allons réaliser un système qui échantillonne un signal sur PA0 à 10 kHz via ADC1 déclenché par un timer, transfère les données par DMA vers un buffer circulaire, et calcule la moyenne en continu toutes les 100 ms.</p>
+<p><strong>Configuration</strong> :</p>
+<ul>
+<li>Timer2 génère un déclenchement à 10 kHz (TRGO).</li>
+<li>ADC1 est en mode déclenché par timer, DMA circulaire.</li>
+<li>DMA2 Stream0 en mode circulaire avec double buffer.</li>
+<li>Une tâche calcule la moyenne des échantillons reçus toutes les 100 ms.</li>
+</ul>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+#define SAMPLE_RATE 10000      // 10 kHz
+#define BUFFER_SIZE 1024        // Taille totale du buffer (sera divisée en deux)
+volatile uint16_t adcBuffer[BUFFER_SIZE];
+
+SemaphoreHandle_t xSemHalf, xSemFull;
+
+void Timer2_Init(void) {
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2-&gt;PSC = 84 - 1;          // 84 MHz / 84 = 1 MHz
+    TIM2-&gt;ARR = (1000000 / SAMPLE_RATE) - 1;  // 1000/10k = 0.1 ms? Calcul : pour 10 kHz, période = 100 µs, à 1 MHz, ARR = 100-1
+    TIM2-&gt;CR2 = TIM_CR2_MMS_1;   // MMS = 010 : Update event as TRGO
+    TIM2-&gt;DIER |= TIM_DIER_UIE;   // Interruption update (optionnelle)
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+void ADC1_DMA_Init(void) {
+    // Horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2));  // PA0 analog
+
+    // ADC
+    ADC1-&gt;CR2 = 0;
+    ADC1-&gt;SQR3 = 0;                 // canal 0
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);          // échantillonnage max
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;      // allumer
+    ADC1-&gt;CR2 |= ADC_CR2_CONT;      // continu (on utilise le timer pour déclencher)
+    // On utilise le déclenchement externe
+    ADC1-&gt;CR2 |= ADC_CR2_EXTEN_0;    // Trigger on rising edge
+    ADC1-&gt;CR2 |= (6 &lt;&lt; 24);          // Selection TRGO de TIM2 (valeur 6 pour TIM2_TRGO, voir RM)
+    ADC1-&gt;CR2 |= ADC_CR2_DMA;        // Activer DMA
+    ADC1-&gt;CR2 |= ADC_CR2_DDS;        // DMA requests continues
+
+    // DMA2 Stream0
+    DMA2_Stream0-&gt;CR &amp;= ~DMA_SxCR_EN;
+    DMA2_Stream0-&gt;PAR = (uint32_t)&amp;ADC1-&gt;DR;
+    DMA2_Stream0-&gt;M0AR = (uint32_t)adcBuffer;
+    DMA2_Stream0-&gt;NDTR = BUFFER_SIZE;
+
+   DMA2_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 |
+                       DMA_SxCR_PL_1 |
+                       DMA_SxCR_MSIZE_0 |
+                       DMA_SxCR_PSIZE_0 |
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_CIRC |
+                       DMA_SxCR_HTIE |      // Demi-transfert
+                       DMA_SxCR_TCIE |      // Transfert complet
+                       DMA_SxCR_DIR_1;       // Périph -&gt; mem
+
+    NVIC_SetPriority(DMA2_Stream0_IRQn, 5);
+    NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+    DMA2_Stream0-&gt;CR |= DMA_SxCR_EN;
+}
+
+void DMA2_Stream0_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (DMA2-&gt;LISR &amp; DMA_LISR_HTIF0) {
+        DMA2-&gt;LIFCR |= DMA_LIFCR_CHTIF0;
+        xSemaphoreGiveFromISR(xSemHalf, &amp;xWoken);
+    }
+    if (DMA2-&gt;LISR &amp; DMA_LISR_TCIF0) {
+        DMA2-&gt;LIFCR |= DMA_LIFCR_CTCIF0;
+        xSemaphoreGiveFromISR(xSemFull, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vProcessTask(void *pvParameters) {
+    uint32_t sum;
+    uint16_t *buffer;
+    int i;
+
+    for (;;) {
+        // Attendre qu'un demi-buffer soit rempli
+        xSemaphoreTake(xSemHalf, portMAX_DELAY);
+        // Traiter la première moitié
+        buffer = (uint16_t*)adcBuffer;
+        sum = 0;
+        for (i = 0; i &lt; BUFFER_SIZE/2; i++) {
+            sum += buffer[i];
+        }
+        // Calculer moyenne (à afficher ou utiliser)
+        // ...
+
+        xSemaphoreTake(xSemFull, portMAX_DELAY);
+        // Traiter la seconde moitié
+        buffer = (uint16_t*)&amp;adcBuffer[BUFFER_SIZE/2];
+        sum = 0;
+        for (i = 0; i &lt; BUFFER_SIZE/2; i++) {
+            sum += buffer[i];
+        }
+        // ...
+    }
+}
+
+int main(void) {
+    xSemHalf = xSemaphoreCreateBinary();
+    xSemFull = xSemaphoreCreateBinary();
+
+    Timer2_Init();
+    ADC1_DMA_Init();
+
+    xTaskCreate(vProcessTask, &quot;Process&quot;, 256, NULL, 2, NULL);
+    vTaskStartScheduler();
+
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../usart/">Communication Série USART</a></li>
+<li><a href="../i2c/">Communication Série I2C</a></li>
+<li><a href="../spi/">Communication Série SPI</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 

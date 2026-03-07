@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/usart/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Communication Série USART - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link"></a>
+            <li class="nav-item" data-bs-level="1"><a href="#communication-serie-usart" class="nav-link">Communication Série USART</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,8 +63,250 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="_1"></h1>
-<p>Contenu Ã  rÃ©diger...</p></div>
+<h1 id="communication-serie-usart">Communication Série USART</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-a-la-communication-serie"><strong>Introduction à la communication série</strong></h3>
+<p>La communication série asynchrone (UART/USART) est l’un des moyens les plus simples et les plus répandus pour faire dialoguer un microcontrôleur avec un PC, un autre microcontrôleur, ou des périphériques (GPS, modules Bluetooth, etc.). Elle ne nécessite que deux fils (TX et RX) et une masse commune.</p>
+<p>Le STM32F4 intègre plusieurs <strong>USART</strong> (Universal Synchronous/Asynchronous Receiver Transmitter) capables de fonctionner en mode asynchrone (UART) ou synchrone. Dans ce chapitre, nous nous concentrerons sur le mode asynchrone, le plus utilisé.</p>
+<p>Les objectifs de ce chapitre sont :</p>
+<ul>
+<li>Comprendre le principe de la communication série (start bit, data bits, stop bit, baud rate).</li>
+<li>Configurer l’USART en mode polling (simple mais bloquant).</li>
+<li>Passer à un mode plus efficace : les interruptions.</li>
+<li>Intégrer l’USART dans un environnement FreeRTOS en utilisant des files de messages (queues) pour découpler réception et traitement.</li>
+<li>Réaliser un projet pratique d’échange de données avec un PC.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-de-luart"><strong>Principe de l’UART</strong></h3>
+<p>Une trame UART typique se compose de :</p>
+<ul>
+<li>Un bit de start (toujours à 0)</li>
+<li>5 à 9 bits de données (souvent 8)</li>
+<li>Un bit de parité optionnel</li>
+<li>1 ou 2 bits de stop (toujours à 1)</li>
+</ul>
+<p>Le débit est défini par le baud rate (ex: 9600, 115200 bauds). Les deux extrémités doivent être configurées exactement de la même manière.</p>
+<p>Sur le STM32F4, l’USART est configuré via des registres :</p>
+<ul>
+<li><code>USART_BRR</code> : définit le baud rate à partir de l’horloge du périphérique.</li>
+<li><code>USART_CR1</code> : active la transmission, la réception, les interruptions, etc.</li>
+<li><code>USART_SR</code> : indique l’état (TXE – registre de transmission vide, RXNE – donnée reçue disponible, etc.).</li>
+<li><code>USART_DR</code> : registre de données (lecture/écriture).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="configuration-simple-mode-polling"><strong>Configuration simple (mode polling)</strong></h3>
+<p><strong>Initialisation de l’USART2 sur PA2 (TX) et PA3 (RX)</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void USART2_Init(uint32_t baud) {
+    // 1. Activer les horloges GPIOA et USART2
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // 2. Configurer PA2 et PA3 en alternate function AF7
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (2*2)) | (3U &lt;&lt; (3*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (2*2)) | (2U &lt;&lt; (3*2))); // 10 = Alternate function
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));     // AF7 pour USART2
+
+    // 3. Configurer l'USART : 8 bits, 1 stop, pas de parité, 115200 bauds
+    USART2-&gt;BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE; // Activer TX et RX
+    USART2-&gt;CR2 = 0;                  // 1 stop bit par défaut
+    USART2-&gt;CR3 = 0;
+    USART2-&gt;CR1 |= USART_CR1_UE;       // Activer l'USART
+}
+
+// Émission d'un caractère (polling)
+void USART2_SendChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE)); // Attendre que le buffer soit vide
+    USART2-&gt;DR = c;
+}
+
+// Émission d'une chaîne
+void USART2_SendString(char *str) {
+    while (*str) {
+        USART2_SendChar(*str++);
+    }
+}
+
+// Réception d'un caractère (polling, bloquant)
+char USART2_GetChar(void) {
+    while (!(USART2-&gt;SR &amp; USART_SR_RXNE)); // Attendre qu'une donnée soit reçue
+    return USART2-&gt;DR;
+}
+</code></pre>
+<p>Limitation : les fonctions d’émission/réception en polling bloquent le CPU jusqu’à ce que l’opération soit terminée. Dans un système temps réel, cela peut être problématique.</p>
+<hr />
+<p><br></p>
+<h3 id="utilisation-avec-freertos"><strong>Utilisation avec FreeRTOS</strong></h3>
+<p>Pour ne pas bloquer les tâches, on peut utiliser <strong>les interruptions</strong> et <strong>les files de messages</strong>.</p>
+<p><strong>Principe</strong></p>
+<ul>
+<li>Une ISR de réception (RXNE) place le caractère reçu dans une file (<code>xQueueSendFromISR</code>).</li>
+<li>Une tâche consomme les caractères depuis la file (<code>xQueueReceive</code>) et les traite.</li>
+<li>L’émission peut aussi être gérée par une tâche qui écrit dans un buffer circulaire ou une file, mais l’exemple le plus simple est de conserver un émission directe (polling court) ou d’utiliser une file et une ISR de fin d’émission (TXE).</li>
+</ul>
+<p><strong>Configuration avec interruption de réception</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;queue.h&quot;
+
+QueueHandle_t xRxQueue;
+
+void USART2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    uint8_t data;
+
+    if (USART2-&gt;SR &amp; USART_SR_RXNE) {
+        data = USART2-&gt;DR;                 // Lire la donnée (efface le flag)
+        xQueueSendFromISR(xRxQueue, &amp;data, &amp;xWoken);
+    }
+    // Gérer d'autres flags si nécessaire (par exemple erreurs)
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void USART2_Init_Interrupt(void) {
+    // Même initialisation que précédemment, mais on ajoute :
+    USART2-&gt;CR1 |= USART_CR1_RXNEIE;       // Activer l'interruption sur réception
+    NVIC_SetPriority(USART2_IRQn, 5);
+    NVIC_EnableIRQ(USART2_IRQn);
+}
+
+// Tâche de traitement de la réception
+void vTaskRxProcessor(void *pvParameters) {
+    uint8_t c;
+    for (;;) {
+        if (xQueueReceive(xRxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            // Traiter le caractère reçu (ex: l'accumuler dans une ligne, interpréter une commande...)
+            // Pour l'instant, on le renvoie en écho
+            USART2_SendChar(c);
+        }
+    }
+}
+</code></pre>
+<p><strong>Émission avec file d’attente (optionnel)</strong></p>
+<p>On peut aussi utiliser une file pour l’émission, avec une tâche dédiée qui vide la file et envoie les caractères (polling court mais sans bloquer les autres tâches).</p>
+<pre><code class="language-c">QueueHandle_t xTxQueue;
+
+void vTaskTxProcessor(void *pvParameters) {
+    uint8_t c;
+    for (;;) {
+        if (xQueueReceive(xTxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            USART2_SendChar(c);  // Polling, mais on ne bloque que le temps d'envoyer un caractère
+        }
+    }
+}
+
+// Fonction pour envoyer une chaîne via la file (à appeler depuis n'importe quelle tâche)
+void USART2_SendStringAsync(char *str) {
+    while (*str) {
+        xQueueSend(xTxQueue, str++, 0);
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-mini-terminal-interactif-projet-usart-terminal"><strong>Projet : Mini terminal interactif {#projet-usart-terminal}</strong></h3>
+<p>Réalisons un petit système qui reçoit des commandes via l’UART, les interprète, et exécute des actions (par exemple allumer/éteindre une LED, afficher l’état, etc.). Ce projet utilise :</p>
+<ul>
+<li>Une interruption de réception pour accumuler les caractères dans une file.</li>
+<li>Une tâche qui lit la file et construit une ligne jusqu’à recevoir un retour chariot (<code>\n</code> ou <code>\r</code>).</li>
+<li>Une machine à états simple pour interpréter la commande.</li>
+</ul>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;string.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+QueueHandle_t xRxQueue;
+
+// Buffer pour la ligne courante
+#define LINE_BUFFER_SIZE 64
+static char lineBuffer[LINE_BUFFER_SIZE];
+static uint8_t lineIndex = 0;
+
+// Prototypes
+void USART2_Init_Interrupt(void);
+void vTaskRxInterpreter(void *pvParameters);
+
+void USART2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (USART2-&gt;SR &amp; USART_SR_RXNE) {
+        uint8_t data = USART2-&gt;DR;
+        xQueueSendFromISR(xRxQueue, &amp;data, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vTaskRxInterpreter(void *pvParameters) {
+    uint8_t c;
+    for (;;) {
+        if (xQueueReceive(xRxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            // Afficher en écho (optionnel)
+            USART2_SendChar(c);
+
+            // Fin de ligne ?
+            if (c == '\n' || c == '\r') {
+                lineBuffer[lineIndex] = '\0'; // Terminer la chaîne
+                if (lineIndex &gt; 0) {
+                    // Interpréter la commande
+                    if (strcmp(lineBuffer, &quot;on&quot;) == 0) {
+                        GPIOC-&gt;ODR |= (1 &lt;&lt; 13);   // Allumer LED
+                        USART2_SendString(&quot;\r\nLED ON\r\n&quot;);
+                    } else if (strcmp(lineBuffer, &quot;off&quot;) == 0) {
+                        GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13);  // Éteindre LED
+                        USART2_SendString(&quot;\r\nLED OFF\r\n&quot;);
+                    } else {
+                        USART2_SendString(&quot;\r\nCommande inconnue\r\n&quot;);
+                    }
+                }
+                lineIndex = 0; // Réinitialiser
+            } else if (lineIndex &lt; LINE_BUFFER_SIZE - 1) {
+                lineBuffer[lineIndex++] = c;
+            }
+        }
+    }
+}
+
+int main(void) {
+    // Initialisation LED PC13
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+
+    // Initialisation USART
+    USART2_Init_Interrupt();
+
+    // Création de la file pour les caractères reçus
+    xRxQueue = xQueueCreate(32, sizeof(uint8_t));
+
+    if (xRxQueue != NULL) {
+        xTaskCreate(vTaskRxInterpreter, &quot;RxInterp&quot;, 256, NULL, 2, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<p><strong>Explications :</strong></p>
+<ul>
+<li>Les caractères reçus sont mis dans une file par l’ISR.</li>
+<li>La tâche vTaskRxInterpreter les récupère un par un, les accumule dans un buffer jusqu’à recevoir un retour chariot, puis compare la ligne avec des commandes prédéfinies.</li>
+<li>La LED est commandée via les commandes on et off.</li>
+<li>L’écho permet de voir ce qu’on tape (facultatif).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+</ul></div>
             </div>
         </div>
 
