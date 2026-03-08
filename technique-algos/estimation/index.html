@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/technique-algos/estimation/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Estimation d'État et Fusion Capteurs - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,12 +53,377 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#estimation-detat-et-fusion-capteurs" class="nav-link">Estimation d'État et Fusion Capteurs</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# Estimation d'Etat et Fusion de capteurs" </p></div>
+<h1 id="estimation-detat-et-fusion-capteurs">Estimation d'État et Fusion Capteurs</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Dans de nombreux systèmes embarqués, une grandeur physique (angle, position, vitesse) ne peut pas être mesurée directement avec une précision suffisante ou peut être entachée de bruit. On dispose souvent de plusieurs capteurs aux caractéristiques complémentaires : par exemple, un accéléromètre donne une bonne estimation à long terme mais est bruité à court terme, tandis qu’un gyroscope est précis à court terme mais dérive dans le temps. La <strong>fusion de capteurs</strong> combine ces mesures pour obtenir une estimation plus fiable et plus précise.</p>
+<p>L’<strong>estimation d’état</strong> est le processus qui consiste à déterminer l’état interne d’un système dynamique à partir de mesures bruitées. Dans ce chapitre, nous étudierons deux méthodes couramment utilisées dans l’embarqué :</p>
+<ul>
+<li>Le <strong>filtre complémentaire</strong> : simple, peu coûteux en calcul, idéal pour fusionner accéléromètre et gyroscope.</li>
+<li>Le <strong>filtre de Kalman</strong> : plus complexe, optimal pour les systèmes linéaires gaussiens.</li>
+</ul>
+<p>Nous mettrons en œuvre ces techniques sur STM32F4 avec FreeRTOS pour estimer l’angle d’inclinaison d’un système à partir d’un IMU (MPU6050). Cette estimation pourra ensuite être utilisée dans un asservissement (ex: stabilisation de drone, pendule inversé).</p>
+<hr />
+<p><br></p>
+<h3 id="rappels-sur-les-capteurs-dun-imu"><strong>Rappels sur les capteurs d’un IMU</strong></h3>
+<p>Un central inertiel (IMU) typique contient :</p>
+<ul>
+<li><strong>Accéléromètre</strong> : mesure l’accélération linéaire (incluant la gravité). Au repos, il indique la direction de la gravité. Il est précis sur le long terme mais très bruité à court terme.</li>
+<li><strong>Gyroscope</strong> : mesure la vitesse angulaire. En intégrant, on obtient l’angle. Il est précis à court terme mais dérive à cause de l’intégration du biais (drift).</li>
+</ul>
+<p>L’objectif est de fusionner ces deux sources pour obtenir un angle fiable.</p>
+<hr />
+<p><br></p>
+<h3 id="filtre-complementaire"><strong>Filtre complémentaire</strong></h3>
+<p>Le principe du filtre complémentaire est de combiner une estimation haute fréquence (gyroscope) et une estimation basse fréquence (accéléromètre). On utilise un filtre passe-haut sur l’intégration du gyroscope et un filtre passe-bas sur l’accéléromètre, puis on somme les deux.</p>
+<p>L’équation discrète simple est :</p>
+<p>[
+\text{angle}<em k-1="k-1">k = \alpha \cdot (\text{angle}</em>} + \dot{\theta<em _text_acc="\text{acc">k \cdot dt) + (1-\alpha) \cdot \theta</em>_k
+]}</p>
+<p>avec :
+- (\alpha = \frac{\tau}{\tau + dt}), où (\tau) est la constante de temps (souvent entre 0.5 et 2 s).
+- (\dot{\theta}<em _text_acc="\text{acc">k) : vitesse angulaire mesurée par le gyroscope.
+- (\theta</em>_k) : angle estimé à partir de l’accéléromètre ((\arctan(A_x, A_z)) par exemple).
+- (dt) : pas de temps.}</p>
+<p><strong>Implémentation en C</strong></p>
+<pre><code class="language-c">typedef struct {
+    float angle;        // angle estimé
+    float bias;         // biais estimé (optionnel)
+    float Q_angle;      // variance du bruit sur l'angle
+    float Q_bias;       // variance du bruit sur le biais
+    float R_measure;    // variance du bruit de mesure
+    float P[2][2];      // matrice de covariance
+} ComplementaryFilter;
+
+// Initialisation
+void Complementary_Init(ComplementaryFilter *f, float tau, float dt) {
+    float alpha = tau / (tau + dt);
+    f-&gt;angle = 0.0f;
+    // Pour un filtre simple, on n'a pas besoin de plus.
+}
+
+// Mise à jour avec données gyro et accéléromètre
+float Complementary_Update(ComplementaryFilter *f, float gyroRate, float accAngle, float dt) {
+    // Prédiction à partir du gyroscope
+    float gyroAngle = f-&gt;angle + gyroRate * dt;
+
+    // Fusion avec l'accéléromètre
+    float alpha = 0.98f; // constante de temps 0.98/0.02 ≈ 49s (si dt=0.01s)
+    f-&gt;angle = alpha * gyroAngle + (1.0f - alpha) * accAngle;
+
+    return f-&gt;angle;
+}
+</code></pre>
+<p>Remarque : le coefficient α doit être choisi en fonction de dt et de la constante de temps souhaitée. Plus α est proche de 1, plus on fait confiance au gyroscope.</p>
+<hr />
+<p><br></p>
+<h3 id="filtre-de-kalman-version-simplifiee"><strong>Filtre de Kalman (version simplifiée)</strong></h3>
+<p>Le filtre de Kalman est un estimateur récursif optimal pour les systèmes linéaires avec bruit gaussien. Il se compose de deux étapes :</p>
+<ul>
+<li><strong>Prédiction</strong> : on projette l’état courant et la covariance.</li>
+<li><strong>Mise à jour</strong> : on corrige l’état à l’aide de la mesure.</li>
+</ul>
+<p>Pour un angle à estimer à partir d’un gyroscope et d’un accéléromètre, on peut utiliser un modèle d’état simple :</p>
+<p><strong>État :</strong>
+x = [θ, θ˙b] (angle et biais du gyroscope).</p>
+<p><strong>Équation d’état :</strong>
+{
+θk = θk−1 + (θ˙m − θ˙b) dt
+θ˙b = θ˙b
+}
+où <strong>θ˙m</strong> est la mesure du gyroscope.</p>
+<p><strong>Implémentation en C</strong></p>
+<pre><code class="language-c">typedef struct {
+    float angle;
+    float bias;
+    float Q_angle;      // variance du bruit sur l'angle (process)
+    float Q_bias;       // variance du bruit sur le biais
+    float R_measure;    // variance du bruit de mesure (accéléromètre)
+    float P[2][2];      // matrice de covariance
+} KalmanFilter;
+
+void Kalman_Init(KalmanFilter *kf) {
+    kf-&gt;angle = 0.0f;
+    kf-&gt;bias = 0.0f;
+    kf-&gt;P[0][0] = 0.0f;
+    kf-&gt;P[0][1] = 0.0f;
+    kf-&gt;P[1][0] = 0.0f;
+    kf-&gt;P[1][1] = 0.0f;
+    kf-&gt;Q_angle = 0.001f;
+    kf-&gt;Q_bias = 0.003f;
+    kf-&gt;R_measure = 0.03f;
+}
+
+float Kalman_Update(KalmanFilter *kf, float gyroRate, float accAngle, float dt) {
+    // ---- Prédiction ----
+    // Estimation a priori
+    kf-&gt;angle += dt * (gyroRate - kf-&gt;bias);
+
+    // Covariance a priori
+    kf-&gt;P[0][0] += dt * (dt*kf-&gt;P[1][1] - kf-&gt;P[0][1] - kf-&gt;P[1][0] + kf-&gt;Q_angle);
+    kf-&gt;P[0][1] -= dt * kf-&gt;P[1][1];
+    kf-&gt;P[1][0] -= dt * kf-&gt;P[1][1];
+    kf-&gt;P[1][1] += kf-&gt;Q_bias * dt;
+
+    // ---- Mise à jour avec la mesure accéléromètre ----
+    float y = accAngle - kf-&gt;angle;               // innovation
+    float S = kf-&gt;P[0][0] + kf-&gt;R_measure;        // covariance de l'innovation
+
+    float K[2];                                   // gain de Kalman
+    K[0] = kf-&gt;P[0][0] / S;
+    K[1] = kf-&gt;P[1][0] / S;
+
+    // Correction
+    kf-&gt;angle += K[0] * y;
+    kf-&gt;bias  += K[1] * y;
+
+    // Mise à jour de la covariance
+    float P00_temp = kf-&gt;P[0][0];
+    float P01_temp = kf-&gt;P[0][1];
+
+    kf-&gt;P[0][0] -= K[0] * P00_temp;
+    kf-&gt;P[0][1] -= K[0] * P01_temp;
+    kf-&gt;P[1][0] -= K[1] * P00_temp;
+    kf-&gt;P[1][1] -= K[1] * P01_temp;
+
+    return kf-&gt;angle;
+}
+</code></pre>
+<p>Remarque : Les paramètres de bruit (<code>Q_angle</code>, <code>Q_bias</code>, <code>R_measure</code>) doivent être ajustés expérimentalement.</p>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-un-imu-mpu6050-et-freertos"><strong>Intégration avec un IMU (MPU6050) et FreeRTOS</strong></h3>
+<p>Nous allons maintenant lire les données brutes d’un MPU6050 via I2C, les convertir en angle d’inclinaison (accéléromètre) et en vitesse angulaire (gyroscope), puis appliquer un filtre complémentaire dans une tâche FreeRTOS.</p>
+<p><strong>Structure du projet</strong></p>
+<ul>
+<li>Tâche <code>vTaskIMUReader</code> : lit périodiquement les registres du MPU6050 (via I2C en mode polling ou avec interruption) et place les données brutes dans une file.</li>
+<li>Tâche <code>vTaskEstimator</code> : récupère les données, applique le filtre, et met le résultat à disposition (variable globale ou autre file).</li>
+<li>Tâche <code>vTaskMonitor</code> (optionnelle) : affiche l’angle estimé sur UART.</li>
+</ul>
+<p><strong>Code partiel pour le MPU6050</strong></p>
+<pre><code class="language-c">// Adresse MPU6050 (AD0 = 0 -&gt; 0x68)
+#define MPU6050_ADDR    0x68
+#define MPU6050_WHO_AM_I 0x75
+
+// Initialisation (simplifiée)
+void MPU6050_Init(void) {
+    // Sortir du mode sommeil (register PWR_MGMT_1, bit 6 = 0)
+    uint8_t data = 0x00;
+    I2C_Write(MPU6050_ADDR, 0x6B, &amp;data, 1);
+}
+
+// Lecture des accélérations et gyros
+void MPU6050_Read(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+    uint8_t buffer[14];
+    I2C_Read(MPU6050_ADDR, 0x3B, buffer, 14); // lecture en rafale
+
+    int16_t raw_ax = (buffer[0] &lt;&lt; 8) | buffer[1];
+    int16_t raw_ay = (buffer[2] &lt;&lt; 8) | buffer[3];
+    int16_t raw_az = (buffer[4] &lt;&lt; 8) | buffer[5];
+    // ... idem pour gyro (buffer[8] à buffer[13])
+
+    // Conversion en unités physiques (selon la sensibilité configurée)
+    *ax = (float)raw_ax / 16384.0f; // pour ±2g
+    *ay = (float)raw_ay / 16384.0f;
+    *az = (float)raw_az / 16384.0f;
+    *gx = (float)raw_gx / 131.0f;   // pour ±250°/s
+    *gy = (float)raw_gy / 131.0f;
+    *gz = (float)raw_gz / 131.0f;
+}
+</code></pre>
+<p><strong>Calcul de l’angle à partir de l’accéléromètre</strong></p>
+<p>Si on suppose que le capteur est incliné autour de l’axe X, l’angle peut être calculé par :</p>
+<pre><code class="language-c">float accel_angle_x = atan2f(ay, az) * 180.0f / 3.14159f;
+// Attention : selon l'orientation du capteur, ajuster.
+</code></pre>
+<p><strong>Tâches FreeRTOS</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+
+QueueHandle_t xIMUQueue;
+
+typedef struct {
+    float accAngle;   // angle calculé depuis accéléromètre
+    float gyroRate;   // vitesse angulaire (rad/s ou °/s)
+} IMUData_t;
+
+void vTaskIMUReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(10); // 100 Hz
+    IMUData_t data;
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+
+        // Lire MPU6050
+        float ax, ay, az, gx, gy, gz;
+        MPU6050_Read(&amp;ax, &amp;ay, &amp;az, &amp;gx, &amp;gy, &amp;gz);
+
+        // Calculer angle accéléromètre (par exemple autour de X)
+        data.accAngle = atan2f(ay, az) * 180.0f / 3.14159f;
+        data.gyroRate = gx; // vitesse angulaire en °/s
+
+        xQueueSend(xIMUQueue, &amp;data, 0);
+    }
+}
+
+void vTaskEstimator(void *pvParameters) {
+    ComplementaryFilter filter;
+    Complementary_Init(&amp;filter, 0.5f, 0.01f); // tau = 0.5s, dt = 0.01s
+    IMUData_t data;
+    float estimatedAngle = 0.0f;
+
+    for (;;) {
+        if (xQueueReceive(xIMUQueue, &amp;data, portMAX_DELAY) == pdPASS) {
+            estimatedAngle = Complementary_Update(&amp;filter, data.gyroRate, data.accAngle, 0.01f);
+            // Utiliser estimatedAngle (par exemple pour affichage ou contrôle)
+        }
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-estimation-angle"><strong>Projet : Estimation d’angle pour un drone ou une plateforme</strong></h3>
+<p>Objectif : lire les données d’un MPU6050, appliquer un filtre complémentaire, et afficher l’angle en temps réel sur un terminal UART. Le code complet intègre I2C, FreeRTOS, et les filtres.</p>
+<pre><code class="language-c">// Fichier main.c complet (simplifié)
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;math.h&gt;
+#include &lt;stdio.h&gt;
+
+// Fonctions I2C (à implémenter)
+void I2C1_Init(void);
+void I2C_Write(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t len);
+void I2C_Read(uint8_t devAddr, uint8_t regAddr, uint8_t *buf, uint8_t len);
+
+// Fonctions UART pour printf
+void USART2_Init(uint32_t baud);
+int _write(int file, char *ptr, int len);
+
+// Filtre complémentaire
+typedef struct {
+    float angle;
+} ComplementaryFilter;
+
+void Complementary_Init(ComplementaryFilter *f) {
+    f-&gt;angle = 0.0f;
+}
+
+float Complementary_Update(ComplementaryFilter *f, float gyroRate, float accAngle, float dt) {
+    float alpha = 0.98f;
+    float gyroAngle = f-&gt;angle + gyroRate * dt;
+    f-&gt;angle = alpha * gyroAngle + (1.0f - alpha) * accAngle;
+    return f-&gt;angle;
+}
+
+// Handles et files
+QueueHandle_t xIMUQueue;
+
+// Tâche de lecture IMU
+void vTaskIMUReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(10);
+    float ax, ay, az, gx, gy, gz;
+    float accAngle, gyroRate;
+
+    // Initialiser MPU6050
+    uint8_t tmp = 0x00;
+    I2C_Write(0x68, 0x6B, &amp;tmp, 1); // sortir du sommeil
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+
+        // Lecture MPU6050 (simplifiée)
+        uint8_t buf[14];
+        I2C_Read(0x68, 0x3B, buf, 14);
+        int16_t raw_ax = (buf[0] &lt;&lt; 8) | buf[1];
+        int16_t raw_ay = (buf[2] &lt;&lt; 8) | buf[3];
+        int16_t raw_az = (buf[4] &lt;&lt; 8) | buf[5];
+        int16_t raw_gx = (buf[8] &lt;&lt; 8) | buf[9];
+        int16_t raw_gy = (buf[10] &lt;&lt; 8) | buf[11];
+        int16_t raw_gz = (buf[12] &lt;&lt; 8) | buf[13];
+
+        ax = raw_ax / 16384.0f;
+        ay = raw_ay / 16384.0f;
+        az = raw_az / 16384.0f;
+        gx = raw_gx / 131.0f;
+        gy = raw_gy / 131.0f;
+        gz = raw_gz / 131.0f;
+
+        // Calcul angle accéléromètre (autour de X)
+        accAngle = atan2f(ay, az) * 180.0f / 3.14159f;
+        gyroRate = gx;
+
+        xQueueSend(xIMUQueue, &amp;accAngle, 0);
+        // Envoyer aussi gyroRate ? Pour simplifier, on envoie les deux via une structure.
+    }
+}
+
+// Tâche d'estimation
+void vTaskEstimator(void *pvParameters) {
+    ComplementaryFilter filter;
+    Complementary_Init(&amp;filter);
+    float accAngle, gyroRate;
+    float estimatedAngle;
+
+    for (;;) {
+        // Reçoit les données (structure plus complète à définir)
+        // Ici on suppose une queue qui envoie deux floats
+        if (xQueueReceive(xIMUQueue, &amp;accAngle, portMAX_DELAY) == pdPASS) {
+            // Récupérer aussi gyroRate (pour l'exemple, on simule)
+            gyroRate = 0; // à remplacer par vraie réception
+            estimatedAngle = Complementary_Update(&amp;filter, gyroRate, accAngle, 0.01f);
+            printf(&quot;Angle estimé: %.2f deg\r\n&quot;, estimatedAngle);
+        }
+    }
+}
+
+int main(void) {
+    HAL_Init();
+    SystemClock_Config(); // à définir
+    I2C1_Init();
+    USART2_Init(115200);
+
+    xIMUQueue = xQueueCreate(5, sizeof(float)); // pas idéal : on devrait envoyer deux floats
+
+    xTaskCreate(vTaskIMUReader, &quot;IMUReader&quot;, 256, NULL, 2, NULL);
+    xTaskCreate(vTaskEstimator, &quot;Estimator&quot;, 256, NULL, 1, NULL);
+
+    vTaskStartScheduler();
+
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="/stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="/stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="/usart/index.md">Communication Série USART</a></li>
+<li><a href="/adc/index.md">Acquisition Analogique via ADC</a></li>
+<li><a href="/stm32f4/pwm/index.md">Génération des signaux PWM</a></li>
+<li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../dma/index.md">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 
