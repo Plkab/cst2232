@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/projects/gps/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Récepteur GPS avec Affichage sur Interface Python - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#recepteur-gps-avec-affichage-sur-interface-python" class="nav-link">Récepteur GPS avec Affichage sur Interface Python</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="recepteur-gps-avec-affichage-sur-interface-python">Récepteur GPS avec Affichage sur Interface Python</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Ce projet a pour objectif de mettre en pratique les connaissances acquises sur la communication série (USART), les interruptions, les files de messages (queues) et la gestion de tâches FreeRTOS. Nous allons interfacer un <strong>module GPS</strong> (un module NEO-6M) avec notre carte STM32F401, lire les trames NMEA en continu, extraire les informations utiles (latitude, longitude, heure, etc.) et les envoyer à un PC via un port série (USB). Côté PC, une interface graphique réalisée en Python affichera ces données en temps réel.</p>
+<p>Ce projet illustre parfaitement l'intégration de périphériques de communication dans un système temps réel et la communication avec un ordinateur pour le monitoring.</p>
+<hr />
+<p><br></p>
+<h3 id="cahier-des-charges"><strong>Cahier des charges</strong></h3>
+<ul>
+<li>
+<p><strong>Acquisition GPS</strong> :</p>
+<ul>
+<li>Le module GPS est connecté à l'USART3 du STM32 (par exemple) avec un baud rate de 9600 bps (standard pour la plupart des modules GPS).</li>
+<li>Les trames NMEA (format texte) sont reçues en continu.</li>
+</ul>
+</li>
+<li>
+<p><strong>Réception efficace</strong> :</p>
+<ul>
+<li>La réception se fait par <strong>interruption</strong> pour ne pas bloquer le CPU.</li>
+<li>Chaque caractère reçu est placé dans une file (<code>xRxQueue</code>) pour être traité ultérieurement par une tâche dédiée.</li>
+</ul>
+</li>
+<li>
+<p><strong>Parsing des trames</strong> :</p>
+<ul>
+<li>Une tâche <strong>vTaskGPSParser</strong> lit les caractères depuis la file et reconstruit les trames jusqu'au caractère de fin de ligne (<code>\n</code>).</li>
+<li>Elle extrait les informations pertinentes (par exemple la trame <code>$GPRMC</code> ou <code>$GPGGA</code>) : latitude, longitude, vitesse, cap, etc.</li>
+<li>Les données extraites sont placées dans une structure et envoyées vers une autre file (<code>xDataQueue</code>) à destination de la tâche d'envoi.</li>
+</ul>
+</li>
+<li>
+<p><strong>Communication avec le PC</strong> :</p>
+<ul>
+<li>Une tâche <code>vTaskSendToPC</code> récupère les données depuis <code>xDataQueue</code> et les formate (par exemple en JSON ou en texte simple) avant de les envoyer sur l'USART2 (connecté au port USB de la carte) vers le PC.</li>
+<li>L'USART2 est configuré en mode polling simple ou avec une file d'émission.</li>
+</ul>
+</li>
+<li>
+<p><strong>Interface Python</strong> :</p>
+<ul>
+<li>Un script Python lit les données sur le port série (ex: COMx sous Windows, /dev/ttyACMx sous Linux) et les affiche dans une fenêtre graphique (par exemple avec Tkinter ou PyQt).</li>
+<li>L'interface affiche la position (latitude, longitude), l'heure, la vitesse, etc., et peut éventuellement tracer la position sur une carte (optionnel).</li>
+</ul>
+</li>
+<li>
+<p><strong>Contraintes techniques</strong> :</p>
+<ul>
+<li>Utilisation de FreeRTOS pour gérer les tâches (priorités adaptées).</li>
+<li>Les ISR doivent être courtes (seulement l'envoi dans une file).</li>
+<li>Pas de blocage dans les tâches (utilisation de <code>portMAX_DELAY</code> pour les files).</li>
+<li>La taille des files doit être suffisante pour absorber les rafales de données.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="materiel-necessaire"><strong>Matériel nécessaire</strong></h3>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>
+<p>Module GPS (par exemple NEO-6M, NEO-8M) avec sortie UART (3.3V compatible)</p>
+</li>
+<li>
+<p>Connexions :</p>
+<ul>
+<li>GPS TX → STM32 RX (par exemple PB11 pour USART3)</li>
+<li>GPS RX → STM32 TX (optionnel, si on veut configurer le GPS)</li>
+<li>Alimentation 3.3V et GND</li>
+</ul>
+</li>
+<li>
+<p>Câble USB pour la programmation et la communication série avec le PC</p>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="code-stm32-freertos"><strong>Code STM32 (FreeRTOS)</strong></h3>
+<p>Voici le code complet pour le microcontrôleur. Il utilise deux USART :</p>
+<ul>
+<li><strong>USART3</strong> pour la communication avec le module GPS (réception seule, interruption).</li>
+<li><strong>USART2</strong> pour l'envoi des données parsées vers le PC (polling).</li>
+</ul>
+<p>Les tâches FreeRTOS sont :</p>
+<ul>
+<li><strong>USART3_IRQHandler</strong> : interruption de réception GPS, place les caractères dans <code>xGPS_RxQueue</code>.</li>
+<li><strong>vTaskGPSParser</strong> : lit les caractères depuis la file, reconstruit les trames NMEA et extrait les données de la trame <code>$GPRMC</code>.</li>
+<li><strong>vTaskSendToPC</strong> : reçoit les structures de données parsées et les envoie au PC au format CSV.</li>
+</ul>
+<pre><code class="language-c">/*
+ * Projet GPS avec FreeRTOS sur STM32F401
+ * Lecture des trames NMEA via USART3 (interruption)
+ * Parsing de la trame $GPRMC
+ * Envoi des données formatées (CSV) sur USART2 vers le PC
+ */
+
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;string.h&quot;
+#include &quot;stdio.h&quot;
+#include &quot;stdlib.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+// ======================== Définitions =========================
+
+#define GPS_UART         USART3
+#define GPS_BAUD         9600
+#define PC_UART          USART2
+#define PC_BAUD          115200
+
+// Taille des files
+#define RX_QUEUE_SIZE    128          // File pour les caractères bruts du GPS
+#define DATA_QUEUE_SIZE  10           // File pour les structures GPS
+
+// Structure pour stocker les données GPS extraites
+typedef struct {
+    float latitude;      // Latitude en degrés décimaux
+    float longitude;     // Longitude en degrés décimaux
+    float speed;         // Vitesse en nœuds
+    float course;        // Cap en degrés
+    uint8_t hour;        // Heure UTC
+    uint8_t minute;      // Minute
+    uint8_t second;      // Seconde
+    uint8_t day;         // Jour
+    uint8_t month;       // Mois
+    uint8_t year;        // Année (sur 2 chiffres)
+    uint8_t valid;       // 1 si données valides (trame active)
+} GPSData_t;
+
+// ======================== Handles FreeRTOS ====================
+
+QueueHandle_t xGPS_RxQueue;      // File des caractères bruts du GPS
+QueueHandle_t xDataQueue;        // File des structures GPSData_t
+
+// ======================== Prototypes ==========================
+
+void GPS_UART_Init(void);
+void PC_UART_Init(void);
+void vTaskGPSParser(void *pvParameters);
+void vTaskSendToPC(void *pvParameters);
+float convertNMEAToDecimal(const char *nmeaCoord, char direction);
+
+// ======================== Initialisation USART3 (GPS) =========
+
+/**
+ * @brief Initialise l'USART3 pour la réception des données GPS.
+ *        Utilise les broches PB10 (TX) et PB11 (RX) en alternate function AF7.
+ *        Active l'interruption sur réception (RXNE).
+ */
+void GPS_UART_Init(void) {
+    // 1. Activer les horloges des périphériques
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOBEN;      // Port B
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART3EN;     // USART3 (sur APB1)
+
+    // 2. Configurer PB10 (TX) et PB11 (RX) en alternate function AF7
+    //    Effacer les bits de MODER pour ces pins
+    GPIOB-&gt;MODER &amp;= ~((3U &lt;&lt; (10*2)) | (3U &lt;&lt; (11*2)));
+    //    Mettre en mode alternate function (10)
+    GPIOB-&gt;MODER |=  ((2U &lt;&lt; (10*2)) | (2U &lt;&lt; (11*2)));
+    //    Sélectionner AF7 dans les registres AFRH (car pins &gt;7)
+    //    Pour PB10, bit offset = (10-8)*4 = 8, pour PB11 offset = 12
+    GPIOB-&gt;AFR[1] |= (7 &lt;&lt; ((10-8)*4)) | (7 &lt;&lt; ((11-8)*4));
+
+    // 3. Configuration de l'USART3
+    //    Baud rate = 9600, horloge APB1 = 84 MHz =&gt; BRR = 84e6/9600 = 8750
+    USART3-&gt;BRR = 84000000 / GPS_BAUD;        // 8750
+    //    Activer la réception seule, pas de transmission
+    USART3-&gt;CR1 = USART_CR1_RE | USART_CR1_UE;
+    //    Activer l'interruption sur réception (RXNE)
+    USART3-&gt;CR1 |= USART_CR1_RXNEIE;
+
+    // 4. Configurer le NVIC pour l'interruption USART3
+    NVIC_SetPriority(USART3_IRQn, 5);          // Priorité compatible FreeRTOS
+    NVIC_EnableIRQ(USART3_IRQn);
+}
+
+// ======================== Initialisation USART2 (PC) =========
+
+/**
+ * @brief Initialise l'USART2 pour l'envoi des données vers le PC.
+ *        Utilise les broches PA2 (TX) et PA3 (RX) en alternate function AF7.
+ *        Seule la transmission est utilisée (mode polling).
+ */
+void PC_UART_Init(void) {
+    // 1. Activer les horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;       // Port A
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;      // USART2 (sur APB1)
+
+    // 2. Configurer PA2 (TX) et PA3 (RX) en AF7
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (2*2)) | (3U &lt;&lt; (3*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (2*2)) | (2U &lt;&lt; (3*2)));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+
+    // 3. Configuration USART2 : 115200 bauds, transmission seule
+    USART2-&gt;BRR = 84000000 / PC_BAUD;           // 730 (84e6/115200 ≈ 730)
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_UE;  // TX enable
+    // Pas d'interruption pour l'émission (polling simple)
+}
+
+// ======================== Interruption USART3 =================
+
+/**
+ * @brief Handler d'interruption pour USART3.
+ *        Lit le caractère reçu et le place dans la file xGPS_RxQueue.
+ *        Utilise xQueueSendFromISR avec prise en compte du wake-up.
+ */
+void USART3_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+
+    if (USART3-&gt;SR &amp; USART_SR_RXNE) {
+        uint8_t data = (uint8_t)(USART3-&gt;DR);   // Lecture (efface le flag)
+        xQueueSendFromISR(xGPS_RxQueue, &amp;data, &amp;xWoken);
+    }
+    // Si une tâche de priorité supérieure a été réveillée, on force une commutation
+    portYIELD_FROM_ISR(xWoken);
+}
+
+// ======================== Fonctions de parsing ================
+
+/**
+ * @brief Convertit une coordonnée NMEA (format ddmm.mmmm) en degrés décimaux.
+ * @param nmeaCoord Chaîne contenant la coordonnée (ex: &quot;4807.038&quot;)
+ * @param direction Caractère indiquant la direction ('N','S','E','O')
+ * @return float Valeur en degrés décimaux (signée)
+ */
+float convertNMEAToDecimal(const char *nmeaCoord, char direction) {
+    // La chaîne est de la forme DDMM.MMMM (latitude) ou DDDMM.MMMM (longitude)
+    // On cherche la position du point décimal
+    char *dot = strchr(nmeaCoord, '.');
+    if (dot == NULL) return 0.0f;
+
+    // Calcul de la partie degrés et minutes
+    int degrees;
+    float minutes;
+
+    // Latitude : DDMM.MMMM (degrés sur 2 chiffres)
+    if (direction == 'N' || direction == 'S') {
+        // Extraire les deux premiers chiffres comme degrés
+        char degStr[3] = {nmeaCoord[0], nmeaCoord[1], '\0'};
+        degrees = atoi(degStr);
+        // Le reste (jusqu'au point) sont les minutes
+        char minStr[10];
+        strncpy(minStr, nmeaCoord + 2, dot - (nmeaCoord + 2));
+        minStr[dot - (nmeaCoord + 2)] = '\0';
+        minutes = atof(minStr) + atof(dot); // partie entière + partie décimale
+    }
+    // Longitude : DDDMM.MMMM (degrés sur 3 chiffres)
+    else {
+        char degStr[4] = {nmeaCoord[0], nmeaCoord[1], nmeaCoord[2], '\0'};
+        degrees = atoi(degStr);
+        char minStr[10];
+        strncpy(minStr, nmeaCoord + 3, dot - (nmeaCoord + 3));
+        minStr[dot - (nmeaCoord + 3)] = '\0';
+        minutes = atof(minStr) + atof(dot);
+    }
+
+    float decimal = degrees + minutes / 60.0f;
+
+    // Appliquer le signe en fonction de la direction
+    if (direction == 'S' || direction == 'O') {
+        decimal = -decimal;
+    }
+    return decimal;
+}
+
+// ======================== Tâche de parsing GPS ================
+
+/**
+ * @brief Tâche FreeRTOS qui lit les caractères depuis la file xGPS_RxQueue,
+ *        reconstruit les lignes NMEA, et extrait les données de la trame $GPRMC.
+ *        Les données parsées sont envoyées dans xDataQueue.
+ */
+void vTaskGPSParser(void *pvParameters) {
+    uint8_t c;
+    char line[100];
+    int index = 0;
+    GPSData_t gpsData;
+
+    for (;;) {
+        // Attendre un caractère (bloquant, 0% CPU)
+        if (xQueueReceive(xGPS_RxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            // Si c'est un retour chariot ou newline, on considère la fin de la ligne
+            if (c == '\n' || c == '\r') {
+                // Si la ligne n'est pas vide
+                if (index &gt; 0) {
+                    line[index] = '\0';  // Terminer la chaîne
+
+                    // Vérifier si c'est une trame $GPRMC
+                    if (strstr(line, &quot;$GPRMC&quot;) == line) {
+                        // Exemple de trame : $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
+                        char *token;
+                        int field = 0;
+                        char *saveptr;
+
+                        // Dupliquer la ligne car strtok modifie la chaîne
+                        char lineCopy[100];
+                        strcpy(lineCopy, line);
+
+                        token = strtok_r(lineCopy, &quot;,&quot;, &amp;saveptr);
+                        while (token != NULL) {
+                            switch (field) {
+                                case 1: // Heure (hhmmss.ss)
+                                    sscanf(token, &quot;%2hhu%2hhu%2hhu&quot;, &amp;gpsData.hour, &amp;gpsData.minute, &amp;gpsData.second);
+                                    break;
+                                case 2: // Statut (A=actif, V=invalide)
+                                    gpsData.valid = (token[0] == 'A') ? 1 : 0;
+                                    break;
+                                case 3: // Latitude (ddmm.mmmm)
+                                    // La latitude sera traitée avec le champ suivant (direction)
+                                    // On la stocke temporairement dans une variable
+                                    break;
+                                case 4: // Direction latitude (N/S)
+                                    if (field == 4 &amp;&amp; token != NULL) {
+                                        // Récupérer la latitude depuis le champ 3 (précédent)
+                                        // On doit ré-extraire ou sauvegarder. Ici on utilise une variable locale.
+                                        // Pour simplifier, on refait un strtok en arrière? Pas pratique.
+                                        // On va plutôt stocker les champs au fur et à mesure.
+                                    }
+                                    break;
+                                // ... Une implémentation plus robuste utiliserait un tableau de champs.
+                            }
+                            token = strtok_r(NULL, &quot;,&quot;, &amp;saveptr);
+                            field++;
+                        }
+                    }
+                    index = 0; // Réinitialiser le buffer
+                }
+            } else if (index &lt; 99) {
+                line[index++] = c;  // Accumuler le caractère
+            }
+        }
+    }
+}
+</code></pre>
+<p>Note : Le code ci-dessus est volontairement incomplet pour le parsing. Une version complète et robuste serait longue. Nous allons fournir une version plus simple mais fonctionnelle, en utilisant sscanf pour extraire les champs directement, puis une fonction de conversion.</p>
+<p>Voici une version révisée de la tâche de parsing avec un parsing correct de la trame $GPRMC :</p>
+<pre><code class="language-c">// Version améliorée du parsing (à intégrer dans vTaskGPSParser)
+void vTaskGPSParser(void *pvParameters) {
+    uint8_t c;
+    char line[100];
+    int index = 0;
+    GPSData_t gpsData;
+
+    for (;;) {
+        if (xQueueReceive(xGPS_RxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            if (c == '\n' || c == '\r') {
+                if (index &gt; 0) {
+                    line[index] = '\0';
+                    // Chercher la trame $GPRMC
+                    if (strncmp(line, &quot;$GPRMC&quot;, 6) == 0) {
+                        // Format : $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
+                        char time[12], lat[12], lon[12], speed[8], course[8], date[8];
+                        char latDir, lonDir, status;
+                        float speedVal, courseVal;
+
+                        int parsed = sscanf(line, &quot;$GPRMC,%[^,],%c,%[^,],%c,%[^,],%c,%[^,],%[^,],%[^,]&quot;,
+                                            time, &amp;status, lat, &amp;latDir, lon, &amp;lonDir, speed, course, date);
+                        if (parsed &gt;= 9) {
+                            // Conversion de l'heure
+                            sscanf(time, &quot;%2hhu%2hhu%2hhu&quot;, &amp;gpsData.hour, &amp;gpsData.minute, &amp;gpsData.second);
+                            // Statut
+                            gpsData.valid = (status == 'A') ? 1 : 0;
+                            // Conversion des coordonnées
+                            gpsData.latitude = convertNMEAToDecimal(lat, latDir);
+                            gpsData.longitude = convertNMEAToDecimal(lon, lonDir);
+                            // Vitesse et cap
+                            gpsData.speed = atof(speed);
+                            gpsData.course = atof(course);
+                            // Date
+                            sscanf(date, &quot;%2hhu%2hhu%2hhu&quot;, &amp;gpsData.day, &amp;gpsData.month, &amp;gpsData.year);
+
+                            // Envoyer les données dans la file
+                            xQueueSend(xDataQueue, &amp;gpsData, 0);
+                        }
+                    }
+                    index = 0;
+                }
+            } else if (index &lt; 99) {
+                line[index++] = c;
+            }
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-c">// Tâche d'envoi vers PC
+void vTaskSendToPC(void *pvParameters) {
+    GPSData_t gpsData;
+    char buffer[128];
+
+    for (;;) {
+        if (xQueueReceive(xDataQueue, &amp;gpsData, portMAX_DELAY) == pdPASS) {
+            // Formater en CSV : latitude,longitude,vitesse,cap,heure,date,validité
+            sprintf(buffer, &quot;%.6f,%.6f,%.2f,%.2f,%02u:%02u:%02u,%02u/%02u/%02u,%d\r\n&quot;,
+                    gpsData.latitude, gpsData.longitude,
+                    gpsData.speed, gpsData.course,
+                    gpsData.hour, gpsData.minute, gpsData.second,
+                    gpsData.day, gpsData.month, gpsData.year,
+                    gpsData.valid);
+
+            // Envoi par polling sur USART2
+            char *p = buffer;
+            while (*p) {
+                while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+                USART2-&gt;DR = *p++;
+            }
+        }
+    }
+}
+
+int main(void) {
+    // Initialisations matérielles
+    GPS_UART_Init();
+    PC_UART_Init();
+
+    // Création des files
+    xGPS_RxQueue = xQueueCreate(RX_QUEUE_SIZE, sizeof(uint8_t));
+    xDataQueue   = xQueueCreate(DATA_QUEUE_SIZE, sizeof(GPSData_t));
+
+    if (xGPS_RxQueue != NULL &amp;&amp; xDataQueue != NULL) {
+        // Création des tâches
+        xTaskCreate(vTaskGPSParser, &quot;GPSParser&quot;, 256, NULL, 2, NULL);
+        xTaskCreate(vTaskSendToPC,  &quot;SendToPC&quot;,  256, NULL, 1, NULL);
+
+        // Lancement de l'ordonnanceur
+        vTaskStartScheduler();
+    }
+
+    // Ne devrait jamais arriver
+    while(1);
+}
+</code></pre>
+<p><strong>Remarques</strong> :</p>
+<ul>
+<li>La tâche <code>vTaskGPSParser</code> a une priorité 2 (plus haute) pour éviter de perdre des caractères si la file se remplit.</li>
+<li>La tâche <code>vTaskSendToPC</code> a une priorité 1.</li>
+<li>La taille de pile de 256 mots (environ 1 Ko) est suffisante pour ces tâches.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="interface-python"><strong>Interface Python</strong></h3>
+<p>Côté PC, nous allons créer un script Python simple avec Tkinter pour lire les données sur le port série et les afficher. Le script lit les lignes CSV envoyées par le STM32 et met à jour l'interface.</p>
+<pre><code class="language-py">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+&quot;&quot;&quot;
+Interface graphique pour afficher les données GPS reçues du STM32 via port série.
+Les données sont au format CSV : latitude,longitude,vitesse,cap,heure,date,validité
+&quot;&quot;&quot;
+
+import tkinter as tk
+import serial
+import threading
+import time
+
+class GPSApp:
+    def __init__(self, master):
+        self.master = master
+        master.title(&quot;Récepteur GPS - STM32&quot;)
+        master.geometry(&quot;450x350&quot;)
+        master.resizable(False, False)
+
+        # Variables pour stocker les données
+        self.latitude = tk.StringVar(value=&quot;--&quot;)
+        self.longitude = tk.StringVar(value=&quot;--&quot;)
+        self.speed = tk.StringVar(value=&quot;--&quot;)
+        self.course = tk.StringVar(value=&quot;--&quot;)
+        self.time = tk.StringVar(value=&quot;--&quot;)
+        self.date = tk.StringVar(value=&quot;--&quot;)
+        self.valid = tk.StringVar(value=&quot;--&quot;)
+
+        # Création des labels et champs d'affichage
+        tk.Label(master, text=&quot;Récepteur GPS&quot;, font=(&quot;Arial&quot;, 16)).pack(pady=10)
+
+        frame = tk.Frame(master)
+        frame.pack(pady=10)
+
+        # Ligne 1 : Latitude
+        tk.Label(frame, text=&quot;Latitude :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=0, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.latitude, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=0, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 2 : Longitude
+        tk.Label(frame, text=&quot;Longitude :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=1, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.longitude, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=1, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 3 : Vitesse (nœuds)
+        tk.Label(frame, text=&quot;Vitesse (nœuds) :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=2, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.speed, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=2, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 4 : Cap (degrés)
+        tk.Label(frame, text=&quot;Cap (°) :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=3, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.course, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=3, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 5 : Heure UTC
+        tk.Label(frame, text=&quot;Heure UTC :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=4, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.time, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=4, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 6 : Date
+        tk.Label(frame, text=&quot;Date :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=5, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.date, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=5, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Ligne 7 : Validité
+        tk.Label(frame, text=&quot;Validité :&quot;, font=(&quot;Arial&quot;, 10), anchor=&quot;e&quot;, width=15).grid(row=6, column=0, sticky=&quot;e&quot;, pady=2)
+        tk.Label(frame, textvariable=self.valid, font=(&quot;Arial&quot;, 10), anchor=&quot;w&quot;, width=20).grid(row=6, column=1, sticky=&quot;w&quot;, pady=2)
+
+        # Bouton de fermeture
+        tk.Button(master, text=&quot;Quitter&quot;, command=self.on_closing).pack(pady=10)
+
+        # Configuration du port série (à adapter : port, baudrate)
+        self.serial_port = None
+        try:
+            self.serial_port = serial.Serial('COM3', 115200, timeout=1)  # Sous Windows, remplacer COM3 par le bon port
+            # Sous Linux, utiliser par exemple '/dev/ttyACM0'
+        except Exception as e:
+            self.latitude.set(&quot;Erreur&quot;)
+            self.longitude.set(str(e))
+            return
+
+        self.running = True
+        # Lancer le thread de lecture
+        self.thread = threading.Thread(target=self.read_serial, daemon=True)
+        self.thread.start()
+
+    def read_serial(self):
+        &quot;&quot;&quot;Lit les données série et met à jour les variables.&quot;&quot;&quot;
+        while self.running:
+            try:
+                line = self.serial_port.readline().decode().strip()
+                if line:
+                    # Format attendu : latitude,longitude,vitesse,cap,heure,date,validité
+                    parts = line.split(',')
+                    if len(parts) &gt;= 7:
+                        lat, lon, spd, crs, tim, dat, val = parts[:7]
+                        # Mettre à jour l'interface (dans le thread principal)
+                        self.master.after(0, self.update_labels, lat, lon, spd, crs, tim, dat, val)
+            except Exception as e:
+                print(&quot;Erreur de lecture:&quot;, e)
+                break
+
+    def update_labels(self, lat, lon, spd, crs, tim, dat, val):
+        &quot;&quot;&quot;Met à jour les labels avec les nouvelles données.&quot;&quot;&quot;
+        self.latitude.set(lat)
+        self.longitude.set(lon)
+        self.speed.set(spd)
+        self.course.set(crs)
+        self.time.set(tim)
+        self.date.set(dat)
+        self.valid.set(&quot;OK&quot; if val == &quot;1&quot; else &quot;Invalide&quot;)
+
+    def on_closing(self):
+        &quot;&quot;&quot;Ferme proprement la connexion série et détruit la fenêtre.&quot;&quot;&quot;
+        self.running = False
+        if self.serial_port:
+            self.serial_port.close()
+        self.master.destroy()
+
+if __name__ == &quot;__main__&quot;:
+    root = tk.Tk()
+    app = GPSApp(root)
+    root.protocol(&quot;WM_DELETE_WINDOW&quot;, app.on_closing)
+    root.mainloop()
+</code></pre>
+<p><strong>Explication</strong></p>
+<ul>
+<li>La classe GPSApp crée une fenêtre Tkinter avec des labels pour afficher chaque donnée.</li>
+<li>Un thread séparé lit les données série en continu (non bloquant pour l'interface).</li>
+<li>Les données sont mises à jour via after pour être exécutées dans le thread principal de Tkinter.</li>
+<li>Le port série est configuré à 115200 bauds (identique à celui du STM32). Il faut adapter le nom du port (ex: COM3 sous Windows, /dev/ttyACM0 sous Linux).</li>
+</ul>
+<p><strong>Explication détaillée</strong></p>
+<ul>
+<li><strong>Interruption USART</strong> : chaque caractère reçu du GPS est immédiatement placé dans une file, ce qui libère le CPU très rapidement. La tâche de parsing peut alors traiter les données à son rythme sans perte.</li>
+<li><strong>Parsing des trames</strong> : la tâche <code>vTaskGPSParser</code> accumule les caractères jusqu'au newline, puis utilise sscanf pour extraire les champs de la trame <code>$GPRMC</code>. Une fonction de conversion transforme les coordonnées NMEA (degrés minutes) en degrés décimaux.</li>
+<li><strong>Communication avec le PC</strong> : les données parsées sont envoyées via USART2 en format CSV. L'utilisation du polling pour l'émission est acceptable car le débit est faible et la tâche n'est pas critique.</li>
+<li><strong>Interface Python</strong> : un thread dédié lit le port série et met à jour l'interface graphique en temps réel. L'affichage est simple mais peut être enrichi (carte, graphiques, etc.).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/index.md">GPIO et Interruptions</a></li>
+<li><a href="../timer/index.md">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
