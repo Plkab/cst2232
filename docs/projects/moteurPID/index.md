@@ -714,7 +714,7 @@ int main(void)
 ### **Liens Connexes**
 
 
-- [GPIO et Interruptions](../../stm32f4/gpio/index.md)
+- [GPIO et Interruptions](../../../stm32f4/gpio/index.md)
 - [Timer et Interruption](../../stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)
 - [Génération des signaux PWM](../../stm32f4/pwm/index.md)
