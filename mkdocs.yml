@@ -3,7 +3,9 @@ site_description: Cours de Master en Génie Logiciel Industriel
 site_author: Ir Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
 
-theme: mkdocs
+theme:
+  name: material
+  custom_dir: overrides
 
 markdown_extensions:
   - tables
@@ -18,5 +20,5 @@ extra_css:
 plugins:
   - search
   - git-revision-date-localized:
-      enable_creation_date: true   # optionnel : ajoute aussi la date de création
-      type: date                    # format : date, datetime, timeago
+      enable_creation_date: true
+      type: date

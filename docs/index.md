@@ -103,11 +103,3 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Codes source Github](https://github.com/Plkab/code-demo-cours)
 <br>
 
-
-{% extends "base.html" %}
-
-{% block content %}
-  {{ super() }}
-  <hr>
-  <p><small>Dernière mise à jour : {{ git_revision_date_localized }}</small></p>
-{% endblock %}
