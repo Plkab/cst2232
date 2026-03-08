@@ -715,12 +715,12 @@ int main(void)
 
 
 
-- [GPIO et Interruptions](../../stm32f4/gpio/index.md)
-- [Timer et Interruption](../../stm32f4/timer/index.md)
-- [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)
-- [Génération des signaux PWM](../../stm32f4/pwm/index.md)
-- [Communication Série USART](../../stm32f4/usart/index.md)
+- [GPIO et Interruptions](/stm32f4/gpio/)
+- [Timer et Interruption](/stm32f4/timer/)
+- [Acquisition Analogique via ADC](/stm32f4/adc/)
+- [Génération des signaux PWM](/stm32f4/pwm/)
+- [Communication Série USART](/stm32f4/usart/)
 - [Machine d’État Fini (FSM)](../fsm/index.md)
-- [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
+- [Optimisation de Transfert des Données avec DMA](/stm32f4/dma/)
 - [Introduction pratique à FreeRTOS](../../rtos/#introduction-a-freertos)
 
