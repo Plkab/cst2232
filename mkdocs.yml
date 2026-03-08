@@ -1,16 +1,9 @@
-site_name: CST2232, Conception des Systèmes Temps Réel à base du microcontrôleur STM32F4
+site_name: CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4
 site_description: Cours de Master en Génie Logiciel Industriel
 site_author: Ir Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
 
-theme:
-  name: material
-  custom_dir: overrides   # si vous avez personnalisé des templates
-  palette:
-    # Optionnel : définissez une palette simple
-    - scheme: default
-  features: []            # Aucune fonctionnalité (pas de tabs, pas de sidebar, etc.)
-  font: false             # Désactive les polices Material (utilise les polices système)
+theme: mkdocs
 
 markdown_extensions:
   - tables
@@ -21,9 +14,3 @@ nav:
 
 extra_css:
   - stylesheets/extra.css
-
-plugins:
-  - git-revision-date-localized:
-      enable_creation_date: true
-      type: date
-  # Ne pas inclure 'search' pour éviter la boîte de recherche
