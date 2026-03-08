@@ -1,4 +1,4 @@
-# Acquisition Analogique via ADC
+# Génération des signaux PWM
 
 *Ir Paul S. Kabidu, M.Eng. <spaulkabidu@gmail.com>*
 {: style="text-align: center;" }
@@ -32,9 +32,7 @@ Un signal **PWM (Pulse Width Modulation)** est caractérisé par :
 - une **période** `T` (ou une **fréquence** `f = 1/T`) ;
 - un **rapport cyclique**
 
-\[
-\alpha = \frac{t_{on}}{T}
-\]
+\[\alpha = \frac{t_{on}}{T}\]
 
 (souvent exprimé en pourcentage).
 
