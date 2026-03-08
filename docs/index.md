@@ -43,6 +43,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
 - [Timer et Interruption Matérielles ](stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](stm32f4/adc/index.md)
+- [Génération des signaux PWM](stm32f4/pwm/index.md)
 - [Communication Série USART](stm32f4/usart/index.md)
 - [Communication Série I2C](stm32f4/i2c/index.md)
 - [Communication Série SPI](stm32f4/spi/index.md)

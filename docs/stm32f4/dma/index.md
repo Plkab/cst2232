@@ -501,7 +501,7 @@ void ADC1_DMA_Init(void) {
 
     GPIOA->MODER |= (3U << (0*2));  // PA0 analog
 
-    // ADC
+    // Config ADC
     ADC1->CR2 = 0;
     ADC1->SQR3 = 0;                 // canal 0
     ADC1->SMPR2 = (7 << 0);          // échantillonnage max
