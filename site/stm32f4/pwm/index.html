@@ -70,7 +70,7 @@
 <p><br>
 <br></p>
 <h3 id="introduction"><strong>Introduction</strong></h3>
-<p>La modulation de largeur d’impulsion (<strong>PWM</strong> – Pulse Width Modulation) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (duty cycle) d’un signal périodique, on peut par exemple :</p>
+<p>La modulation de largeur d’impulsion (<strong>PWM</strong> – <em>Pulse Width Modulation</em>) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (<em>duty cycle</em>) d’un signal périodique, on peut par exemple :</p>
 <ul>
 <li>régler la luminosité d’une LED ;</li>
 <li>commander la vitesse d’un moteur à courant continu ;</li>
@@ -83,13 +83,15 @@
 <h3 id="principe-de-la-pwm"><strong>Principe de la PWM</strong></h3>
 <p>Un signal <strong>PWM (Pulse Width Modulation)</strong> est caractérisé par :</p>
 <ul>
-<li>une <strong>période</strong> <code>T</code> (ou une <strong>fréquence</strong> <code>f = 1/T</code>) ;</li>
+<li>une <strong>période</strong> (T) (ou une <strong>fréquence</strong> (f = 1/T)) ;</li>
 <li>un <strong>rapport cyclique</strong></li>
 </ul>
-<p>[\alpha = \frac{t_{on}}{T}]</p>
+<p>[
+\alpha = \frac{t_{on}}{T}
+]</p>
 <p>(souvent exprimé en pourcentage).</p>
 <p>La <strong>valeur moyenne du signal</strong> est proportionnelle au rapport cyclique.<br />
-Par exemple, pour une <strong>LED</strong>, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.</p>
+Par exemple, pour une LED, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.</p>
 <hr />
 <p><br></p>
 <h3 id="generation-de-la-pwm-dans-un-microcontroleur"><strong>Génération de la PWM dans un microcontrôleur</strong></h3>
@@ -114,14 +116,14 @@ f_{timer} = \frac{f_{ck}}{PSC + 1}
 ]</p>
 <p>où :</p>
 <ul>
-<li><code>f_ck</code> : fréquence de l’horloge du timer  </li>
-<li><code>PSC</code> : <strong>prescaler</strong>  </li>
-<li><code>ARR</code> : <strong>Auto Reload Register</strong></li>
+<li>(f_{ck}) : fréquence de l’horloge du timer ;</li>
+<li><code>PSC</code> : <strong>prescaler</strong> ;</li>
+<li><code>ARR</code> : <strong>Auto Reload Register</strong>.</li>
 </ul>
 <p><strong>Résolution du rapport cyclique</strong></p>
 <p>La <strong>résolution du rapport cyclique</strong> (nombre de valeurs possibles) est égale à :</p>
 <p>[
-ARR + 1
+\text{Résolution} = ARR + 1
 ]</p>
 <p>Plus la valeur de <code>ARR</code> est grande, plus la <strong>résolution de la PWM est fine</strong>, ce qui permet un contrôle plus précis (par exemple pour la luminosité d’une LED ou la vitesse d’un moteur).</p>
 <hr />

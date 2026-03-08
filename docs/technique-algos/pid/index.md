@@ -13,425 +13,381 @@
 
 ### **Introduction**
 
-Le régulateur PID (Proportionnel-Intégral-Dérivé) est l'algorithme de contrôle le plus répandu dans l'industrie. On le retrouve dans des applications variées telles que :
+Le régulateur **PID** (*Proportionnel-Intégral-Dérivé*) est l'algorithme de contrôle le plus répandu dans l'industrie. Il permet d’asservir une grandeur physique (température, vitesse, position, etc.) à une consigne en agissant sur un actionneur. Sa simplicité de mise en œuvre et ses bonnes performances en font un outil incontournable pour les systèmes embarqués temps réel.
 
-la régulation de température (four, chauffage) ;
+Dans ce chapitre, nous allons :
 
-le contrôle de vitesse ou de position de moteurs ;
+- comprendre le principe du PID et ses paramètres ;
+- discrétiser l’équation pour une implémentation sur microcontrôleur ;
+- coder un PID en C, avec anti‑windup et passage de l’échelle ;
+- l’intégrer dans une tâche FreeRTOS pour une régulation périodique ;
+- réaliser un projet pratique (régulation de température ou de vitesse).
 
-la stabilisation de drones ou de plateformes ;
-
-l'asservissement de systèmes mécaniques.
-
-Dans un système embarqué temps réel, le PID est implémenté sous forme discrète (échantillonnée) et exécuté périodiquement par une tâche dédiée. Ce chapitre présente la théorie du PID discret, son implémentation en C sur STM32F4, et son intégration avec FreeRTOS pour un contrôle temps réel.
-
----
-<br>
-
-
-### **Concepts de Base d'une FSM**
-
-Une machine à états finis est définie par :
-
-- **États** : représentent les situations dans lesquelles le système peut se trouver (ex: `IDLE`, `WAITING`, `ACTIVE`).
-- **Transitions** : changements d'état déclenchés par des **événements** (ex: appui sur un bouton, expiration d'un timer, réception d'un message).
-**Actions** : ce que le système fait lorsqu'il entre dans un état, lorsqu'il en sort, ou pendant une transition.
-
-Il existe deux grands types de FSM :
-
-- **Machine de Moore** : les actions dépendent uniquement de l'état courant.
-- **Machine de Mealy** : les actions dépendent de l'état courant et de l'événement qui déclenche la transition.
-
-En pratique, on utilise souvent un mixte des deux.
-
-**Démarche de conception**
-
-1. **Modélisation (Le Formalisme)** : Avant de coder, l'ingénieur dessine un **diagramme d'états**. Chaque état représente un comportement stable (ex: `IDLE`, `MEASURING`, `ALARM`), et chaque flèche représente une transition déclenchée par un événement (une interruption GPIO ou un overflow de Timer).
-
-2. **Robustesse** : La FSM permet de définir exactement ce qui se passe si un événement imprévu survient. C'est la base des systèmes critiques (médical, aéronautique).
-
-3. **Implémentation Propre** : En C, on utilise généralement une structure `switch(state)` à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes. 
 
 
 ---
 <br>
 
-### **Implémentation d'une FSM en C**
 
-Plusieurs méthodes existent pour implémenter une FSM en C. Nous allons voir les deux plus courantes : le `switch-case` et la **table de transitions**.
+### **Principe du régulateur PID**
 
-1.**Implémentation par switch-case**
+Le correcteur PID calcule une commande \(u(t)\) à partir de l’erreur :
 
-C'est la méthode la plus simple et la plus lisible pour des machines de taille modeste.
+\[
+e(t) = y_{cons}(t) - y(t)
+\]
+
+où \(y(t)\) est la **mesure** et \(y_{cons}(t)\) la **consigne**.  
+L’équation continue du PID est :
+
+\[
+u(t) =
+K_p e(t)
++
+K_i \int_{0}^{t} e(\tau) d\tau
++
+K_d \frac{de(t)}{dt}
+\]
+
+**Terme proportionnel (P)** : réagit à l’erreur courante.  
+Un gain \(K_p\) élevé accélère la réponse mais peut provoquer des oscillations.
+
+**Terme intégral (I)** : élimine l’erreur statique en sommant les erreurs passées.  
+Attention au phénomène de **windup** (saturation de l’intégrale).
+
+**Terme dérivé (D)** : anticipe les variations futures et améliore la stabilité.  
+Ce terme est cependant **sensible au bruit**.
+
+
+**Discrétisation**
+
+Pour une implémentation sur microcontrôleur, on échantillonne le système avec une période \(T_e\)  
+(par exemple **10 ms**).
+
+Une forme discrète courante est la **forme parallèle** :
+
+\[
+u_k =
+K_p e_k
++
+K_i T_e \sum_{j=0}^{k} e_j
++
+\frac{K_d}{T_e}(e_k - e_{k-1})
+\]
+
+Cependant, cette forme explicite peut provoquer des **à-coups** si la consigne change brutalement.
+
+On préfère souvent la **forme incrémentale (velocity form)**, qui calcule la variation de la commande :
+
+\[
+\Delta u_k =
+K_p (e_k - e_{k-1})
++
+K_i T_e e_k
++
+\frac{K_d}{T_e}(e_k - 2e_{k-1} + e_{k-2})
+\]
+
+La commande est alors mise à jour par :
+
+\[
+u_k = u_{k-1} + \Delta u_k
+\]
+
+Cette forme facilite :
+
+- l’**anti-windup**
+- la **gestion des saturations**
+- l’implémentation efficace sur **microcontrôleur**.
+
+
+
+---
+<br>
+
+
+
+### **Implémentation en C**
+
+Nous allons implémenter un **PID incrémental** avec **saturation de la commande** et **anti-windup** (on gèle l’intégration lorsque la commande sature).  
+La structure de données contient les **paramètres du régulateur** et les **états internes**.
 
 ```c
-typedef enum {
-    STATE_IDLE,
-    STATE_WAIT,
-    STATE_RUN
-} State_t;
+#include <stdint.h>
 
-State_t currentState = STATE_IDLE;
-
-void FSM_Process(Event_t event) {
-    switch (currentState) {
-        case STATE_IDLE:
-            if (event == EV_START) {
-                currentState = STATE_WAIT;
-                // Action de transition
-            }
-            break;
-
-        case STATE_WAIT:
-            if (event == EV_TIMEOUT) {
-                currentState = STATE_RUN;
-            } else if (event == EV_STOP) {
-                currentState = STATE_IDLE;
-            }
-            break;
-
-        case STATE_RUN:
-            if (event == EV_STOP) {
-                currentState = STATE_IDLE;
-            }
-            break;
-    }
-}
-```
-
-2.**Implémentation par table de transitions**
-
-Pour des machines plus complexes ou pour faciliter la maintenance, on peut utiliser une table qui associe à chaque couple (état, événement) l'état suivant et une action.
-
-```c
+// Structure PID (forme incrémentale avec anti-windup simple)
 typedef struct {
-    State_t  currentState;
-    Event_t  event;
-    State_t  nextState;
-    void (*action)(void);
-} Transition_t;
+    float Kp, Ki, Kd;      // Gains (à régler)
+    float Te;              // Période d'échantillonnage (secondes)
 
-Transition_t transitionTable[] = {
-    {STATE_IDLE, EV_START, STATE_WAIT, actionStart},
-    {STATE_WAIT, EV_TIMEOUT, STATE_RUN, actionRun},
-    {STATE_WAIT, EV_STOP, STATE_IDLE, actionStop},
-    {STATE_RUN, EV_STOP, STATE_IDLE, actionStop},
-    // ...
-};
+    float umin, umax;      // Limites de la commande
 
-void FSM_Process(Event_t event) {
-    for (int i = 0; i < sizeof(transitionTable)/sizeof(Transition_t); i++) {
-        if (transitionTable[i].currentState == currentState &&
-            transitionTable[i].event == event) {
-            currentState = transitionTable[i].nextState;
-            if (transitionTable[i].action) {
-                transitionTable[i].action();
-            }
-            break;
-        }
-    }
-}
+    float integral;        // Terme intégral (pour anti-windup)
+
+    float e_prev;          // e(k-1)
+    float e_prev2;         // e(k-2)
+
+    float u_prev;          // commande précédente
+} PIDController;
 ```
 
-Cette approche rend la machine plus facile à modifier et à étendre.
-
-
----
-<br>
-
-
-### **Intégration avec FreeRTOS**
-
-Dans un système temps réel, la FSM peut être implémentée comme une tâche dédiée. Les événements peuvent provenir :
-
-- D'interruptions matérielles (via sémaphores/queues).
-- De timers logiciels (pour des timeouts).
-- D'autres tâches (via queues).
-
-**Exemple de squelette de tâche FSM**
+**Initialisation du PID**
 
 ```c
-void vTaskFSM(void *pvParameters) {
-    Event_t event;
+void PID_Init(PIDController *pid,
+              float Kp, float Ki, float Kd,
+              float Te,
+              float umin, float umax)
+{
 
-    for (;;) {
-        // Attendre un événement (bloquant)
-        if (xQueueReceive(xEventQueue, &event, portMAX_DELAY) == pdPASS) {
-            // Traiter l'événement dans la FSM
-            FSM_Process(event);
-        }
-    }
+    pid->Kp = Kp;
+    pid->Ki = Ki;
+    pid->Kd = Kd;
+
+    pid->Te = Te;
+
+    pid->umin = umin;
+    pid->umax = umax;
+
+    pid->integral = 0.0f;
+
+    pid->e_prev  = 0.0f;
+    pid->e_prev2 = 0.0f;
+
+    pid->u_prev = 0.0f;
 }
 ```
 
-Les événements sont envoyés dans la queue par d'autres parties du système (ISR, tâches, timers logiciels). Cela garantit que la FSM est réactive et ne bloque pas.
-
-
----
-<br>
-
-
-### **Mise en Pratique : Le Mariage des Concepts**
-
-Pour notre étude, l'idéal est de construire une application qui fusionne tout :
-
-- **Les Interruptions (Entrées)** : Elles captent les événements extérieurs (bouton pressé, capteur activé) et envoient un signal à la FSM.
-- **Le Timer (Le Temps)** : Il gère les délais de transition (ex: "rester dans l'état ALARM pendant 10 secondes").
-- **Le GPIO (Sorties)** : La FSM pilote les actionneurs (LEDs, moteurs) en fonction de l'état courant.
-- **FreeRTOS (L'Ordonnanceur)** : La FSM tourne dans sa propre tâche, isolée du reste du système, garantissant que la logique de contrôle est toujours prioritaire.
-
----
-<br>
-
-### **Système de Feux Tricolores avec Bouton Piéton et Détection de Véhicule**{#projet-fsm-timer-freertos}
-
- Nous allons concevoir une autre application classique de l'embarqué : un **système de feux tricolores** pour un carrefour routier, intégrant un bouton piéton et un capteur de détection de véhicule. Ce projet mettra en œuvre une machine à états finis (FSM) gérée par FreeRTOS, avec des temporisations précises (timers matériels ou logiciels), des entrées (bouton, capteur) et des sorties (LEDs). Il illustre la gestion d'événements asynchrones et la coordination de plusieurs tâches.
-
-**Cahier des Charges**
-
-**Fonctionnalités**
-
-- **Feux pour véhicules** : trois LEDs (rouge, orange, vert) pour la circulation des voitures.
-- **Feu piéton** : deux LEDs (rouge piéton, vert piéton) pour traverser.
-- **Bouton piéton** : permet de demander la traversée. La demande n'est prise en compte que si le feu véhicule n'est pas déjà en cours de changement.
-**Capteur de véhicule** (simulé par un bouton ou un interrupteur) : détecte la présence d'un véhicule pour prolonger le vert si nécessaire (optionnel, pour éviter les changements inutiles).
-
-**Cycle normal** :
-1. Vert véhicules pendant 10 secondes.
-2. Orange véhicules pendant 3 secondes.
-3. Rouge véhicules et vert piétons pendant 8 secondes.
-4. Retour au vert véhicules.
-
-- **Demande piéton** : si le bouton est pressé pendant le vert véhicules, on passe à l'orange après un délai minimum (ex: 5 secondes de vert) pour ne pas interrompre trop tôt. Si le bouton est pressé pendant le rouge véhicules, le vert piéton reste actif le temps normal.
-
-**Contraintes Techniques**
-
-- Utilisation de GPIO pour les LEDs et les entrées (bouton, capteur).
-- Gestion des entrées par interruptions (pour réactivité) ou par polling (mais on privilégie les interruptions).
-- Temporisations gérées par des timers matériels ou des timers logiciels FreeRTOS.
-- Implémentation d'une FSM avec FreeRTOS (tâche dédiée, file d'événements).
-- Priorités : la tâche FSM doit avoir une priorité moyenne, les ISR doivent être courtes.
-
-  
-**Modélisation de la Machine à États**
-
-**États**
-
-|État	|Description|
-|-------|-----------|
-|`VEHICLE_GREEN`	|Vert véhicules, rouge piétons.|
-|`VEHICLE_YELLOW`	|Orange véhicules, rouge piétons.|
-|`VEHICLE_RED`	|Rouge véhicules, vert piétons.|
-|`PED_REQUEST`	|État temporaire pour gérer une demande piéton pendant le vert véhicules (on attend la fin du délai minimum avant de passer à l'orange).|
-
-**Événements**
-
-|Événement	|Source|
-|-----------|------|
-|`EV_TIMER_GREEN`	|Fin de la temporisation du vert véhicules.|
-|`EV_TIMER_YELLOW`	|Fin de la temporisation de l'orange.|
-|`EV_TIMER_RED`	|Fin de la temporisation du rouge véhicules.|
-|`EV_TIMER_MIN_GREEN`	|Fin du délai minimum de vert avant de prendre en compte une demande piéton.|
-|`EV_PED_BUTTON`	|Appui sur le bouton piéton.|
-|`EV_VEHICLE_DETECT`	|Détection d'un véhicule (optionnel).|
-
-**Diagramme de Transition**
-
-[VEHICLE_GREEN] --(EV_TIMER_GREEN)--> [VEHICLE_YELLOW]
-[VEHICLE_GREEN] --(EV_PED_BUTTON)--> [PED_REQUEST] (si pas déjà en demande)
-[PED_REQUEST] --(EV_TIMER_MIN_GREEN)--> [VEHICLE_YELLOW]
-[VEHICLE_YELLOW] --(EV_TIMER_YELLOW)--> [VEHICLE_RED]
-[VEHICLE_RED] --(EV_TIMER_RED)--> [VEHICLE_GREEN]
-
-On pourrait ajouter une transition de `VEHICLE_RED` vers `VEHICLE_GREEN` avec une condition de détection de véhicule pour passer au vert plus tôt, mais ici on reste simple.
-
-  
-**Implémentation avec FreeRTOS**
-
-Le code complet est présenté ci‑dessous. Il suit la structure suivante :
-
-- Initialisation matérielle (GPIO, interruptions).
-- Création de la file d'événements et des timers logiciels.
-- Tâche FSM qui attend les événements et exécute la logique à états.
+**Mise à jour du PID**
 
 ```c
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-#include "timers.h"
-#include "stm32f4xx.h"
+float PID_Update(PIDController *pid,
+                 float setpoint,
+                 float measurement)
+{
+    float error = setpoint - measurement;
 
-// Définition des événements
-typedef enum {
-    EV_TIMER_GREEN,
-    EV_TIMER_YELLOW,
-    EV_TIMER_RED,
-    EV_TIMER_MIN_GREEN,
-    EV_PED_BUTTON,
-    EV_VEHICLE_DETECT
-} Event_t;
+    // Calcul de la variation (forme incrémentale)
+    float delta_u =
+        pid->Kp * (error - pid->e_prev)
+        // proportionnel
+      + pid->Ki * pid->Te * error
+      // intégral
+      + pid->Kd / pid->Te * (error - 2 * pid->e_prev 
+      + pid->e_prev2);  // dérivé
 
-// Queue pour les événements
-QueueHandle_t xEventQueue;
+    // Nouvelle commande
+    float u = pid->u_prev + delta_u;
 
-// Handles des timers logiciels
-TimerHandle_t xTimerGreen, xTimerYellow, xTimerRed, xTimerMinGreen;
-
-// Callbacks des timers logiciels
-void vTimerGreenCallback(TimerHandle_t xTimer) {
-    Event_t ev = EV_TIMER_GREEN;
-    xQueueSend(xEventQueue, &ev, 0);
-}
-void vTimerYellowCallback(TimerHandle_t xTimer) {
-    Event_t ev = EV_TIMER_YELLOW;
-    xQueueSend(xEventQueue, &ev, 0);
-}
-void vTimerRedCallback(TimerHandle_t xTimer) {
-    Event_t ev = EV_TIMER_RED;
-    xQueueSend(xEventQueue, &ev, 0);
-}
-void vTimerMinGreenCallback(TimerHandle_t xTimer) {
-    Event_t ev = EV_TIMER_MIN_GREEN;
-    xQueueSend(xEventQueue, &ev, 0);
-}
-
-// ISR pour le bouton piéton (EXTI)
-void EXTI0_IRQHandler(void) {
-    BaseType_t xWoken = pdFALSE;
-    if (EXTI->PR & (1 << 0)) {
-        EXTI->PR = (1 << 0);
-        Event_t ev = EV_PED_BUTTON;
-        xQueueSendFromISR(xEventQueue, &ev, &xWoken);
-        portYIELD_FROM_ISR(xWoken);
+    // Saturation + anti-windup simple
+    if (u > pid->umax) {
+        u = pid->umax;
+        // On n'accumule pas l'intégrale
     }
-}
-
-// ISR pour le capteur de véhicule (EXTI)
-void EXTI1_IRQHandler(void) {
-    BaseType_t xWoken = pdFALSE;
-    if (EXTI->PR & (1 << 1)) {
-        EXTI->PR = (1 << 1);
-        Event_t ev = EV_VEHICLE_DETECT;
-        xQueueSendFromISR(xEventQueue, &ev, &xWoken);
-        portYIELD_FROM_ISR(xWoken);
+    else if (u < pid->umin) {
+        u = pid->umin;
     }
-}
-
-// Tâche FSM
-void vTaskFSM(void *pvParameters) {
-    enum { VEHICLE_GREEN, VEHICLE_YELLOW, VEHICLE_RED, PED_REQUEST } state = VEHICLE_GREEN;
-    Event_t ev;
-
-    // Démarrer le timer du vert initial
-    xTimerStart(xTimerGreen, 0);
-
-    for (;;) {
-        xQueueReceive(xEventQueue, &ev, portMAX_DELAY);
-
-        switch (state) {
-            case VEHICLE_GREEN:
-                if (ev == EV_TIMER_GREEN) {
-                    state = VEHICLE_YELLOW;
-                    GPIOA->ODR &= ~(1<<5);   // éteint vert
-                    GPIOA->ODR |=  (1<<6);   // allume orange
-                    xTimerStart(xTimerYellow, 0);
-                }
-                else if (ev == EV_PED_BUTTON) {
-                    state = PED_REQUEST;
-                    xTimerStart(xTimerMinGreen, 0); // délai minimum 5s
-                }
-                break;
-
-            case PED_REQUEST:
-                if (ev == EV_TIMER_MIN_GREEN) {
-                    state = VEHICLE_YELLOW;
-                    GPIOA->ODR &= ~(1<<5);
-                    GPIOA->ODR |=  (1<<6);
-                    xTimerStart(xTimerYellow, 0);
-                }
-                break;
-
-            case VEHICLE_YELLOW:
-                if (ev == EV_TIMER_YELLOW) {
-                    state = VEHICLE_RED;
-                    GPIOA->ODR &= ~(1<<6);
-                    GPIOA->ODR |=  (1<<7);   // rouge véhicule
-                    GPIOC->ODR |=  (1<<8);   // vert piéton
-                    xTimerStart(xTimerRed, 0);
-                }
-                break;
-
-            case VEHICLE_RED:
-                if (ev == EV_TIMER_RED) {
-                    state = VEHICLE_GREEN;
-                    GPIOA->ODR &= ~((1<<5)|(1<<6)|(1<<7));
-                    GPIOC->ODR &= ~((1<<8)|(1<<9));
-                    GPIOA->ODR |=  (1<<5);   // vert véhicule
-                    xTimerStart(xTimerGreen, 0);
-                }
-                break;
-        }
-    }
-}
-
-// Initialisation matérielle (GPIO, interruptions)
-void Hardware_Init(void) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN;
-
-    // LEDs véhicules : PA5 vert, PA6 orange, PA7 rouge
-    GPIOA->MODER |= (1 << (5*2)) | (1 << (6*2)) | (1 << (7*2));
-    // LEDs piétons : PC8 vert, PC9 rouge
-    GPIOC->MODER |= (1 << (8*2)) | (1 << (9*2));
-    // Initialement éteint
-    GPIOA->ODR &= ~((1<<5)|(1<<6)|(1<<7));
-    GPIOC->ODR &= ~((1<<8)|(1<<9));
-
-    // Bouton piéton sur PA0, capteur véhicule sur PA1 (entrées avec pull-up)
-    GPIOA->MODER &= ~(3U << (0*2)) & ~(3U << (1*2));
-    GPIOA->PUPDR |= (1 << (0*2)) | (1 << (1*2));
-
-    // Activation de SYSCFG pour EXTI
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-    SYSCFG->EXTICR[0] &= ~(SYSCFG_EXTICR1_EXTI0 | SYSCFG_EXTICR1_EXTI1);
-    // EXTI0 sur PA0, EXTI1 sur PA1
-    EXTI->IMR |= (1 << 0) | (1 << 1);
-    EXTI->FTSR |= (1 << 0) | (1 << 1);   // front descendant (appui)
-    NVIC_SetPriority(EXTI0_IRQn, 5);
-    NVIC_SetPriority(EXTI1_IRQn, 5);
-    NVIC_EnableIRQ(EXTI0_IRQn);
-    NVIC_EnableIRQ(EXTI1_IRQn);
-}
-
-int main(void) {
-    Hardware_Init();
-
-    xEventQueue = xQueueCreate(10, sizeof(Event_t));
-
-    xTimerGreen    = xTimerCreate("Green",    pdMS_TO_TICKS(10000), pdFALSE, NULL, vTimerGreenCallback);
-    xTimerYellow   = xTimerCreate("Yellow",   pdMS_TO_TICKS(3000),  pdFALSE, NULL, vTimerYellowCallback);
-    xTimerRed      = xTimerCreate("Red",      pdMS_TO_TICKS(8000),  pdFALSE, NULL, vTimerRedCallback);
-    xTimerMinGreen = xTimerCreate("MinGreen", pdMS_TO_TICKS(5000),  pdFALSE, NULL, vTimerMinGreenCallback);
-
-    if (xEventQueue != NULL && xTimerGreen != NULL && xTimerYellow != NULL && xTimerRed != NULL && xTimerMinGreen != NULL) {
-        xTaskCreate(vTaskFSM, "FSM", 256, NULL, 2, NULL);
-        vTaskStartScheduler();
+    else {
+        // Mise à jour de l’intégrale seulement si pas saturé
+        // Dans la forme incrémentale l’intégrale est implicite
     }
 
-    while(1);
+    // Mise à jour des états
+    pid->e_prev2 = pid->e_prev;
+    pid->e_prev  = error;
+    pid->u_prev  = u;
+
+    return u;
 }
 ```
 
-**Explication**
+**Remarques**
 
-- **File d'événements** : `xEventQueue` reçoit les événements des ISR et des callbacks de timers.
-- **Timers logiciels** : utilisés pour les temporisations. Ils sont en mode "one-shot" (`pdFALSE`) car ils sont redémarrés à chaque cycle.
-- **ISR** : très courtes, elles envoient juste l'événement dans la file.
-- **Tâche FSM** : boucle infinie qui attend un événement, puis selon l'état courant, effectue les actions et change d'état.
+- La **période d’échantillonnage `Te` doit être constante**.  
+  Elle est généralement assurée par une **tâche FreeRTOS périodique**.
+
+- L’**anti-windup** est géré ici en **bloquant l’accumulation lorsque la commande sature**.
+
+- Dans la **forme incrémentale**, l’intégrale n’est pas stockée explicitement,  
+  ce qui simplifie l’implémentation.
+
+- Pour un **anti-windup plus robuste**, une méthode courante consiste à :
+  
+  - recalculer l’intégrale à partir de la **commande saturée**
+  - ou utiliser une **rétroaction de saturation (back-calculation)**.
 
 ---
 <br>
+
+
+### **Intégration matérielle**
+
+Pour réaliser un **asservissement**, il faut généralement deux éléments principaux :
+
+- **Un capteur** fournissant la mesure du système :
+  - ADC pour un **potentiomètre**
+  - **encodeur** pour mesurer une vitesse ou une position
+  - **thermistance** pour mesurer une température
+
+- **Un actionneur** commandé par la sortie du PID :
+  - **PWM** pour piloter un moteur
+  - commande d’un **chauffage**
+  - commande d’un **servomoteur** ou d’une **valve**
+
+Le **PID s’exécute dans une tâche périodique** avec une fréquence fixe  
+(par exemple **100 Hz**, soit une période d’échantillonnage de **10 ms**).
+
+Les **valeurs de consigne** peuvent provenir d’une **interface homme-machine**, par exemple :
+
+- un **potentiomètre** (lecture ADC)
+- une **communication UART**
+- un **bouton** ou une interface série
+- une **application externe** (PC, smartphone, etc.)
+
+
+---
+<br>
+
+
+### **Projet : Régulation de vitesse d’un moteur DC** {#projet-pid-moteur}
+
+Nous allons réaliser un **asservissement de vitesse d’un moteur DC** à l’aide d’un **encodeur incrémental**.
+
+**Matériel**
+
+- **Moteur DC avec encodeur** (type JGA25-370)
+- **Driver moteur** (L298N ou module à pont en H)
+- **Carte STM32F401**
+- **Alimentation adaptée**
+
+**Principe**
+
+- L’**encodeur** fournit des **impulsions**.
+- On mesure la **vitesse** en calculant la **fréquence des impulsions**  
+  (via un **timer en mode capture** ou une **interruption externe**).
+
+- La **consigne de vitesse** est donnée par :
+  - un **potentiomètre** (lecture ADC)
+  - ou une **commande série (UART)**.
+
+- Le **PID** calcule la **commande PWM** à appliquer au moteur.
+
+- La **tâche de contrôle** s’exécute à une **fréquence fixe**  
+  (par exemple **50 Hz**, soit une période de **20 ms**).
+
+
+**Code partiel**
+
+```c
+// Structure PID
+PIDController pid;
+
+// Variables globales
+volatile float current_speed = 0.0f;   // vitesse mesurée (rad/s ou tours/s)
+float setpoint_speed = 0.0f;
+```
+
+**Tâche de contrôle**
+
+```c
+void vTaskControl(void *pvParameters)
+{
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(20); // 50 Hz
+
+    for (;;)
+    {
+        vTaskDelayUntil(&xLastWakeTime, xPeriod);
+
+        // Lire la consigne (par exemple depuis un potentiomètre)
+        setpoint_speed = ADC_GetSpeedSetpoint();
+
+        // Mise à jour du PID
+        float control = PID_Update(&pid, setpoint_speed, current_speed);
+
+        // Appliquer la commande au moteur (PWM)
+        Motor_SetSpeed(control);
+    }
+}
+```
+
+**Interruption de l’encodeur**
+
+```c
+void TIMx_IRQHandler(void)
+{
+    static uint32_t lastCapture = 0;
+    uint32_t capture = TIMx->CCR1;
+    uint32_t period = capture - lastCapture;
+    lastCapture = capture;
+
+    // Calcul de la vitesse (à adapter selon la résolution de l'encodeur)
+    // Par exemple : vitesse = (f_timer / period) * facteur
+    current_speed = (float)(84000000 / 84) / period; // si timer à 1 MHz
+    // Noter que ce calcul peut être effectué dans la tâche pour éviter des calculs flottants en ISR.
+}
+```
+
+**Fonctions matérielles à implémenter**
+
+```c
+// Lecture de la consigne via ADC (0-4095) -> conversion en plage de vitesse
+float ADC_GetSpeedSetpoint(void)
+{
+    uint16_t raw = ADC_Read();   // fonction de lecture ADC
+    return (float)raw * 1000.0f / 4095.0f;  // exemple: consigne 0-1000 tr/min
+}
+
+// Application de la commande PWM (0-100%)
+void Motor_SetSpeed(float percent)
+{
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    uint32_t duty = (uint32_t)(percent * (TIM2->ARR + 1) / 100.0f);
+    TIM2->CCR1 = duty;
+}
+```
+
+**Réglage des gains**
+
+Le réglage des gains **\(K_p\)**, **\(K_i\)** et **\(K_d\)** peut se faire :
+
+- **empiriquement** (méthode de **Ziegler-Nichols**)
+- par **modélisation et simulation**
+
+Pour un **moteur DC**, une méthode simple consiste à :
+
+1. Commencer avec \(Ki = 0\) et \(Kd = 0\)
+2. Augmenter progressivement **\(K_p\)** jusqu’à observer une **oscillation stable**.
+3. Ajuster ensuite :
+
+- **\(K_i\)** pour éliminer l’erreur statique
+- **\(K_d\)** pour améliorer l’amortissement et la stabilité.
+
+
+**Applications**
+
+Ce type de régulation est utilisé dans :
+
+- **robots mobiles**
+- **contrôle de vitesse de moteurs DC**
+- **systèmes mécatroniques**
+- **automatisation industrielle**
+- **robots auto-équilibrés**
+
+---
+<br>
+
+
 
 ### Liens connexes
 
-- [GPIO et Interruptions](/stm32f4/gpio/)
-- [Timer et Interruption](/stm32f4/timer/)
+- [GPIO et Interruptions](../gpio/index.md)
+- [Timer et Interruption](../timer/index.md)
+- [Communication Série USART](../usart/index.md)
+- [Acquisition Analogique via ADC](../adc/index.md)
+- [Génération des signaux PWM](../pwm/index.md)
+- [Communication Série USART](../usart/index.md)
+- [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
+- [Optimisation de Transfert des Données avec DMA](../dma/index.md)
+- [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
