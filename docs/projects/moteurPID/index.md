@@ -705,3 +705,20 @@ int main(void)
 - Le sémaphore `xSpeedSemaphore` est déclaré mais non utilisé dans le code ; vous pouvez l'intégrer si vous voulez protéger l'accès à `current_speed` entre l'ISR et la tâche. Par exemple, prenez le sémaphore dans l'ISR (avec `xSemaphoreGiveFromISR`) et attendez-le dans la tâche avant de lire la variable.
 - Les valeurs de gains PID sont données à titre d'exemple ; elles doivent être réglées expérimentalement pour votre moteur.
 - La détection du sens de rotation n'est pas implémentée ici ; si vous utilisez les deux voies de l'encodeur, vous pouvez déterminer le sens et ajuster le signe de la vitesse.
+
+
+---
+<br>
+
+
+### **Liens Connexes**
+
+- [GPIO et Interruptions](../gpio/index.md)
+- [Timer et Interruption](../timer/index.md)
+- [Communication Série USART](../usart/index.md)
+- [Acquisition Analogique via ADC](../adc/index.md)
+- [Génération des signaux PWM](../pwm/index.md)
+- [Communication Série USART](../usart/index.md)
+- [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
+- [Optimisation de Transfert des Données avec DMA](../dma/index.md)
+- [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)

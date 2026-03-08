@@ -49,17 +49,16 @@ K_i \int_{0}^{t} e(\tau) d\tau
 K_d \frac{de(t)}{dt}
 \]
 
-**Terme proportionnel (P)** : réagit à l’erreur courante.  
+- **Terme proportionnel (P)** : réagit à l’erreur courante.  
 Un gain \(K_p\) élevé accélère la réponse mais peut provoquer des oscillations.
-
-**Terme intégral (I)** : élimine l’erreur statique en sommant les erreurs passées.  
+- **Terme intégral (I)** : élimine l’erreur statique en sommant les erreurs passées.  
 Attention au phénomène de **windup** (saturation de l’intégrale).
-
-**Terme dérivé (D)** : anticipe les variations futures et améliore la stabilité.  
+- **Terme dérivé (D)** : anticipe les variations futures et améliore la stabilité.  
 Ce terme est cependant **sensible au bruit**.
 
 
 **Discrétisation**
+  
 
 Pour une implémentation sur microcontrôleur, on échantillonne le système avec une période \(T_e\)  
 (par exemple **10 ms**).
@@ -382,12 +381,11 @@ Ce type de régulation est utilisé dans :
 
 ### Liens connexes
 
-- [GPIO et Interruptions](../gpio/index.md)
-- [Timer et Interruption](../timer/index.md)
-- [Communication Série USART](../usart/index.md)
-- [Acquisition Analogique via ADC](../adc/index.md)
-- [Génération des signaux PWM](../pwm/index.md)
-- [Communication Série USART](../usart/index.md)
+- [GPIO et Interruptions](../../gpio/index.md)
+- [Timer et Interruption](../../timer/index.md)
+- [Acquisition Analogique via ADC](../../adc/index.md)
+- [Génération des signaux PWM](../../pwm/index.md)
+- [Communication Série USART](../../usart/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
-- [Optimisation de Transfert des Données avec DMA](../dma/index.md)
+- [Optimisation de Transfert des Données avec DMA](../../dma/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)

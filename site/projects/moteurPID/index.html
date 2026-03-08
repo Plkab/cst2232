@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/projects/moteurPID/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Projet intégrateur : Régulation de vitesse d’un moteur DC avec PID - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#projet-integrateur-regulation-de-vitesse-dun-moteur-dc-avec-pid" class="nav-link">Projet intégrateur : Régulation de vitesse d’un moteur DC avec PID</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="projet-integrateur-regulation-de-vitesse-dun-moteur-dc-avec-pid">Projet intégrateur : Régulation de vitesse d’un moteur DC avec PID</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="objectif-du-projet"><strong>Objectif du projet</strong></h3>
+<p>Ce projet a pour but de réaliser un <strong>asservissement de vitesse d’un moteur à courant continu</strong> à l’aide d’un <strong>régulateur PID implémenté sur STM32F401 sous FreeRTOS</strong>.</p>
+<p>La <strong>vitesse du moteur</strong> est mesurée par un <strong>encodeur incrémental</strong>, la <strong>consigne</strong> est donnée par un <strong>potentiomètre</strong> (lecture ADC), et la <strong>commande</strong> est appliquée via un <strong>signal PWM</strong> au moteur à travers un <strong>driver de puissance</strong>.</p>
+<p>Ce projet synthétise plusieurs notions importantes :</p>
+<ul>
+<li>Configuration des <strong>GPIO</strong>, <strong>timers</strong>, <strong>PWM</strong>, <strong>ADC</strong> et <strong>interruptions</strong></li>
+<li>Utilisation de <strong>FreeRTOS</strong> (tâches périodiques, synchronisation)</li>
+<li>Implémentation d’un <strong>algorithme de contrôle en temps réel</strong></li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="materiel-necessaire"><strong>Matériel nécessaire</strong></h3>
+<ul>
+<li>Carte <strong>STM32F401 (Black Pill)</strong></li>
+<li><strong>Moteur DC avec encodeur incrémental</strong> (ex : JGA25-370, 6V ou 12V)</li>
+<li><strong>Driver moteur</strong> (L298N ou module à pont en H comme TB6612)</li>
+<li><strong>Potentiomètre linéaire 10 kΩ</strong> (pour la consigne)</li>
+<li><strong>Alimentation adaptée</strong> au moteur (par exemple 12V)</li>
+<li><strong>Breadboard et câbles de connexion</strong></li>
+<li><em>(Optionnel)</em> Module <strong>USB-UART</strong> pour le monitoring</li>
+</ul>
+<p><strong>Connexions</strong></p>
+<ul>
+<li><strong>Potentiomètre</strong> → sortie sur <strong>PA0 (ADC)</strong></li>
+<li><strong>Moteur</strong> → commande PWM sur <strong>PA5 (TIM2_CH1)</strong></li>
+<li><strong>Encodeur</strong></li>
+<li>sortie A → <strong>PA6 (TIM3_CH1 en capture)</strong></li>
+<li>sortie B → <strong>PA7</strong> (optionnelle pour déterminer le sens)</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-de-fonctionnement"><strong>Principe de fonctionnement</strong></h3>
+<p>Le système fonctionne en <strong>boucle fermée</strong>.</p>
+<ol>
+<li>La <strong>consigne de vitesse</strong> est lue périodiquement sur le <strong>potentiomètre via l’ADC</strong>.</li>
+<li>La <strong>vitesse réelle</strong> est mesurée par l’<strong>encodeur incrémental</strong>.</li>
+<li>Le <strong>PID</strong> calcule l’erreur entre <strong>consigne et mesure</strong>.</li>
+<li>La <strong>commande PWM</strong> est appliquée au moteur via <strong>TIM2</strong>.</li>
+<li>L’ensemble est géré par <strong>FreeRTOS</strong> avec une <strong>tâche périodique de contrôle</strong>.</li>
+</ol>
+<p>La fréquence de la tâche PID est typiquement :</p>
+<pre><code>50 Hz  → période = 20 ms
+</code></pre>
+<p>La <strong>mesure de vitesse</strong> est mise à jour dans une <strong>interruption de timer</strong>.</p>
+<hr />
+<p><br></p>
+<h3 id="code-complet"><strong>Code complet</strong></h3>
+<p><strong>Fichier <code>pid.h</code> — Interface du PID</strong></p>
+<pre><code class="language-c">#ifndef PID_H
+#define PID_H
+
+#include &lt;stdint.h&gt;
+
+typedef struct {
+    float Kp, Ki, Kd;
+    float Te;
+
+    float umin, umax;
+
+    float e_prev;
+    float e_prev2;
+
+    float u_prev;
+} PIDController;
+
+void PID_Init(PIDController *pid,
+              float Kp,
+              float Ki,
+              float Kd,
+              float Te,
+              float umin,
+              float umax);
+
+float PID_Update(PIDController *pid,
+                 float setpoint,
+                 float measurement);
+
+#endif
+</code></pre>
+<hr />
+<p><strong>Fichier <code>pid.c</code> — Implémentation</strong></p>
+<pre><code class="language-c">#include &quot;pid.h&quot;
+
+void PID_Init(PIDController *pid,
+              float Kp,
+              float Ki,
+              float Kd,
+              float Te,
+              float umin,
+              float umax)
+{
+    pid-&gt;Kp = Kp;
+    pid-&gt;Ki = Ki;
+    pid-&gt;Kd = Kd;
+
+    pid-&gt;Te = Te;
+
+    pid-&gt;umin = umin;
+    pid-&gt;umax = umax;
+
+    pid-&gt;e_prev = 0.0f;
+    pid-&gt;e_prev2 = 0.0f;
+    pid-&gt;u_prev = 0.0f;
+}
+
+float PID_Update(PIDController *pid,
+                 float setpoint,
+                 float measurement)
+{
+    float error = setpoint - measurement;
+
+    float delta_u =
+        pid-&gt;Kp * (error - pid-&gt;e_prev)
+      + pid-&gt;Ki * pid-&gt;Te * error
+      + pid-&gt;Kd / pid-&gt;Te * (error - 2*pid-&gt;e_prev + pid-&gt;e_prev2);
+
+    float u = pid-&gt;u_prev + delta_u;
+
+    if (u &gt; pid-&gt;umax) u = pid-&gt;umax;
+    else if (u &lt; pid-&gt;umin) u = pid-&gt;umin;
+
+    pid-&gt;e_prev2 = pid-&gt;e_prev;
+    pid-&gt;e_prev = error;
+    pid-&gt;u_prev = u;
+
+    return u;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="explications-detaillees"><strong>Explications détaillées</strong></h3>
+<p><strong>Mesure de vitesse par encodeur</strong></p>
+<p>Un <strong>encodeur incrémental</strong> produit un <strong>nombre fixe d’impulsions par tour</strong>.</p>
+<p>La vitesse peut être calculée en mesurant la <strong>période entre deux impulsions</strong> :</p>
+<pre><code>vitesse (tours/s) =
+f_timer / (période × résolution)
+</code></pre>
+<p>où :</p>
+<ul>
+<li><code>f_timer</code> : fréquence du timer de capture</li>
+<li><code>période</code> : temps entre deux impulsions</li>
+<li><code>résolution</code> : nombre d’impulsions par tour</li>
+</ul>
+<hr />
+<p><strong>Génération de la consigne</strong></p>
+<p>La consigne est lue via <strong>ADC</strong>.</p>
+<p>La valeur brute :</p>
+<pre><code>0 → 4095
+</code></pre>
+<p>est convertie en vitesse :</p>
+<pre><code>0 → 10 tours/s
+</code></pre>
+<p>selon :</p>
+<pre><code class="language-c">speed = raw * 10 / 4095
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="regulateur-pid"><strong>Régulateur PID</strong></h3>
+<p>Le régulateur utilise la <strong>forme incrémentale</strong>.</p>
+<p>Avantages :</p>
+<ul>
+<li>calcul plus stable</li>
+<li>réduction du <strong>windup</strong></li>
+<li>adapté aux systèmes embarqués</li>
+</ul>
+<p>La mise à jour se fait <strong>toutes les 20 ms</strong>.</p>
+<p><strong>Sécurité et saturation</strong></p>
+<p>La commande est limitée :</p>
+<pre><code>0 %  ≤ PWM ≤ 100 %
+</code></pre>
+<p>Cela protège :</p>
+<ul>
+<li>le moteur</li>
+<li>le driver</li>
+<li>le système de contrôle</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="utilisation-de-freertos"><strong>Utilisation de FreeRTOS</strong></h3>
+<p>Deux tâches peuvent être utilisées :</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PID Control</td>
+<td>Calcul de la commande</td>
+</tr>
+<tr>
+<td>Monitoring</td>
+<td>Affichage UART</td>
+</tr>
+</tbody>
+</table>
+<p>La tâche PID utilise :</p>
+<pre><code>vTaskDelayUntil()
+</code></pre>
+<p>afin de garantir une <strong>période d’échantillonnage constante</strong>.</p>
+<hr />
+<p><br></p>
+<h3 id="reglage-des-gains-pid"><strong>Réglage des gains PID</strong></h3>
+<p>Une méthode classique est <strong>Ziegler-Nichols</strong>.</p>
+<p><strong>Étape 1</strong></p>
+<pre><code>Ki = 0
+Kd = 0
+</code></pre>
+<p><strong>Étape 2</strong></p>
+<p>Augmenter <code>Kp</code> jusqu’à obtenir une <strong>oscillation stable</strong>.</p>
+<p>Noter :</p>
+<pre><code>Ku = gain critique
+Tu = période d’oscillation
+</code></pre>
+<p><strong>Étape 3 — Formules PID</strong></p>
+<pre><code>Kp = 0.6 Ku
+Ki = 2 Kp / Tu
+Kd = Kp Tu / 8
+</code></pre>
+<p>Ensuite, <strong>affiner empiriquement</strong> les paramètres.</p>
+<p>**Code complet : **</p>
+<pre><code class="language-c">/*****************************************************************************
+ * pid.h - Interface du régulateur PID (forme incrémentale)
+ *****************************************************************************/
+
+#ifndef PID_H
+#define PID_H
+
+#include &lt;stdint.h&gt;
+
+/**
+ * Structure PID contenant les paramètres et les états internes.
+ */
+typedef struct {
+    float Kp, Ki, Kd;      // Gains du régulateur
+    float Te;              // Période d'échantillonnage (en secondes)
+    float umin, umax;      // Limites de la commande (saturation)
+
+    // États pour la forme incrémentale
+    float e_prev;          // erreur précédente e(k-1)
+    float e_prev2;         // erreur e(k-2)
+    float u_prev;          // commande précédente u(k-1)
+} PIDController;
+
+/**
+ * Initialise la structure PID.
+ * @param pid   Pointeur vers la structure
+ * @param Kp    Gain proportionnel
+ * @param Ki    Gain intégral
+ * @param Kd    Gain dérivé
+ * @param Te    Période d'échantillonnage (s)
+ * @param umin  Commande minimale
+ * @param umax  Commande maximale
+ */
+void PID_Init(PIDController *pid,
+              float Kp,
+              float Ki,
+              float Kd,
+              float Te,
+              float umin,
+              float umax);
+
+/**
+ * Met à jour le PID à chaque période d'échantillonnage.
+ * @param pid         Pointeur vers la structure
+ * @param setpoint    Consigne (valeur désirée)
+ * @param measurement Mesure actuelle (valeur réelle)
+ * @return Commande calculée (saturée entre umin et umax)
+ */
+float PID_Update(PIDController *pid,
+                 float setpoint,
+                 float measurement);
+
+#endif /* PID_H */
+</code></pre>
+<pre><code class="language-c">/*****************************************************************************
+ * pid.c - Implémentation du PID (forme incrémentale)
+ *****************************************************************************/
+
+#include &quot;pid.h&quot;
+
+void PID_Init(PIDController *pid,
+              float Kp,
+              float Ki,
+              float Kd,
+              float Te,
+              float umin,
+              float umax)
+{
+    pid-&gt;Kp = Kp;
+    pid-&gt;Ki = Ki;
+    pid-&gt;Kd = Kd;
+    pid-&gt;Te = Te;
+    pid-&gt;umin = umin;
+    pid-&gt;umax = umax;
+    pid-&gt;e_prev  = 0.0f;
+    pid-&gt;e_prev2 = 0.0f;
+    pid-&gt;u_prev  = 0.0f;
+}
+
+float PID_Update(PIDController *pid,
+                 float setpoint,
+                 float measurement)
+{
+    float error = setpoint - measurement;
+
+    // Variation de commande (velocity form)
+    float delta_u =
+        pid-&gt;Kp * (error - pid-&gt;e_prev)
+      + pid-&gt;Ki * pid-&gt;Te * error
+      + pid-&gt;Kd / pid-&gt;Te * (error - 2.0f * pid-&gt;e_prev + pid-&gt;e_prev2);
+
+    float u = pid-&gt;u_prev + delta_u;
+
+    // Saturation de la commande
+    if (u &gt; pid-&gt;umax)
+        u = pid-&gt;umax;
+    else if (u &lt; pid-&gt;umin)
+        u = pid-&gt;umin;
+
+    // Mise à jour des états pour le prochain appel
+    pid-&gt;e_prev2 = pid-&gt;e_prev;
+    pid-&gt;e_prev  = error;
+    pid-&gt;u_prev  = u;
+
+    return u;
+}
+</code></pre>
+<pre><code class="language-c">/*****************************************************************************
+ * main.c - Régulation de vitesse d'un moteur DC avec PID et FreeRTOS
+ *          Cible : STM32F401 (Black Pill)
+ *****************************************************************************/
+
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &quot;pid.h&quot;
+
+/* ========================= Définitions ========================= */
+
+#define PID_PERIOD_MS       20                 // Période du PID (50 Hz)
+#define PID_TE              (PID_PERIOD_MS / 1000.0f)  // en secondes
+
+#define PWM_MIN             0.0f                // Commande minimale (0%)
+#define PWM_MAX             100.0f              // Commande maximale (100%)
+
+// Gains du PID (à ajuster expérimentalement)
+#define KP                  0.5f
+#define KI                  0.2f
+#define KD                  0.02f
+
+// Paramètres de l'encodeur
+#define ENC_RESOLUTION      20                  // Nombre d'impulsions par tour
+#define TIM3_FREQ           1000000U            // Fréquence du timer de capture (1 MHz)
+
+/* ====================== Structures globales ==================== */
+
+PIDController pid;                             // Régulateur PID
+volatile float current_speed = 0.0f;           // Vitesse mesurée (tours/s)
+float setpoint_speed = 0.0f;                   // Consigne (tours/s)
+
+// Sémaphore pour protéger l'accès à current_speed (optionnel)
+SemaphoreHandle_t xSpeedSemaphore;
+
+/* ==================== Prototypes des fonctions ================= */
+
+void Hardware_Init(void);
+void PWM_Init(void);
+void ENCODER_Init(void);
+void ADC_Init(void);
+uint16_t ADC_Read(void);
+float ADC_GetSpeedSetpoint(void);
+void Motor_SetSpeed(float percent);
+
+void vTaskPIDControl(void *pvParameters);
+void vTaskMonitor(void *pvParameters);
+
+/* ==================== Implémentation matérielle ================= */
+
+/**
+ * Initialise la PWM sur PA5 (TIM2_CH1) à 1 kHz.
+ */
+void PWM_Init(void)
+{
+    // Activer les horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // PA5 en alternate function AF1 (TIM2_CH1)
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (5*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (5*2));
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (5*4));
+    GPIOA-&gt;AFR[0] |=  (1 &lt;&lt; (5*4));
+
+    // Configuration de TIM2 pour générer une PWM à 1 kHz
+    TIM2-&gt;PSC = 84 - 1;                 // 84 MHz / 84 = 1 MHz
+    TIM2-&gt;ARR = 1000 - 1;               // Période = 1000 ticks → 1 kHz
+    TIM2-&gt;CCR1 = 0;                     // Rapport cyclique initial 0%
+
+    TIM2-&gt;CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1PE; // PWM mode 1
+    TIM2-&gt;CCER |= TIM_CCER_CC1E;        // Activer la sortie sur CH1
+    TIM2-&gt;CR1  |= TIM_CR1_CEN;          // Démarrer le timer
+}
+
+/**
+ * Initialise le timer 3 en mode capture sur PA6 (TIM3_CH1).
+ * La fréquence du timer est 1 MHz.
+ */
+void ENCODER_Init(void)
+{
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+    // PA6 en alternate function AF2 (TIM3_CH1)
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (6*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (6*2));
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (6*4));
+    GPIOA-&gt;AFR[0] |=  (2 &lt;&lt; (6*4));
+
+    // TIM3 à 1 MHz
+    TIM3-&gt;PSC = 84 - 1;
+    TIM3-&gt;ARR = 0xFFFF;                 // Compteur 16 bits
+
+    // Capture sur front montant (entrée TI1)
+    TIM3-&gt;CCMR1 = TIM_CCMR1_CC1S_0;     // 01 : entrée sur TI1
+    TIM3-&gt;CCER |= TIM_CCER_CC1E;        // Activer la capture
+
+    // Activer l'interruption sur capture
+    TIM3-&gt;DIER |= TIM_DIER_CC1IE;
+
+    NVIC_SetPriority(TIM3_IRQn, 5);
+    NVIC_EnableIRQ(TIM3_IRQn);
+
+    TIM3-&gt;CR1 |= TIM_CR1_CEN;           // Démarrer le timer
+}
+
+/**
+ * Initialise l'ADC sur PA0 (canal 0).
+ */
+void ADC_Init(void)
+{
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+
+    // PA0 en mode analogique
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2));
+
+    // Configuration de base de l'ADC
+    ADC1-&gt;CR2 = 0;
+    ADC1-&gt;SQR3 = 0;                     // Premier canal de la séquence : canal 0
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);             // Temps d'échantillonnage maximal
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;          // Activer l'ADC
+}
+
+/**
+ * Lit une valeur de l'ADC (mode polling, bloquant).
+ * @return Valeur 12 bits (0-4095)
+ */
+uint16_t ADC_Read(void)
+{
+    ADC1-&gt;CR2 |= ADC_CR2_SWSTART;       // Démarrer la conversion
+    while (!(ADC1-&gt;SR &amp; ADC_SR_EOC));   // Attendre la fin
+    return (uint16_t)ADC1-&gt;DR;
+}
+
+/**
+ * Lit la consigne sur le potentiomètre et la convertit en tours/s.
+ * Plage : 0-10 tours/s (à adapter selon le besoin).
+ */
+float ADC_GetSpeedSetpoint(void)
+{
+    uint16_t raw = ADC_Read();
+    return (float)raw * 10.0f / 4095.0f;
+}
+
+/**
+ * Applique la commande au moteur via PWM (0% à 100%).
+ * @param percent Pourcentage de la pleine échelle (0..100)
+ */
+void Motor_SetSpeed(float percent)
+{
+    if (percent &lt; 0)   percent = 0;
+    if (percent &gt; 100) percent = 100;
+    uint32_t duty = (uint32_t)(percent * (TIM2-&gt;ARR + 1) / 100.0f);
+    TIM2-&gt;CCR1 = duty;
+}
+
+/**
+ * Initialisation matérielle globale.
+ */
+void Hardware_Init(void)
+{
+    PWM_Init();
+    ENCODER_Init();
+    ADC_Init();
+}
+
+/* ==================== Interruption de l'encodeur ================= */
+
+/**
+ * ISR du TIM3 : capture la valeur du compteur à chaque impulsion de l'encodeur.
+ * Calcule la vitesse instantanée et la stocke dans current_speed.
+ */
+void TIM3_IRQHandler(void)
+{
+    static uint32_t lastCapture = 0;
+    uint32_t capture;
+    float speed;
+
+    if (TIM3-&gt;SR &amp; TIM_SR_CC1IF)
+    {
+        capture = TIM3-&gt;CCR1;
+        TIM3-&gt;SR &amp;= ~TIM_SR_CC1IF;       // Acquitter l'interruption
+
+        uint32_t period = capture - lastCapture;
+        lastCapture = capture;
+
+        // Éviter les mesures aberrantes (période trop grande = arrêt)
+        if (period &gt; 0 &amp;&amp; period &lt; 10000)
+        {
+            // vitesse = (f_timer / période) / résolution
+            speed = (float)TIM3_FREQ / (float)period / ENC_RESOLUTION;
+        }
+        else
+        {
+            speed = 0.0f;
+        }
+
+        // Mise à jour de la variable partagée (si sémaphore utilisé, on pourrait le prendre)
+        current_speed = speed;
+
+        // (Optionnel) donner un sémaphore pour notifier une tâche
+    }
+}
+
+/* ==================== Tâches FreeRTOS ================= */
+
+/**
+ * Tâche de contrôle PID, exécutée périodiquement toutes les 20 ms.
+ */
+void vTaskPIDControl(void *pvParameters)
+{
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(PID_PERIOD_MS);
+
+    // Initialiser le PID
+    PID_Init(&amp;pid, KP, KI, KD, PID_TE, PWM_MIN, PWM_MAX);
+
+    for (;;)
+    {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+
+        // Lire la consigne
+        setpoint_speed = ADC_GetSpeedSetpoint();
+
+        // Lire la vitesse mesurée (si sémaphore, on pourrait prendre)
+        float meas = current_speed;
+
+        // Calculer la commande PID
+        float command = PID_Update(&amp;pid, setpoint_speed, meas);
+
+        // Appliquer au moteur
+        Motor_SetSpeed(command);
+
+        // (Optionnel) envoi UART pour monitoring
+        // printf(&quot;%.2f,%.2f,%.2f\r\n&quot;, setpoint_speed, meas, command);
+    }
+}
+
+/**
+ * Tâche optionnelle de monitoring (affichage UART toutes les 500 ms).
+ */
+void vTaskMonitor(void *pvParameters)
+{
+    for (;;)
+    {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        // À implémenter si une UART est configurée
+        // Exemple : afficher consigne, mesure, commande
+    }
+}
+
+/* ============================== Main ============================= */
+
+int main(void)
+{
+    // Initialisation du matériel
+    Hardware_Init();
+
+    // Création du sémaphore (optionnel)
+    // xSpeedSemaphore = xSemaphoreCreateMutex();
+
+    // Création des tâches
+    xTaskCreate(vTaskPIDControl, &quot;PID&quot;, 256, NULL, 3, NULL);
+    // xTaskCreate(vTaskMonitor, &quot;Monitor&quot;, 128, NULL, 1, NULL);
+
+    // Lancement de l'ordonnanceur FreeRTOS
+    vTaskStartScheduler();
+
+    // Ne devrait jamais atteindre cette ligne
+    while (1);
+}
+</code></pre>
+<p><strong>Notes complémentaires :</strong></p>
+<ul>
+<li>Les fonctions <code>printf</code> ne sont pas incluses ; si vous souhaitez du monitoring, configurez l'UART et utilisez <code>printf</code> ou une fonction personnalisée.</li>
+<li>Le sémaphore <code>xSpeedSemaphore</code> est déclaré mais non utilisé dans le code ; vous pouvez l'intégrer si vous voulez protéger l'accès à <code>current_speed</code> entre l'ISR et la tâche. Par exemple, prenez le sémaphore dans l'ISR (avec <code>xSemaphoreGiveFromISR</code>) et attendez-le dans la tâche avant de lire la variable.</li>
+<li>Les valeurs de gains PID sont données à titre d'exemple ; elles doivent être réglées expérimentalement pour votre moteur.</li>
+<li>La détection du sens de rotation n'est pas implémentée ici ; si vous utilisez les deux voies de l'encodeur, vous pouvez déterminer le sens et ajuster le signe de la vitesse.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
