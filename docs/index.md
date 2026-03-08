@@ -44,11 +44,16 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Timer et Interruption Matérielles ](stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](stm32f4/adc/index.md)
 - [Génération des signaux PWM](stm32f4/pwm/index.md)
+- [Optimisation de Transfert des Données avec DMA](stm32f4/dma/index.md)
+
+**Communication Série**
+
 - [Communication Série USART](stm32f4/usart/index.md)
 - [Communication Série I2C](stm32f4/i2c/index.md)
 - [Communication Série SPI](stm32f4/spi/index.md)
 - [Communication Série CAN](stm32f4/can/index.md)
-- [Optimisation de Transfert des Données avec DMA](stm32f4/dma/index.md)
+- [Communication Série USB](stm32f4/usb/index.md)
+
 
 ---
 <br>
@@ -60,7 +65,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Filtres Numériques](technique-algos/filtre/index.md)
 - [Analyse fréquentielle avec FFT](technique-algos/fft/index.md)
 - [Synthèse Numérique Directe (DDS)](technique-algos/dds/index.md)
-- [Bases du Graphisme Embarqué](technique-algos/graphisme/index.md)
+- [Bases du Graphisme Embarqué sur écran TFT ili9488 3.2](technique-algos/graphisme/index.md)
 
 ---
 <br>
