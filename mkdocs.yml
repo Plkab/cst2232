@@ -14,3 +14,9 @@ nav:
 
 extra_css:
   - stylesheets/extra.css
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true   # optionnel : ajoute aussi la date de création
+      type: date                    # format : date, datetime, timeago

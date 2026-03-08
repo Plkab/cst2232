@@ -723,3 +723,10 @@ int main(void)
 - [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
 
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}
+  <hr>
+  <p><small>Dernière mise à jour : {{ git_revision_date_localized }}</small></p>
+{% endblock %}
