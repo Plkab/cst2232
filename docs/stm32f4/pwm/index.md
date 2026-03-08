@@ -13,7 +13,7 @@
 
 ### **Introduction**
 
-La modulation de largeur d’impulsion (**PWM** – Pulse Width Modulation) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (duty cycle) d’un signal périodique, on peut par exemple :
+La modulation de largeur d’impulsion (**PWM** – *Pulse Width Modulation*) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (*duty cycle*) d’un signal périodique, on peut par exemple :
 
 - régler la luminosité d’une LED ;
 - commander la vitesse d’un moteur à courant continu ;
@@ -29,15 +29,17 @@ Le STM32F401 dispose de plusieurs timers capables de générer des signaux PWM s
 
 Un signal **PWM (Pulse Width Modulation)** est caractérisé par :
 
-- une **période** `T` (ou une **fréquence** `f = 1/T`) ;
+- une **période** \(T\) (ou une **fréquence** \(f = 1/T\)) ;
 - un **rapport cyclique**
 
-\[\alpha = \frac{t_{on}}{T}\]
+\[
+\alpha = \frac{t_{on}}{T}
+\]
 
 (souvent exprimé en pourcentage).
 
 La **valeur moyenne du signal** est proportionnelle au rapport cyclique.  
-Par exemple, pour une **LED**, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.
+Par exemple, pour une LED, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.
 
 ---
 <br>
@@ -76,16 +78,16 @@ f_{timer} = \frac{f_{ck}}{PSC + 1}
 
 où :
 
-- `f_ck` : fréquence de l’horloge du timer  
-- `PSC` : **prescaler**  
-- `ARR` : **Auto Reload Register**
+- \(f_{ck}\) : fréquence de l’horloge du timer ;
+- `PSC` : **prescaler** ;
+- `ARR` : **Auto Reload Register**.
 
 **Résolution du rapport cyclique**
 
 La **résolution du rapport cyclique** (nombre de valeurs possibles) est égale à :
 
 \[
-ARR + 1
+\text{Résolution} = ARR + 1
 \]
 
 Plus la valeur de `ARR` est grande, plus la **résolution de la PWM est fine**, ce qui permet un contrôle plus précis (par exemple pour la luminosité d’une LED ou la vitesse d’un moteur).
