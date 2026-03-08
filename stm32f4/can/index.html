@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/can/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Communication Série CAN - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link"></a>
+            <li class="nav-item" data-bs-level="1"><a href="#communication-serie-can" class="nav-link">Communication Série CAN</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,8 +63,368 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="_1"></h1>
-<p>Contenu Ã  rÃ©diger...</p></div>
+<h1 id="communication-serie-can">Communication Série CAN</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-au-bus-can"><strong>*Introduction au bus CAN</strong></h3>
+<p>Le bus <strong>CAN</strong> (Controller Area Network) est un protocole de communication série développé par Bosch dans les années 1980 pour l’automobile. Il est conçu pour permettre à plusieurs microcontrôleurs de communiquer entre eux sans ordinateur hôte, dans des environnements sévères (perturbations électromagnétiques, températures extrêmes). Aujourd’hui, il est largement utilisé dans l’industrie, la robotique, les équipements médicaux et bien sûr l’automobile.</p>
+<p><strong>Caractéristiques principales :</strong></p>
+<ul>
+<li>Transmission différentielle sur deux fils (CAN_H et CAN_L), ce qui le rend robuste au bruit.</li>
+<li>Jusqu’à 1 Mbit/s (selon la longueur du bus).</li>
+<li>Multi-maître : tout nœud peut initier une communication.</li>
+<li>Arbitrage non destructif basé sur l’identifiant : les messages prioritaires passent sans collision.</li>
+<li>Détection d’erreurs et retransmission automatique.</li>
+</ul>
+<p>Le <strong>STM32F401</strong> intègre un contrôleur CAN (bxCAN) compatible avec les protocoles 2.0A et 2.0B (standard et étendu). Dans ce chapitre, nous apprendrons à :</p>
+<ul>
+<li>Comprendre la <strong>structure d’une trame CAN</strong>.</li>
+<li>Configurer le contrôleur CAN en mode <strong>normal</strong>.</li>
+<li>Gérer l’envoi et la réception de messages.</li>
+<li>Utiliser les <strong>filtres</strong> pour sélectionner les messages entrants.</li>
+<li>Intégrer le CAN dans un environnement <strong>FreeRTOS</strong> avec des <strong>files</strong>.</li>
+<li>Réaliser un projet pratique d’échange de données entre deux cartes.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-du-bus-can"><strong>Principe du bus CAN</strong></h3>
+<p><strong>Niveaux logiques</strong></p>
+<p>Le bus utilise deux lignes différentielles :</p>
+<ul>
+<li><strong>CAN_H</strong> et <strong>CAN_L</strong>.</li>
+<li>État <strong>dominant</strong> (logique 0) : CAN_H = 3,5 V, CAN_L = 1,5 V.</li>
+<li>État <strong>récessif</strong> (logique 1) : CAN_H = 2,5 V, CAN_L = 2,5 V.</li>
+<li>En cas de conflit, l’état dominant l’emporte (c’est le principe d’arbitrage).</li>
+</ul>
+<p><strong>Trame de données (format standard)</strong></p>
+<p>Une trame CAN se compose des champs suivants :</p>
+<ol>
+<li><strong>SOF</strong> (Start of Frame) : 1 bit dominant.</li>
+<li><strong>Identifiant</strong> (11 bits en standard, 29 en étendu) : détermine la priorité (plus la valeur est petite, plus la priorité est haute).</li>
+<li><strong>RTR</strong> (Remote Transmission Request) : distingue trame de données et trame de requête.</li>
+<li><strong>IDE</strong> (Identifier Extension) : 0 pour standard, 1 pour étendu.</li>
+<li><strong>DLC</strong> (Data Length Code) : nombre d’octets de données (0 à 8).</li>
+<li><strong>Champ de données</strong> : 0 à 8 octets.</li>
+<li><strong>CRC</strong> (15 bits + délimiteur) : contrôle d’intégrité.</li>
+<li><strong>ACK</strong> : acquittement.</li>
+<li><strong>EOF</strong> (End of Frame) : 7 bits récessifs.</li>
+</ol>
+<p>Le contrôleur CAN gère automatiquement tout le protocole : pour l’utilisateur, il suffit de préparer l’identifiant et les données, et de lire les messages reçus.</p>
+<hr />
+<p><br></p>
+<h3 id="le-controleur-can-du-stm32f4-bxcan"><strong>Le contrôleur CAN du STM32F4 (bxCAN)</strong></h3>
+<p>Le STM32F401 dispose d’un contrôleur CAN avec les caractéristiques suivantes :</p>
+<ul>
+<li>3 boîtes d’émission (mailboxes).</li>
+<li>2 FIFO de réception (3 messages chacune).</li>
+<li>28 filtres configurables (par masque ou par liste) sur 32 bits.</li>
+<li>Modes : normal, silence, bouclage (loopback).</li>
+</ul>
+<p><strong>Registres principaux</strong></p>
+<table>
+<thead>
+<tr>
+<th>Registre</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CAN_MCR</code></td>
+<td>Registre de contrôle maître (initialisation, modes de test, etc.)</td>
+</tr>
+<tr>
+<td><code>CAN_MSR</code></td>
+<td>Statut maître (mode d’initialisation, erreurs)</td>
+</tr>
+<tr>
+<td><code>CAN_TSR</code></td>
+<td>Statut des boîtes d’émission</td>
+</tr>
+<tr>
+<td><code>CAN_RFR</code></td>
+<td>Statut des FIFO de réception</td>
+</tr>
+<tr>
+<td><code>CAN_TIxR</code></td>
+<td>Registre d’identifiant pour la boîte d’émission x</td>
+</tr>
+<tr>
+<td><code>CAN_TDTxR</code></td>
+<td>Registre de DLC pour la boîte x</td>
+</tr>
+<tr>
+<td><code>CAN_TDLxR</code></td>
+<td>Registre de données (bas) pour la boîte x</td>
+</tr>
+<tr>
+<td><code>CAN_TDHxR</code></td>
+<td>Registre de données (haut) pour la boîte x</td>
+</tr>
+<tr>
+<td><code>CAN_RIxR</code></td>
+<td>Identifiant reçu (FIFO x)</td>
+</tr>
+<tr>
+<td><code>CAN_RDTxR</code></td>
+<td>DLC reçu</td>
+</tr>
+<tr>
+<td><code>CAN_RDLxR</code></td>
+<td>Données reçues (bas)</td>
+</tr>
+<tr>
+<td><code>CAN_RDHxR</code></td>
+<td>Données reçues (haut)</td>
+</tr>
+<tr>
+<td><code>CAN_FMR</code></td>
+<td>Registre de configuration des filtres</td>
+</tr>
+<tr>
+<td><code>CAN_FM1R</code></td>
+<td>Mode des filtres (liste/masque)</td>
+</tr>
+<tr>
+<td><code>CAN_FS1R</code></td>
+<td>Taille des filtres (16/32 bits)</td>
+</tr>
+<tr>
+<td><code>CAN_FFA1R</code></td>
+<td>Affectation des filtres aux FIFO</td>
+</tr>
+<tr>
+<td><code>CAN_FA1R</code></td>
+<td>Activation des filtres</td>
+</tr>
+<tr>
+<td><code>CAN_FiR</code></td>
+<td>Registres de filtre i (2 x 32 bits)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="configuration-simple-mode-polling"><strong>Configuration simple (mode polling)</strong></h3>
+<p><strong>Initialisation des broches</strong></p>
+<p>On utilise par exemple PB8 (CAN_RX) et PB9 (CAN_TX) avec l’alternate function AF9.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void CAN_GPIO_Init(void) {
+    // Activer horloge GPIOB
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+
+    // PB8 (RX), PB9 (TX) en alternate function AF9
+    GPIOB-&gt;MODER &amp;= ~((3U &lt;&lt; (8*2)) | (3U &lt;&lt; (9*2)));
+    GPIOB-&gt;MODER |=  ((2U &lt;&lt; (8*2)) | (2U &lt;&lt; (9*2))); // AF
+    GPIOB-&gt;AFR[1] &amp;= ~((0xF &lt;&lt; (0*4)) | (0xF &lt;&lt; (1*4))); // (PB8 = AFRH[0], PB9 = AFRH[1])
+    GPIOB-&gt;AFR[1] |=  ((9 &lt;&lt; (0*4)) | (9 &lt;&lt; (1*4))); // AF9 pour CAN
+}
+</code></pre>
+<p><strong>Configuration du bit timing</strong></p>
+<p>La vitesse est définie par le prescaler (BRP) et les segments de temps (BS1, BS2, SJW). Le temps de bit est :
+t_bit = t_quanta * (1 + BS1 + BS2) avec t_quanta = (BRP+1) / f_APB.</p>
+<p>Pour 125 kbit/s avec APB1 = 42 MHz (par exemple), on peut prendre BRP=41, BS1=6, BS2=7.</p>
+<pre><code class="language-c">void CAN_Init(void) {
+    // 1. Activer horloge CAN
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_CAN1EN;
+
+    // 2. Demander le mode initialisation
+    CAN1-&gt;MCR |= CAN_MCR_INRQ;
+    while (!(CAN1-&gt;MSR &amp; CAN_MSR_INAK));
+
+    // 3. Configurer le bit timing
+    CAN1-&gt;BTR = (41 &lt;&lt; CAN_BTR_BRP_Pos) |   // BRP = 41
+                (CAN_BTR_TS1_6) |            // BS1 = 6 tq
+                (CAN_BTR_TS2_7) |            // BS2 = 7 tq
+                (0 &lt;&lt; CAN_BTR_SJW_Pos);      // SJW = 1 tq
+
+    // 4. Sortir du mode initialisation
+    CAN1-&gt;MCR &amp;= ~CAN_MCR_INRQ;
+    while (CAN1-&gt;MSR &amp; CAN_MSR_INAK);
+}
+</code></pre>
+<p><strong>Envoi d’un message (polling)</strong></p>
+<p>On cherche une boîte d’émission libre (TME = 1), on charge les registres, puis on demande la transmission.</p>
+<pre><code class="language-c">uint8_t CAN_SendMessage(uint32_t id, uint8_t *data, uint8_t len) {
+    uint32_t mailbox;
+    // Attendre une boîte libre
+    while (!(CAN1-&gt;TSR &amp; (CAN_TSR_TME0 | CAN_TSR_TME1 | CAN_TSR_TME2)));
+
+    if (CAN1-&gt;TSR &amp; CAN_TSR_TME0) mailbox = 0;
+    else if (CAN1-&gt;TSR &amp; CAN_TSR_TME1) mailbox = 1;
+    else mailbox = 2;
+
+    // Format standard (11 bits) – on suppose id &lt; 0x800
+    CAN1-&gt;sTxMailBox[mailbox].TIR = (id &lt;&lt; 21) | CAN_TI0R_TXRQ; // TXRQ pour démarrer
+    CAN1-&gt;sTxMailBox[mailbox].TDTR = len &amp; 0xF;
+    CAN1-&gt;sTxMailBox[mailbox].TDLR = data[0] | (data[1] &lt;&lt; 8) | (data[2] &lt;&lt; 16) | (data[3] &lt;&lt; 24);
+    CAN1-&gt;sTxMailBox[mailbox].TDHR = data[4] | (data[5] &lt;&lt; 8) | (data[6] &lt;&lt; 16) | (data[7] &lt;&lt; 24);
+
+    // La transmission est lancée par TXRQ (déjà mis)
+    return 1;
+}
+</code></pre>
+<p><strong>Réception d’un message (polling)</strong></p>
+<p>On vérifie si une FIFO a reçu un message (FMP non nul), puis on lit.</p>
+<pre><code class="language-c">uint8_t CAN_ReceiveMessage(uint32_t *id, uint8_t *data) {
+    if ((CAN1-&gt;RF0R &amp; CAN_RF0R_FMP0) == 0) return 0; // pas de message
+
+    // Lire depuis FIFO0 (on pourrait aussi FIFO1)
+    *id = (CAN1-&gt;sFIFOMailBox[0].RIR &gt;&gt; 21) &amp; 0x7FF; // 11 bits
+    uint8_t len = CAN1-&gt;sFIFOMailBox[0].RDTR &amp; 0xF;
+    uint32_t low = CAN1-&gt;sFIFOMailBox[0].RDLR;
+    uint32_t high = CAN1-&gt;sFIFOMailBox[0].RDHR;
+
+    for (int i = 0; i &lt; 4 &amp;&amp; i &lt; len; i++) data[i] = (low &gt;&gt; (i*8)) &amp; 0xFF;
+    for (int i = 4; i &lt; 8 &amp;&amp; i &lt; len; i++) data[i] = (high &gt;&gt; ((i-4)*8)) &amp; 0xFF;
+
+    // Libérer la FIFO
+    CAN1-&gt;RF0R |= CAN_RF0R_RFOM0;
+    return len;
+}
+</code></pre>
+<p>Limitation : ces fonctions sont bloquantes et ne sont pas adaptées à un système temps réel multitâche.</p>
+<hr />
+<p><br></p>
+<h3 id="utilisation-avec-freertos"><strong>Utilisation avec FreeRTOS</strong></h3>
+<p>Pour ne pas bloquer les tâches, on peut utiliser les interruptions de réception et éventuellement de transmission. Une tâche dédiée gère les messages reçus via une file (queue).</p>
+<p><strong>Configuration des interruptions</strong></p>
+<pre><code class="language-c">void CAN_Interrupt_Init(void) {
+    NVIC_SetPriority(CAN1_RX0_IRQn, 5);
+    NVIC_EnableIRQ(CAN1_RX0_IRQn);
+
+    // Activer l'interruption sur réception FIFO0 (message en attente)
+    CAN1-&gt;IER |= CAN_IER_FMPIE0;
+}
+</code></pre>
+<p><strong>Gestionnaire d’interruption</strong></p>
+<pre><code class="language-c">QueueHandle_t xCANRxQueue;
+
+void CAN1_RX0_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    uint8_t data[8];
+    uint32_t id;
+
+    // Lire le message depuis FIFO0
+    id = (CAN1-&gt;sFIFOMailBox[0].RIR &gt;&gt; 21) &amp; 0x7FF;
+    uint8_t len = CAN1-&gt;sFIFOMailBox[0].RDTR &amp; 0xF;
+    uint32_t low = CAN1-&gt;sFIFOMailBox[0].RDLR;
+    uint32_t high = CAN1-&gt;sFIFOMailBox[0].RDHR;
+
+    for (int i = 0; i &lt; 4 &amp;&amp; i &lt; len; i++) data[i] = (low &gt;&gt; (i*8)) &amp; 0xFF;
+    for (int i = 4; i &lt; 8 &amp;&amp; i &lt; len; i++) data[i] = (high &gt;&gt; ((i-4)*8)) &amp; 0xFF;
+
+    // Libérer la FIFO
+    CAN1-&gt;RF0R |= CAN_RF0R_RFOM0;
+
+    // Envoyer dans la queue (copie de l'ID et des données)
+    xQueueSendFromISR(xCANRxQueue, data, &amp;xWoken);
+    portYIELD_FROM_ISR(xWoken);
+}
+</code></pre>
+<p><strong>Tâche de traitement des messages reçus</strong></p>
+<pre><code class="language-c">void vTaskCANReceiver(void *pvParameters) {
+    uint8_t rxData[8];
+
+    for (;;) {
+        if (xQueueReceive(xCANRxQueue, rxData, portMAX_DELAY) == pdPASS) {
+            // Traiter le message (afficher, agir selon l'ID...)
+            // L'ID n'est pas passé ici, on pourrait structurer les données.
+        }
+    }
+}
+</code></pre>
+<p>Pour l’émission, on peut aussi utiliser une file pour que diverses tâches puissent envoyer des messages sans se soucier de la synchronisation. Une tâche dédiée à l’émission vide la file et appelle la fonction d’envoi (avec protection si nécessaire).</p>
+<hr />
+<p><br></p>
+<h3 id="projet-lechange-de-donnees-entre-deux-cartes-stm32-projet-can-echange"><strong>Projet : LÉchange de données entre deux cartes STM32 {#projet-can-echange}</strong></h3>
+<p>Réalisons un système simple où :</p>
+<ul>
+<li>La carte A lit un potentiomètre sur ADC (PA0) et envoie périodiquement la valeur (16 bits) sur le bus CAN avec l’ID 0x100.</li>
+<li>La carte B reçoit les messages avec l’ID 0x100 et affiche la valeur sur UART (PC). Un filtre est configuré pour ne recevoir que cet ID.</li>
+</ul>
+<p><strong>Configuration des filtres (carte B)</strong></p>
+<pre><code class="language-c">void CAN_Filter_Init(void) {
+    // Mode initialisation des filtres
+    CAN1-&gt;FMR |= CAN_FMR_FINIT;
+
+    // Filtre 0 : mode masque (32 bits)
+    CAN1-&gt;FM1R &amp;= ~(1 &lt;&lt; 0); // 0 = masque, 1 = liste
+    CAN1-&gt;FS1R |= (1 &lt;&lt; 0);   // 32 bits
+
+    // Registre de filtre 0 : masque (les bits à 1 sont pertinents)
+    CAN1-&gt;sFilterRegister[0].FR1 = 0x7FF &lt;&lt; 21; // masque sur l'ID 11 bits
+    CAN1-&gt;sFilterRegister[0].FR2 = (0x100 &lt;&lt; 21); // valeur attendue
+
+    // Affecter à FIFO0
+    CAN1-&gt;FFA1R &amp;= ~(1 &lt;&lt; 0); // FIFO0
+
+    // Activer le filtre
+    CAN1-&gt;FA1R |= (1 &lt;&lt; 0);
+
+    // Sortir du mode initialisation
+    CAN1-&gt;FMR &amp;= ~CAN_FMR_FINIT;
+}
+</code></pre>
+<p><strong>Tâche d’acquisition et d’envoi (carte A)</strong></p>
+<pre><code class="language-c">void vTaskSensorSender(void *pvParameters) {
+    uint8_t data[8];
+    uint16_t adcVal;
+
+    for (;;) {
+        adcVal = ADC_Read(); // lecture ADC (0-4095)
+        data[0] = adcVal &amp; 0xFF;
+        data[1] = (adcVal &gt;&gt; 8) &amp; 0xFF;
+
+        CAN_SendMessage(0x100, data, 2);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+</code></pre>
+<p><strong>Tâche de réception et affichage (carte B)</strong></p>
+<pre><code class="language-c">void vTaskCANDisplay(void *pvParameters) {
+    uint8_t rxData[8];
+    uint16_t value;
+
+    for (;;) {
+        if (xQueueReceive(xCANRxQueue, rxData, portMAX_DELAY) == pdPASS) {
+            value = rxData[0] | (rxData[1] &lt;&lt; 8);
+            printf(&quot;Valeur ADC: %u\r\n&quot;, value);
+        }
+    }
+}
+</code></pre>
+<p><strong>Programme principal (carte B)</strong></p>
+<pre><code class="language-c">int main(void) {
+    USART2_Init(115200);
+    CAN_GPIO_Init();
+    CAN_Init();
+    CAN_Filter_Init();
+    CAN_Interrupt_Init();
+
+    xCANRxQueue = xQueueCreate(10, 8); // queue de 10 messages de 8 octets
+
+    if (xCANRxQueue != NULL) {
+        xTaskCreate(vTaskCANDisplay, &quot;CAN Disp&quot;, 256, NULL, 2, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 

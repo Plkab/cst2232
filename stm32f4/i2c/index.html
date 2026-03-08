@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/i2c/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Communication Série I2C - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link"></a>
+            <li class="nav-item" data-bs-level="1"><a href="#communication-serie-i2c" class="nav-link">Communication Série I2C</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,8 +63,401 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="_1"></h1>
-<p>Contenu Ã  rÃ©diger...</p></div>
+<h1 id="communication-serie-i2c">Communication Série I2C</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-au-bus-i2c"><strong>Introduction au bus I2C</strong></h3>
+<p>Le <strong>bus I2C (Inter-Integrated Circuit)</strong> est un protocole de communication série <strong>synchrone</strong> très répandu pour connecter des périphériques à <strong>faible vitesse</strong> (capteurs, mémoires EEPROM, écrans OLED, etc.) à un microcontrôleur.</p>
+<p>Il ne nécessite que <strong>deux fils</strong> :</p>
+<ul>
+<li><strong>SCL</strong> : ligne d’horloge  </li>
+<li><strong>SDA</strong> : ligne de données  </li>
+</ul>
+<p>Le protocole permet de connecter <strong>plusieurs périphériques esclaves sur le même bus</strong>, chacun possédant une <strong>adresse unique</strong>.</p>
+<p>Le <strong>STM32F401</strong> intègre plusieurs interfaces <strong>I2C matérielles</strong>, ce qui facilite la communication avec des capteurs et modules externes.</p>
+<p>Dans ce chapitre, nous apprendrons à :</p>
+<ul>
+<li>Comprendre le <strong>protocole I2C</strong> (trames, adressage, conditions START/STOP).</li>
+<li>Configurer l’<strong>I2C en mode maître</strong> pour communiquer avec des périphériques.</li>
+<li>Utiliser les <strong>interruptions</strong> pour une communication <strong>non bloquante</strong>.</li>
+<li>Intégrer l’I2C dans un environnement <strong>FreeRTOS</strong> avec des <strong>files de messages</strong>.</li>
+<li>Réaliser un <strong>projet pratique</strong> de lecture d’un <strong>capteur de température</strong> (type LM75 ou DS1621) et afficher la valeur sur <strong>UART</strong>.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-du-bus-i2c"><strong>Principe du bus I2C</strong></h3>
+<p>Le bus I2C est un <strong>bus multi-maître</strong> (plusieurs maîtres possibles), mais dans la plupart des applications embarquées on utilise un <strong>seul maître</strong>.</p>
+<p>Les deux lignes du bus (SDA et SCL) sont tirées au <strong>niveau logique</strong> haut par des <strong>résistances de tirage (pull-up)</strong>. Les dispositifs connectés au bus utilisent des sorties <strong>open-drain</strong>, ce qui signifie qu'ils peuvent tirer la <strong>ligne à 0</strong>, mais jamais la forcer à 1. C'est ce qui permet d'éviter les courts-circuits lorsque plusieurs périphériques tentent de communiquer simultanément.</p>
+<p>Toutes les communications sont <strong>initiées par le maître</strong>.</p>
+<p><strong>Trame élémentaire I2C</strong></p>
+<p>Une communication I2C se déroule selon une séquence bien définie.</p>
+<ol>
+<li><strong>Condition START</strong></li>
+</ol>
+<p>La communication commence lorsque <strong>SDA passe de 1 à 0</strong> alors que <strong>SCL est à 1</strong>. Cela indique aux périphériques qu'une nouvelle transaction commence. Cela indique aux périphériques qu'une <strong>nouvelle transaction</strong> commence.</p>
+<ol>
+<li><strong>Envoi de l’adresse</strong></li>
+</ol>
+<p>Le maître envoie 7 bits d'adresse + 1 bit R/W :</p>
+<ul>
+<li><strong>0</strong> : écriture vers l’esclave  </li>
+<li>
+<p><strong>1</strong> : lecture depuis l’esclave  </p>
+</li>
+<li>
+<p><strong>Bit d’acquittement (ACK)</strong></p>
+</li>
+</ul>
+<p>Après chaque octet transmis, le récepteur tire la ligne SDA à 0 pour confirmer la bonne réception. Si SDA reste à 1, cela signifie NACK (absence d'acquittement).</p>
+<ol>
+<li><strong>Transfert de données</strong></li>
+</ol>
+<p>Les données sont envoyées 8 bits, MSB en premier. Chaque octet est suivi d'un bit ACK.</p>
+<p>En <strong>écriture :</strong> Maître → Esclave
+En <strong>lecture :</strong> Esclave → Maître</p>
+<ol>
+<li><strong>Condition STOP</strong></li>
+</ol>
+<p>La communication se termine lorsque SDA passe de 0 à 1 alors que SCL est à 1. Cela libère le bus pour une autre communication.</p>
+<hr />
+<p><br></p>
+<h3 id="registres-importants-de-li2c-sur-stm32f4"><strong>Registres importants de l’I2C sur STM32F4</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Registre</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>I2C_CR1</strong></td>
+<td>Registre de contrôle (activation I2C, génération START/STOP, interruptions)</td>
+</tr>
+<tr>
+<td><strong>I2C_CR2</strong></td>
+<td>Configuration de la fréquence du bus et gestion des interruptions</td>
+</tr>
+<tr>
+<td><strong>I2C_OAR1</strong></td>
+<td>Adresse propre du microcontrôleur en mode esclave</td>
+</tr>
+<tr>
+<td><strong>I2C_DR</strong></td>
+<td>Registre de données (lecture / écriture)</td>
+</tr>
+<tr>
+<td><strong>I2C_SR1</strong></td>
+<td>Registre de statut (SB, ADDR, BTF, RxNE, TxE…)</td>
+</tr>
+<tr>
+<td><strong>I2C_SR2</strong></td>
+<td>Informations supplémentaires (bus busy, rôle maître/esclave)</td>
+</tr>
+<tr>
+<td><strong>I2C_CCR</strong></td>
+<td>Configuration de la vitesse I2C (100 kHz ou 400 kHz)</td>
+</tr>
+<tr>
+<td><strong>I2C_TRISE</strong></td>
+<td>Temps de montée du signal sur le bus</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vitesses standard du bus I2C</strong></p>
+<p>Les vitesses les plus utilisées sont :</p>
+<ul>
+<li><strong>Standard mode : 100 kHz</strong></li>
+<li><strong>Fast mode : 400 kHz</strong></li>
+<li><strong>Fast mode plus : 1 MHz</strong> (selon les périphériques)</li>
+</ul>
+<p>Le bus I2C est particulièrement adapté pour :</p>
+<ul>
+<li>les capteurs (température, pression, humidité) ;</li>
+<li>les mémoires EEPROM ;</li>
+<li>les afficheurs (OLED, LCD) ;</li>
+<li>les convertisseurs ADC/DAC ;</li>
+<li>les modules RTC (Real-Time Clock).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="configuration-simple-mode-polling"><strong>Configuration simple (mode polling)</strong></h3>
+<p>L’exemple suivant configure l’I2C1 en mode maître à 100 kHz sur les broches PB6 (SCL) et PB7 (SDA). On effectue une lecture d’un registre sur un périphérique esclave (par exemple un capteur de température).</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void I2C1_Init(void) {
+    // 1. Activer les horloges GPIOB et I2C1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_I2C1EN;
+
+    // 2. Configurer PB6 (SCL) et PB7 (SDA) en alternate function AF4
+    GPIOB-&gt;MODER &amp;= ~((3U &lt;&lt; (6*2)) | (3U &lt;&lt; (7*2)));
+    GPIOB-&gt;MODER |=  ((2U &lt;&lt; (6*2)) | (2U &lt;&lt; (7*2))); // AF
+    GPIOB-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (6*4)) | (0xF &lt;&lt; (7*4)));
+    GPIOB-&gt;AFR[0] |=  ((4 &lt;&lt; (6*4)) | (4 &lt;&lt; (7*4)));  // AF4 pour I2C1
+
+    // 3. Réinitialiser et configurer I2C1
+    I2C1-&gt;CR1 = I2C_CR1_SWRST;  // Reset
+    I2C1-&gt;CR1 = 0;
+    I2C1-&gt;CR2 = 16;              // Fréquence APB1 = 16 MHz (à adapter selon votre horloge)
+    I2C1-&gt;CCR = 80;              // 100 kHz (standard) : CCR = 16 MHz / (2*100 kHz) = 80
+    I2C1-&gt;TRISE = 17;            // 1000 ns / (1/16 MHz) = 16 + 1 = 17
+    I2C1-&gt;CR1 |= I2C_CR1_PE;     // Activer le périphérique
+}
+
+// Écriture d'un octet dans un registre d'un esclave (sans donnée)
+void I2C1_WriteByte(uint8_t slaveAddr, uint8_t reg) {
+    // Attendre que le bus soit libre
+    while (I2C1-&gt;SR2 &amp; I2C_SR2_BUSY);
+
+    // Générer un START
+    I2C1-&gt;CR1 |= I2C_CR1_START;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_SB));  // Attendre START généré
+
+    // Envoyer l'adresse de l'esclave en écriture
+    I2C1-&gt;DR = slaveAddr &lt;&lt; 1;  // bit 0 = 0 pour écriture
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_ADDR));  // Attendre adresse reconnue
+    (void)I2C1-&gt;SR2;  // Lire SR2 pour effacer le flag ADDR
+
+    // Envoyer le registre
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_TXE));
+    I2C1-&gt;DR = reg;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_BTF));  // Attendre fin de transmission
+
+    // STOP
+    I2C1-&gt;CR1 |= I2C_CR1_STOP;
+}
+
+// Lecture d'un octet depuis un registre
+uint8_t I2C1_ReadByte(uint8_t slaveAddr, uint8_t reg) {
+    uint8_t data;
+
+    // Écriture de l'adresse du registre
+    I2C1_WriteByte(slaveAddr, reg);  // Cette fonction envoie un STOP à la fin
+
+    // Attendre bus libre
+    while (I2C1-&gt;SR2 &amp; I2C_SR2_BUSY);
+
+    // START + adresse en lecture
+    I2C1-&gt;CR1 |= I2C_CR1_START;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_SB));
+    I2C1-&gt;DR = (slaveAddr &lt;&lt; 1) | 1;  // bit 0 = 1 pour lecture
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_ADDR));
+    (void)I2C1-&gt;SR2;
+
+    // Réception de la donnée
+    I2C1-&gt;CR1 &amp;= ~I2C_CR1_ACK;  // Pas d'acquittement (on va lire un seul octet)
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_RXNE));
+    data = I2C1-&gt;DR;
+
+    // STOP
+    I2C1-&gt;CR1 |= I2C_CR1_STOP;
+
+    return data;
+}
+</code></pre>
+<p>Limitation : ces fonctions sont bloquantes et utilisent des boucles d’attente actives. Dans un système temps réel, on préférera les interruptions.</p>
+<hr />
+<p><br></p>
+<h3 id="utilisation-avec-freertos"><strong>Utilisation avec FreeRTOS</strong></h3>
+<p>Pour ne pas bloquer les tâches, on peut configurer l'I2C en mode interruption. L'idée est de lancer une transaction (START + adresse + données) et de laisser l'I2C générer des interruptions à chaque étape. Une machine d'états simple dans l'ISR gère la progression de la transaction et réveille une tâche à la fin via un sémaphore.</p>
+<p>Exemple simplifié : lecture d’un registre avec interruptions.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+
+SemaphoreHandle_t xI2CSemaphore;
+
+// États de la machine I2C
+typedef enum {
+    I2C_IDLE,
+    I2C_START,
+    I2C_ADDR,
+    I2C_REG,
+    I2C_RESTART,
+    I2C_DATA,
+    I2C_STOP
+} I2C_State_t;
+
+volatile I2C_State_t i2cState = I2C_IDLE;
+volatile uint8_t i2cSlaveAddr, i2cReg, i2cData;
+volatile uint8_t i2cError;
+
+void I2C1_EV_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    uint32_t sr1 = I2C1-&gt;SR1;
+
+    // Gestion des événements selon l'état
+    switch (i2cState) {
+        case I2C_START:
+            if (sr1 &amp; I2C_SR1_SB) {
+                // Envoyer adresse
+                I2C1-&gt;DR = i2cSlaveAddr &lt;&lt; 1;
+                i2cState = I2C_ADDR;
+            }
+            break;
+
+        case I2C_ADDR:
+            if (sr1 &amp; I2C_SR1_ADDR) {
+                (void)I2C1-&gt;SR2;  // Clear ADDR
+                if (i2cSlaveAddr &amp; 1) {
+                    // Lecture : passer directement à la réception de données
+                    i2cState = I2C_DATA;
+                } else {
+                    // Écriture : envoyer le registre
+                    I2C1-&gt;DR = i2cReg;
+                    i2cState = I2C_REG;
+                }
+            }
+            break;
+
+        case I2C_REG:
+            if (sr1 &amp; I2C_SR1_TXE) {
+                // Registre envoyé, on peut soit STOP soit RESTART pour lecture
+                i2cState = I2C_RESTART;
+            }
+            break;
+
+        case I2C_RESTART:
+            // Générer un RESTART
+            I2C1-&gt;CR1 |= I2C_CR1_START;
+            i2cState = I2C_START;
+            i2cSlaveAddr |= 1;  // Adresse en lecture
+            break;
+
+        case I2C_DATA:
+            if (sr1 &amp; I2C_SR1_RXNE) {
+                i2cData = I2C1-&gt;DR;
+                i2cState = I2C_STOP;
+                I2C1-&gt;CR1 |= I2C_CR1_STOP;
+                // Réveiller la tâche
+                xSemaphoreGiveFromISR(xI2CSemaphore, &amp;xWoken);
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void I2C1_ER_IRQHandler(void) {
+    // Gestion des erreurs
+    i2cError = I2C1-&gt;SR1;
+    // Réveiller la tâche pour signaler l'erreur
+    xSemaphoreGiveFromISR(xI2CSemaphore, NULL);
+}
+
+// Fonction de lecture asynchrone
+uint8_t I2C1_ReadRegister(uint8_t slaveAddr, uint8_t reg) {
+    i2cSlaveAddr = slaveAddr;
+    i2cReg = reg;
+    i2cError = 0;
+    i2cState = I2C_START;
+
+    // Générer un START (l'ISR prendra la suite)
+    I2C1-&gt;CR1 |= I2C_CR1_START | I2C_CR1_ACK;
+
+    // Attendre le sémaphore (timeout de 100 ms)
+    if (xSemaphoreTake(xI2CSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
+        if (i2cError) {
+            // Gérer erreur
+            return 0;
+        }
+        return i2cData;
+    } else {
+        // Timeout
+        return 0;
+    }
+}
+</code></pre>
+<p>Remarque : Ce code est une illustration simplifiée. En pratique, il faut gérer correctement tous les flags, les timeouts, et la configuration des interruptions (priorité, activation).</p>
+<h3 id="lecture-dun-capteur-lm75-avec-freertos"><strong>Lecture d’un capteur LM75 avec FreeRTOS</strong></h3>
+<p>Le LM75 est un capteur de température numérique avec interface I2C. Son adresse par défaut est <code>0x48</code> (7 bits). Le registre de température (<code>0x00</code>) fournit la température en degrés Celsius (format 9 bits, 0,5°C par LSB).</p>
+<p><strong>Montage</strong></p>
+<ul>
+<li>SDA → PB7, SCL → PB6 (avec résistances pull-up de 4,7 kΩ)</li>
+<li>VCC → 3,3 V, GND → masse</li>
+</ul>
+<p><strong>Exemple de tâche FreeRTOS lecture température</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+
+// Déclarations des fonctions I2C et UART
+uint8_t I2C1_ReadRegister(uint8_t slaveAddr, uint8_t reg);
+void USART2_SendString(char *str);
+SemaphoreHandle_t xI2CSemaphore;
+
+// Tâche de lecture de température
+void vTaskTempSensor(void *pvParameters) {
+    uint8_t raw;
+    float temp;
+
+    for (;;) {
+        raw = I2C1_ReadRegister(0x48, 0x00);  // Lecture du registre température
+        temp = raw * 0.5f;                     // Conversion (1 LSB = 0,5 °C)
+
+        char buffer[32];
+        sprintf(buffer, &quot;Température : %.1f °C\r\n&quot;, temp);
+        USART2_SendString(buffer);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+int main(void) {
+    // Initialisations
+    I2C1_Init();           // Initialisation I2C (mode polling ou interruptions)
+    USART2_Init(115200);   // Initialisation USART2 pour affichage
+
+    // Création du sémaphore si on utilise les interruptions
+    xI2CSemaphore = xSemaphoreCreateBinary();
+
+    if (xI2CSemaphore != NULL) {
+        xTaskCreate(vTaskTempSensor, &quot;Temp&quot;, 256, NULL, 2, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<p><strong>Remarque</strong> : Pour simplifier, on peut utiliser la version polling de <code>I2C1_ReadRegister</code> si la tâche n’a pas d’autres contraintes temps réel critiques.</p>
+<p><strong>Utilisation de l’I2C avec FreeRTOS et mutex</strong></p>
+<p>Pour un accès sécurisé à l'I2C depuis plusieurs tâches, il est impératif de protéger les transactions avec un mutex. Cela évite qu'une tâche n'interrompe une transaction I2C commencée par une autre.</p>
+<pre><code class="language-c">SemaphoreHandle_t xI2CMutex;
+
+void vTaskTempSensor(void *pvParameters) {
+    uint8_t raw;
+    float temp;
+
+    for (;;) {
+        if (xSemaphoreTake(xI2CMutex, portMAX_DELAY) == pdTRUE) {
+            raw = I2C1_ReadRegister(0x48, 0x00);
+            xSemaphoreGive(xI2CMutex);
+        }
+        temp = raw * 0.5f;
+        printf(&quot;Temp: %.1f\n&quot;, temp);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+</code></pre>
+<p>Cette approche garantit que le bus I2C est utilisé par une seule tâche à la fois et évite les conflits sur le bus partagé.</p>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 

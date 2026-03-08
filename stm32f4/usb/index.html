@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/usb/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Communication Série USB - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#communication-serie-usb" class="nav-link">Communication Série USB</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="communication-serie-usb">Communication Série USB</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-a-la-communication-usb"><strong>Introduction à la communication USB</strong></h3>
+<p>L'USB (Universal Serial Bus) est devenu le standard de communication le plus répandu pour connecter des périphériques à un ordinateur. Sur les microcontrôleurs STM32F4, l'USB offre des avantages considérables par rapport à l'UART classique :</p>
+<ul>
+<li><strong>Vitesse élevée</strong> : jusqu'à 12 Mbit/s (Full Speed) voire 480 Mbit/s (High Speed avec PHY externe).</li>
+<li><strong>Alimentation intégrée</strong> : le périphérique peut être alimenté directement par le bus USB.</li>
+<li><strong>Plug-and-play</strong> : détection automatique par l'OS, pas de configuration de débit.</li>
+<li><strong>Multiples classes</strong> : Communication Device Class (CDC) pour la communication série virtuelle, Human Interface Device (HID) pour les souris/claviers, Mass Storage Class (MSC) pour les clés USB, etc.</li>
+<li><strong>Robustesse</strong> : protocole avec acquittements, CRC, et gestion d'erreurs intégrée.</li>
+</ul>
+<p>Le <strong>STM32F401</strong> intègre un contrôleur USB OTG (On-The-Go) Full Speed. Dans ce chapitre, nous apprendrons à :</p>
+<ul>
+<li>Comprendre l'architecture USB (périphérique, hôte, OTG).</li>
+<li>Configurer le contrôleur USB en mode <strong>périphérique CDC</strong> pour créer un port série virtuel (VCP).</li>
+<li>Utiliser la bibliothèque USB de ST (STM32 USB Device Library).</li>
+<li>Intégrer l'USB dans un environnement <strong>FreeRTOS</strong> pour une communication non bloquante.</li>
+<li>Réaliser un projet pratique de terminal interactif (comme avec l'UART) mais via USB.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-du-bus-usb"><strong>Principe du bus USB</strong></h3>
+<p><strong>Architecture</strong></p>
+<p>Le bus USB utilise une topologie en étoile avec un <strong>hôte</strong> (PC) qui contrôle la communication et des <strong>périphériques</strong> (périphériques). Les communications sont initiées uniquement par l'hôte.</p>
+<p>Le STM32F401 peut fonctionner dans trois modes :</p>
+<ul>
+<li><strong>Périphérique</strong> : connecté à un hôte (PC).</li>
+<li><strong>Hôte</strong> : contrôle d'autres périphériques (clavier, souris, clé USB).</li>
+<li><strong>OTG</strong> : peut changer de rôle dynamiquement.</li>
+</ul>
+<p><strong>Terminologie</strong></p>
+<ul>
+<li><strong>Endpoint</strong> : point d'entrée/sortie logique sur le périphérique, identifié par une adresse (1-15) et une direction (IN/OUT).</li>
+<li><strong>Pipe</strong> : connexion logique entre l'hôte et un endpoint.</li>
+<li><strong>Interface</strong> : regroupement d'endpoints pour une fonction (ex: interface CDC).</li>
+<li><strong>Configuration</strong> : ensemble d'interfaces actives.</li>
+</ul>
+<p><strong>Types de transfert</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Caractéristiques</th>
+<th>Utilisation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Contrôle</strong></td>
+<td>Fiable, utilisé pour la configuration</td>
+<td>Configuration du périphérique</td>
+</tr>
+<tr>
+<td><strong>Bulk</strong></td>
+<td>Fiable, pas de garantie de latence</td>
+<td>Transfert de données (MSC, CDC)</td>
+</tr>
+<tr>
+<td><strong>Interrupt</strong></td>
+<td>Latence garantie, faible volume</td>
+<td>Souris, clavier</td>
+</tr>
+<tr>
+<td><strong>Isochrone</strong></td>
+<td>Pas de garantie de livraison, temps réel</td>
+<td>Audio, vidéo</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="la-classe-cdc-communication-device-class"><strong>La classe CDC (Communication Device Class)</strong></h3>
+<p>La classe <strong>CDC</strong> permet de faire apparaître notre microcontrôleur comme un <strong>port série virtuel</strong> (Virtual COM Port - VCP) sur l'ordinateur. Aucun pilote spécifique n'est nécessaire sous Windows (utilise usbser.sys) et Linux (cdc_acm).</p>
+<p>Pour implémenter un périphérique CDC, il faut configurer :</p>
+<ul>
+<li><strong>1 endpoint de contrôle</strong> (endpoint 0) obligatoire.</li>
+<li><strong>1 endpoint de données OUT</strong> (pour la réception de l'hôte).</li>
+<li><strong>1 endpoint de données IN</strong> (pour l'émission vers l'hôte).</li>
+<li><strong>1 endpoint de notification</strong> (optionnel, pour les événements série).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="la-bibliotheque-usb-de-st"><strong>La bibliothèque USB de ST</strong></h3>
+<p>ST fournit une bibliothèque USB complète dans le cadre du STM32CubeF4. Elle est conçue avec une architecture en couches :</p>
+<p>Application (User)
+│
+├── Class Driver (CDC, HID, MSC...)
+│
+├── Core (USB Device Core)
+│
+└── HAL (Hardware Abstraction Layer)</p>
+<p>Cette bibliothèque gère tous les détails du protocole USB. Pour l'utilisateur, il suffit de :</p>
+<ol>
+<li>Configurer les endpoints dans un tableau.</li>
+<li>Implémenter quelques callbacks (réception, déconnexion, etc.).</li>
+<li>Appeler les fonctions de la classe CDC pour envoyer/recevoir des données.</li>
+</ol>
+<p><strong>Fichiers principaux</strong></p>
+<ul>
+<li><code>usbd_core.c</code> : noyau USB.</li>
+<li><code>usbd_cdc.c</code> : implémentation de la classe CDC.</li>
+<li><code>usbd_cdc_if.c</code> : interface utilisateur (à personnaliser).</li>
+<li><code>usbd_desc.c</code> : descripteurs USB (VID, PID, chaînes).</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="configuration-dun-projet-usb-avec-stm32cubemx"><strong>Configuration d'un projet USB avec STM32CubeMX</strong></h3>
+<p>Bien que nous programmions en "bare metal" sans HAL, la génération du code USB est complexe. Nous utiliserons STM32CubeMX pour générer l'initialisation USB, puis nous intégrerons ce code dans notre projet FreeRTOS.</p>
+<h4 id="etapes-sous-cubemx"><strong>Étapes sous CubeMX</strong></h4>
+<ol>
+<li>Sélectionner le microcontrôleur STM32F401CCUx.</li>
+<li>Activer <strong>USB_OTG_FS</strong> en mode <strong>Device_Only</strong>.</li>
+<li>Dans "Middleware", sélectionner <strong>USB_DEVICE</strong> et choisir la classe <strong>Communication Device Class (Virtual Port Com)</strong>.</li>
+<li>Configurer l'horloge pour avoir une horloge USB à 48 MHz (ex: PLL avec HSE 8 MHz, diviser par 7, multiplier par 84, puis diviser par 2 pour obtenir 48 MHz).</li>
+<li>Générer le code (avec ou sans HAL).</li>
+</ol>
+<p><strong>Fichiers générés</strong></p>
+<p>Le code généré contient les fichiers suivants :</p>
+<p>USB_DEVICE/
+├── App/
+│ ├── usb_device.c # Initialisation USB
+│ ├── usbd_desc.c # Descripteurs (VID, PID, etc.)
+│ └── usbd_cdc_if.c # Interface CDC (callbacks utilisateur)
+├── Target/
+│ └── usbd_conf.c # Configuration bas niveau (HAL)
+└── USB_HOST/ # (non utilisé)</p>
+<hr />
+<p><br></p>
+<h3 id="integration-dans-un-projet-bare-metal-freertos"><strong>Intégration dans un projet bare metal / FreeRTOS</strong></h3>
+<p>Pour intégrer le stack USB dans un projet sans HAL complet, nous devons fournir quelques fonctions de base que la bibliothèque attend (gestion du timing, accès aux registres). Voici comment procéder.</p>
+<p><strong>Structure du projet</strong></p>
+<p>Projet/
+├── Core/
+│ ├── main.c
+│ └── FreeRTOSConfig.h
+├── USB_DEVICE/
+│ ├── usbd_cdc_if.c
+│ ├── usbd_desc.c
+│ └── usbd_conf.c
+└── Drivers/
+└── CMSIS/</p>
+<p><strong>Fichier <code>usbd_conf.c</code> adapté</strong></p>
+<p>Ce fichier contient les callbacks HAL nécessaires. Version simplifiée :</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+#include &quot;usbd_core.h&quot;
+
+// Gestion du timing (nécessaire pour les timeouts USB)
+void HAL_Delay(uint32_t Delay) {
+    uint32_t tickstart = HAL_GetTick();
+    while ((HAL_GetTick() - tickstart) &lt; Delay);
+}
+
+uint32_t HAL_GetTick(void) {
+    // Si FreeRTOS est lancé, utiliser osKernelGetTickCount()
+    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
+        return (uint32_t)xTaskGetTickCount();
+    }
+    // Sinon, compter nous-mêmes (à implémenter avec SysTick)
+    static uint32_t tick = 0;
+    return tick; // simplifié
+}
+
+// Fonctions de gestion des registres USB (fournies par CubeMX)
+void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd) {
+    // Activation des horloges, GPIO, NVIC
+    // ...
+}
+</code></pre>
+<p><strong>Fichier usbd_cdc_if.c - Interface utilisateur</strong></p>
+<p>C'est ici que nous connectons la réception USB avec FreeRTOS.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;usbd_cdc_if.h&quot;
+
+extern QueueHandle_t xUSB_RxQueue; // File pour les données reçues
+
+// Buffer de réception (fourni par le stack)
+static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len) {
+    BaseType_t xWoken = pdFALSE;
+
+    // Envoyer les données dans la file (depuis l'ISR)
+    for (uint32_t i = 0; i &lt; *Len; i++) {
+        xQueueSendFromISR(xUSB_RxQueue, &amp;Buf[i], &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+
+    // Prêt pour une nouvelle réception
+    USBD_CDC_ReceivePacket(&amp;hUsbDeviceFS);
+    return (USBD_OK);
+}
+
+// Fonction d'émission (appelable depuis une tâche)
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len) {
+    // Cette fonction est bloquante si le buffer est plein
+    return USBD_CDC_TransmitPacket(&amp;hUsbDeviceFS, Buf, Len);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
+<p>L'USB peut maintenant être utilisé comme un périphérique de communication, avec les mêmes patterns que pour l'UART.</p>
+<p><strong>Configuration des files</strong></p>
+<pre><code class="language-c">QueueHandle_t xUSB_RxQueue;  // File pour les caractères reçus
+
+#define RX_QUEUE_LENGTH 256
+#define TX_QUEUE_LENGTH 128
+
+void USB_Init_Queues(void) {
+    xUSB_RxQueue = xQueueCreate(RX_QUEUE_LENGTH, sizeof(uint8_t));
+}
+Tâche de traitement de la réception
+c
+void vTaskUSBProcessor(void *pvParameters) {
+    uint8_t c;
+    char line[64];
+    int idx = 0;
+
+    for (;;) {
+        if (xQueueReceive(xUSB_RxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            // Afficher en écho
+            CDC_Transmit_FS(&amp;c, 1);
+
+            // Fin de ligne ?
+            if (c == '\n' || c == '\r') {
+                line[idx] = '\0';
+                if (idx &gt; 0) {
+                    // Traitement de la commande (comme avec l'UART)
+                    if (strcmp(line, &quot;help&quot;) == 0) {
+                        char *helpMsg = &quot;Commandes: help, on, off\r\n&quot;;
+                        CDC_Transmit_FS((uint8_t*)helpMsg, strlen(helpMsg));
+                    } else if (strcmp(line, &quot;on&quot;) == 0) {
+                        GPIOC-&gt;ODR |= (1 &lt;&lt; 13);
+                        char *msg = &quot;LED ON\r\n&quot;;
+                        CDC_Transmit_FS((uint8_t*)msg, strlen(msg));
+                    } else if (strcmp(line, &quot;off&quot;) == 0) {
+                        GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13);
+                        char *msg = &quot;LED OFF\r\n&quot;;
+                        CDC_Transmit_FS((uint8_t*)msg, strlen(msg));
+                    }
+                }
+                idx = 0;
+            } else if (idx &lt; 63) {
+                line[idx++] = c;
+            }
+        }
+    }
+}
+</code></pre>
+<p><strong>Tâche d'émission périodique</strong></p>
+<pre><code class="language-c">void vTaskPeriodicSend(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(1000);
+    uint32_t counter = 0;
+    char buffer[32];
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+        sprintf(buffer, &quot;Compteur: %lu\r\n&quot;, counter++);
+        CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-usb-terminal">**Projet : Terminal interactif USB</h3>
+<p>Réalisons un système complet qui émule un terminal série via USB, avec les mêmes fonctionnalités que le projet UART mais en utilisant l'USB Virtual COM Port.</p>
+<p><strong>Matériel</strong></p>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>Câble USB (connecté directement au microcontrôleur via USB OTG FS)</li>
+<li>Fonctionnalités</li>
+<li>Affichage d'un prompt.</li>
+<li>Commandes : <code>help</code>, <code>led on</code>, <code>led off</code>, <code>adc</code>.</li>
+<li>Écho des caractères tapés.</li>
+<li>Gestion de l'historique (optionnel).</li>
+</ul>
+<p><strong>Code principal</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;string.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+// Déclarations des fonctions USB (générées par CubeMX)
+void MX_USB_DEVICE_Init(void);
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
+// Files
+QueueHandle_t xUSB_RxQueue;
+
+// Tâches
+void vTaskUSBProcessor(void *pvParameters);
+void vTaskPeriodicSend(void *pvParameters);
+
+// Fonctions matérielles simplifiées
+void LED_Init(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+    GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13);
+}
+
+uint16_t ADC_Read(void) {
+    // Simulé pour l'exemple
+    return 2048;
+}
+
+// Programme principal
+int main(void) {
+    // Initialisations matérielles
+    HAL_Init();
+    SystemClock_Config(); // à définir (48 MHz pour USB)
+    LED_Init();
+
+    // Initialisation USB (générée par CubeMX)
+    MX_USB_DEVICE_Init();
+
+    // Création des files
+    xUSB_RxQueue = xQueueCreate(256, sizeof(uint8_t));
+
+    if (xUSB_RxQueue != NULL) {
+        xTaskCreate(vTaskUSBProcessor, &quot;USBProc&quot;, 512, NULL, 2, NULL);
+        xTaskCreate(vTaskPeriodicSend, &quot;Periodic&quot;, 256, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+
+// Implémentation des tâches (voir sections précédentes)
+// ...
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="redirection-de-printf-vers-usb"><strong>Redirection de printf() vers USB</strong></h3>
+<p>Comme avec l'UART, nous pouvons rediriger printf() vers l'USB pour faciliter le débogage.</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int _write(int file, char *ptr, int len) {
+    CDC_Transmit_FS((uint8_t*)ptr, len);
+    return len;
+}
+</code></pre>
+<p><strong>Autres classes USB</strong></p>
+<p>Le STM32F4 peut implémenter d'autres classes USB :</p>
+<table>
+<thead>
+<tr>
+<th>Classe</th>
+<th>Description</th>
+<th>Application typique</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HID</td>
+<td>Human Interface Device</td>
+<td>Souris, clavier, joystick</td>
+</tr>
+<tr>
+<td>MSC</td>
+<td>Mass Storage Class</td>
+<td>Clé USB, lecteur de cartes</td>
+</tr>
+<tr>
+<td>DFU</td>
+<td>Device Firmware Update</td>
+<td>Mise à jour du firmware par USB</td>
+</tr>
+<tr>
+<td>AUDIO</td>
+<td>Périphérique audio</td>
+<td>Microphone, haut-parleur USB</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
