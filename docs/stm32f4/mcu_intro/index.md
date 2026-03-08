@@ -146,6 +146,13 @@ DMA_Stream0->CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 ---
 <br>
 
+### **Gestion des horloges (RCC)**
+
+Configuration des horloges système et périphériques.
+
+---
+<br>
+
 
 ### **Présentation de la carte de développement utilisée**
 

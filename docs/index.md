@@ -1,9 +1,15 @@
 # CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur 
 
-*Ir Paul S. Kabidu, M.Eng.* {: style="text-align: center;" } 
-*Enseignant au Département de Génie Électrique et Informatique*{: style="text-align: center;" }
+*Ir Paul S. Kabidu, M.Eng.* 
+{: style="text-align: center;" } 
+
+*Enseignant au Département de Génie Électrique et Informatique*
+{: style="text-align: center;" }
+
 *Institut Supérieur des Techniques Appliquées de Goma (ISTA)* {: style="text-align: center;" }
-*Contact : <spaulkabidu@gmail.com>* {: style="text-align: center;" }
+
+*Contact : <spaulkabidu@gmail.com>* 
+{: style="text-align: center;" }
 
 
 ---
@@ -17,16 +23,15 @@
  <br> 
  
 
-La Conception des Systèmes Embarqués Temps Réel à base du Microcontrôleur est un cours qui a pour objectif de former les étudiants à la conception de systèmes électroniques, avec un accent sur le développement multi-capteurs, le contrôle numérique, le traitement numérique du signal et la communication IoT.
+Bienvenue sur le site du **cours CST2232 – Conception de Systèmes Temps Réel à Base de Microcontrôleur**. Ce cours s’adresse aux étudiants du **Master en Génie Logiciel Industriel** de l’ISTA. Il a pour ambition de former des ingénieurs capables de concevoir et de réaliser des systèmes embarqués temps réel complets, en intégrant à la fois les aspects matériels (microcontrôleurs, capteurs, actionneurs) et logiciels (programmation bas niveau, RTOS, algorithmes de contrôle et de traitement du signal).
 
-Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logiciel Industriel à l'Institut Supérieur des Techniques Appliquées de Goma (ISTA)**. Ce cours suit l'approche **d'expérience de conception cumulative (CDE, Cumulative Design Experience)**. Il est conçu pour permettre aux étudiants de synthétiser et d'appliquer l'ensemble des connaissances acquises durant leurs études pour résoudre des problèmes réels et complexes.
+L’approche pédagogique adoptée est celle d’une **expérience de conception cumulative (Cumulative Design Experience – CDE)** : chaque chapitre apporte une brique nouvelle et les projets finaux synthétisent l’ensemble des connaissances. À l’issue de ce cours, vous serez capable de :
 
-À l’issue de ce cours, l’étudiant sera capable de :
-
-- Concevoir un firmware temps réel structuré sur le microcontrôleur STM32F4
-- Maîtriser RTOS (FreeRTOS), tâches, queues, sémaphores, mutex
-- Implémenter des algorithmes de contrôle et de traitement de données en temps réel.
-- Réaliser des interfaces homme-machine et des systèmes connectés.  
+- Concevoir un firmware temps réel structuré sur microcontrôleur STM32F4.
+- Maîtriser un système d’exploitation temps réel (FreeRTOS) et ses primitives (tâches, queues, sémaphores, mutex).
+- Implémenter des algorithmes de contrôle (PID) et de traitement numérique du signal (filtres, FFT).
+- Intégrer des périphériques de communication (UART, I2C, SPI, CAN) et des modules sans fil (ESP8266).
+- Réaliser des interfaces homme-machine et des systèmes connectés (IoT).  
 
 
 ---
@@ -42,7 +47,7 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ### Périphériques du STM32F4
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
-- [Timer et Interruption](stm32f4/timer/index.md)
+- [Timer et Interruption Matérielles ](stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](stm32f4/adc/index.md)
 - [Communication Série USART](stm32f4/usart/index.md)
 - [Communication Série I2C](stm32f4/i2c/index.md)
@@ -67,7 +72,8 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 
 ### Projets d’Application
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](projects/imu_compl/index.md)
-- [Lecture GPS et affichge sur GUI Python](projects/gps/index.md)
+- [Générateur de signaux DDS : Frequencemetre sur TFT](projects/frequencemetre/index.md)
+- [Lecture GPS et affichge sur GUI Python](projects/gps/index.md) : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.
 - [Système de Contrôle de LED (Anti-rebond & Queue)](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
 
 ---
@@ -83,12 +89,18 @@ Ce cours CST2232 est élaboré pour les étudiants en **Master en Génie Logicie
 <br>
 
 ### Ressources et Références
+
+**Documentation technique**
+
 - [Manuel de Références pour STM32F4](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
 - [Manuel de Références RM0390 pour STM32F4](https://www.st.com/resource/en/reference_manual/dm00135183.pdf)
 - [Datasheet de STM32F401x](https://www.st.com/resource/en/datasheet/stm32f401re.pdf)
 - [Manuel de Références pour Cortex-M](https://documentation-service.arm.com/static/5e8f224c7100066a414f7810?token=)
 - [The FreeRTOS Reference Manual ](https://www.freertos.org/media/2018/FreeRTOS_Reference_Manual_V10.0.0.pdf)
 - [Mastering the FreeRTOS Real Time Kernel par Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf)
+
+**Guides pratiques**
+
 - [Création Projet sous Keil uVision](ressources/demarrerKiel.md)
 - [Configuration FreeRTOS sous Kiel pour STM32F4](ressources/configRtosKiel.md)
 - [Introduction au Langage C embarqué](ressources/langageC.md)
