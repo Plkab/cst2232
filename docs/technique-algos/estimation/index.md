@@ -420,8 +420,8 @@ int main(void) {
 
 - [GPIO et Interruptions](../../stm32f4/gpio/)
 - [Timer et Interruption](../../stm32f4/timer/)
-- [Communication Série USART](../../usart/index.md)
-- [Acquisition Analogique via ADC](../../adc/index.md)
+- [Communication Série USART](../../stm32f4/usart/index.md)
+- [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)
 - [Génération des signaux PWM](../../stm32f4/pwm/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
 - [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
