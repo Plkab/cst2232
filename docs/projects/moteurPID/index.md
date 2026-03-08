@@ -711,16 +711,15 @@ int main(void)
 <br>
 
 
-### **Liens connexes**
+### **Liens Connexes**
 
 
-
-- [GPIO et Interruptions](../../stm32f4/gpio/index.md)
-- [Timer et Interruption](../../stm32f4/timer/index.md)
-- [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)
-- [Génération des signaux PWM](../../stm32f4/pwm/index.md)
-- [Communication Série USART](../../stm32f4/usart/index.md)
-- [Machine d’État Fini (FSM)](../fsm/index.md)
-- [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
-- [Introduction pratique à FreeRTOS](../../rtos/#introduction-a-freertos)
+- [GPIO et Interruptions](../gpio/index.md)
+- [Timer et Interruption](../timer/index.md)
+- [Acquisition Analogique via ADC](../adc/index.md)
+- [Génération des signaux PWM](../pwm/index.md)
+- [Communication Série USART](../usart/index.md)
+- [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
+- [Optimisation de Transfert des Données avec DMA](../dma/index.md)
+- [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
 
