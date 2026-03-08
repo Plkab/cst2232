@@ -2,7 +2,9 @@
 
 *Ir Paul S. Kabidu, M.Eng. *  
 *Enseignant au Département de Génie Électrique et Informatique*
+
 *Institut Supérieur des Techniques Appliquées de Goma (ISTA)* 
+
 *Contact : <spaulkabidu@gmail.com>* 
 {: style="text-align: center;" }
 
