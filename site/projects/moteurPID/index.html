@@ -682,6 +682,20 @@ int main(void)
 <li>Le sémaphore <code>xSpeedSemaphore</code> est déclaré mais non utilisé dans le code ; vous pouvez l'intégrer si vous voulez protéger l'accès à <code>current_speed</code> entre l'ISR et la tâche. Par exemple, prenez le sémaphore dans l'ISR (avec <code>xSemaphoreGiveFromISR</code>) et attendez-le dans la tâche avant de lire la variable.</li>
 <li>Les valeurs de gains PID sont données à titre d'exemple ; elles doivent être réglées expérimentalement pour votre moteur.</li>
 <li>La détection du sens de rotation n'est pas implémentée ici ; si vous utilisez les deux voies de l'encodeur, vous pouvez déterminer le sens et ajuster le signe de la vitesse.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens Connexes</strong></h3>
+<ul>
+<li><a href="../gpio/index.md">GPIO et Interruptions</a></li>
+<li><a href="../timer/index.md">Timer et Interruption</a></li>
+<li><a href="../usart/index.md">Communication Série USART</a></li>
+<li><a href="../adc/index.md">Acquisition Analogique via ADC</a></li>
+<li><a href="../pwm/index.md">Génération des signaux PWM</a></li>
+<li><a href="../usart/index.md">Communication Série USART</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../dma/index.md">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
 </ul></div>
             </div>
         </div>

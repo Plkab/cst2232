@@ -96,12 +96,14 @@ K_i \int_{0}^{t} e(\tau) d\tau
 +
 K_d \frac{de(t)}{dt}
 ]</p>
-<p><strong>Terme proportionnel (P)</strong> : réagit à l’erreur courante.<br />
-Un gain (K_p) élevé accélère la réponse mais peut provoquer des oscillations.</p>
-<p><strong>Terme intégral (I)</strong> : élimine l’erreur statique en sommant les erreurs passées.<br />
-Attention au phénomène de <strong>windup</strong> (saturation de l’intégrale).</p>
-<p><strong>Terme dérivé (D)</strong> : anticipe les variations futures et améliore la stabilité.<br />
-Ce terme est cependant <strong>sensible au bruit</strong>.</p>
+<ul>
+<li><strong>Terme proportionnel (P)</strong> : réagit à l’erreur courante.<br />
+Un gain (K_p) élevé accélère la réponse mais peut provoquer des oscillations.</li>
+<li><strong>Terme intégral (I)</strong> : élimine l’erreur statique en sommant les erreurs passées.<br />
+Attention au phénomène de <strong>windup</strong> (saturation de l’intégrale).</li>
+<li><strong>Terme dérivé (D)</strong> : anticipe les variations futures et améliore la stabilité.<br />
+Ce terme est cependant <strong>sensible au bruit</strong>.</li>
+</ul>
 <p><strong>Discrétisation</strong></p>
 <p>Pour une implémentation sur microcontrôleur, on échantillonne le système avec une période (T_e)<br />
 (par exemple <strong>10 ms</strong>).</p>
@@ -392,14 +394,13 @@ void Motor_SetSpeed(float percent)
 <p><br></p>
 <h3 id="liens-connexes">Liens connexes</h3>
 <ul>
-<li><a href="../gpio/index.md">GPIO et Interruptions</a></li>
-<li><a href="../timer/index.md">Timer et Interruption</a></li>
-<li><a href="../usart/index.md">Communication Série USART</a></li>
-<li><a href="../adc/index.md">Acquisition Analogique via ADC</a></li>
-<li><a href="../pwm/index.md">Génération des signaux PWM</a></li>
-<li><a href="../usart/index.md">Communication Série USART</a></li>
+<li><a href="../../gpio/index.md">GPIO et Interruptions</a></li>
+<li><a href="../../timer/index.md">Timer et Interruption</a></li>
+<li><a href="../../adc/index.md">Acquisition Analogique via ADC</a></li>
+<li><a href="../../pwm/index.md">Génération des signaux PWM</a></li>
+<li><a href="../../usart/index.md">Communication Série USART</a></li>
 <li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
-<li><a href="../dma/index.md">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../dma/index.md">Optimisation de Transfert des Données avec DMA</a></li>
 <li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
 </ul></div>
             </div>
