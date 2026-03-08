@@ -4,7 +4,6 @@ site_author: Ir Paul S. Kabidu
 site_url: https://Plkab.github.io/cst2232
 
 theme:
-  custom_dir: overrides
 
 markdown_extensions:
   - tables
