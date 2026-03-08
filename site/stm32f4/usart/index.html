@@ -90,7 +90,7 @@
 <li>Un bit de parité optionnel</li>
 <li>1 ou 2 bits de stop (toujours à 1)</li>
 </ul>
-<p>Le débit est défini par le baud rate (ex: 9600, 115200 bauds). Les deux extrémités doivent être configurées exactement de la même manière.</p>
+<p>Le débit est défini par le <strong>baud rate</strong> (ex: 9600, 115200 bauds). Les deux extrémités doivent être configurées exactement de la même manière.</p>
 <p>Sur le STM32F4, l’USART est configuré via des registres :</p>
 <ul>
 <li><code>USART_BRR</code> : définit le baud rate à partir de l’horloge du périphérique.</li>
@@ -170,14 +170,19 @@ void USART2_IRQHandler(void) {
     portYIELD_FROM_ISR(xWoken);
 }
 
-void USART2_Init_Interrupt(void) {
-    // Même initialisation que précédemment, mais on ajoute :
-    USART2-&gt;CR1 |= USART_CR1_RXNEIE;       // Activer l'interruption sur réception
+void USART2_Init_Interrupt(uint32_t baud) {
+    // Réutiliser l'initialisation précédente
+    USART2_Init(baud);
+
+    // Activer l'interruption sur réception
+    USART2-&gt;CR1 |= USART_CR1_RXNEIE;
+
+    // Configurer la priorité et activer dans le NVIC
     NVIC_SetPriority(USART2_IRQn, 5);
     NVIC_EnableIRQ(USART2_IRQn);
 }
 
-// Tâche de traitement de la réception
+// Tâche de traitement de la réception (écho simple)
 void vTaskRxProcessor(void *pvParameters) {
     uint8_t c;
     for (;;) {
@@ -211,7 +216,7 @@ void USART2_SendStringAsync(char *str) {
 </code></pre>
 <hr />
 <p><br></p>
-<h3 id="projet-mini-terminal-interactif-projet-usart-terminal"><strong>Projet : Mini terminal interactif {#projet-usart-terminal}</strong></h3>
+<h3 id="projet-usart-terminal"><strong>Projet : Mini terminal interactif</strong></h3>
 <p>Réalisons un petit système qui reçoit des commandes via l’UART, les interprète, et exécute des actions (par exemple allumer/éteindre une LED, afficher l’état, etc.). Ce projet utilise :</p>
 <ul>
 <li>Une interruption de réception pour accumuler les caractères dans une file.</li>
@@ -224,6 +229,7 @@ void USART2_SendStringAsync(char *str) {
 #include &quot;string.h&quot;
 #include &quot;stm32f4xx.h&quot;
 
+// Définition des handles de queue
 QueueHandle_t xRxQueue;
 
 // Buffer pour la ligne courante
@@ -232,9 +238,11 @@ static char lineBuffer[LINE_BUFFER_SIZE];
 static uint8_t lineIndex = 0;
 
 // Prototypes
-void USART2_Init_Interrupt(void);
+void USART2_Init_Interrupt(uint32_t baud);
 void vTaskRxInterpreter(void *pvParameters);
+void USART2_SendString(char *str);
 
+// Handler d'interruption USART2
 void USART2_IRQHandler(void) {
     BaseType_t xWoken = pdFALSE;
     if (USART2-&gt;SR &amp; USART_SR_RXNE) {
@@ -244,6 +252,7 @@ void USART2_IRQHandler(void) {
     portYIELD_FROM_ISR(xWoken);
 }
 
+// Tâche d'interprétation des commandes
 void vTaskRxInterpreter(void *pvParameters) {
     uint8_t c;
     for (;;) {
@@ -266,7 +275,7 @@ void vTaskRxInterpreter(void *pvParameters) {
                         USART2_SendString(&quot;\r\nCommande inconnue\r\n&quot;);
                     }
                 }
-                lineIndex = 0; // Réinitialiser
+                lineIndex = 0; // Réinitialiser le buffer
             } else if (lineIndex &lt; LINE_BUFFER_SIZE - 1) {
                 lineBuffer[lineIndex++] = c;
             }
@@ -274,38 +283,60 @@ void vTaskRxInterpreter(void *pvParameters) {
     }
 }
 
+// Programme principal
 int main(void) {
     // Initialisation LED PC13
     RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
     GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+    GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13); // LED éteinte au départ
 
-    // Initialisation USART
-    USART2_Init_Interrupt();
+    // Initialisation USART à 115200 bauds
+    USART2_Init_Interrupt(115200);
 
-    // Création de la file pour les caractères reçus
+    // Création de la file pour les caractères reçus (taille 32)
     xRxQueue = xQueueCreate(32, sizeof(uint8_t));
 
     if (xRxQueue != NULL) {
+        // Création de la tâche d'interprétation
         xTaskCreate(vTaskRxInterpreter, &quot;RxInterp&quot;, 256, NULL, 2, NULL);
+
+        // Lancement de l'ordonnanceur
         vTaskStartScheduler();
     }
 
+    // Ne devrait jamais arriver
     while(1);
 }
 </code></pre>
 <p><strong>Explications :</strong></p>
 <ul>
 <li>Les caractères reçus sont mis dans une file par l’ISR.</li>
-<li>La tâche vTaskRxInterpreter les récupère un par un, les accumule dans un buffer jusqu’à recevoir un retour chariot, puis compare la ligne avec des commandes prédéfinies.</li>
-<li>La LED est commandée via les commandes on et off.</li>
+<li>La tâche <code>vTaskRxInterpreter</code> les récupère un par un, les accumule dans un buffer jusqu’à recevoir un retour chariot, puis compare la ligne avec des commandes prédéfinies.</li>
+<li>La LED est commandée via les commandes <code>on</code> et <code>off</code>.</li>
 <li>L’écho permet de voir ce qu’on tape (facultatif).</li>
 </ul>
 <hr />
 <p><br></p>
+<h3 id="utiliser-printf-sur-lusart"><em>Utiliser printf() sur l'USART</em>*</h3>
+<p>Pour faciliter le débogage, on peut rediriger <code>printf()</code> vers l’USART. Sous Keil, il suffit de réimplémenter la fonction <code>_write</code> :</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int _write(int file, char *ptr, int len) {
+    for (int i = 0; i &lt; len; i++) {
+        USART2_SendChar(ptr[i]);
+    }
+    return len;
+}
+</code></pre>
+<p>Ainsi, un simple <code>printf("Valeur : %d\r\n", maVariable);</code> enverra la chaîne formatée sur le port série.</p>
+<hr />
+<p><br></p>
 <h3 id="liens-connexe">Liens connexe</h3>
 <ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
 <li><a href="../timer/">Timer et Interruption</a></li>
 <li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
 </ul></div>
             </div>
         </div>
