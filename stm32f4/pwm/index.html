@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/pwm/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Acquisition Analogique via ADC - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#acquisition-analogique-via-adc" class="nav-link">Acquisition Analogique via ADC</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="acquisition-analogique-via-adc">Acquisition Analogique via ADC</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>La modulation de largeur d’impulsion (<strong>PWM</strong> – Pulse Width Modulation) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (duty cycle) d’un signal périodique, on peut par exemple :</p>
+<ul>
+<li>régler la luminosité d’une LED ;</li>
+<li>commander la vitesse d’un moteur à courant continu ;</li>
+<li>positionner un servomoteur ;</li>
+<li>générer un signal analogique après filtrage (convertisseur numérique‑analogique rudimentaire).</li>
+</ul>
+<p>Le STM32F401 dispose de plusieurs timers capables de générer des signaux PWM sur différentes broches. Dans ce chapitre, nous apprendrons à configurer un timer en mode PWM, à modifier le rapport cyclique en temps réel, et à intégrer cette fonctionnalité dans un projet FreeRTOS.</p>
+<hr />
+<p><br></p>
+<h3 id="principe-de-la-pwm"><strong>Principe de la PWM</strong></h3>
+<p>Un signal <strong>PWM (Pulse Width Modulation)</strong> est caractérisé par :</p>
+<ul>
+<li>une <strong>période</strong> <code>T</code> (ou une <strong>fréquence</strong> <code>f = 1/T</code>) ;</li>
+<li>un <strong>rapport cyclique</strong></li>
+</ul>
+<p>[
+\alpha = \frac{t_{on}}{T}
+]</p>
+<p>(souvent exprimé en pourcentage).</p>
+<p>La <strong>valeur moyenne du signal</strong> est proportionnelle au rapport cyclique.<br />
+Par exemple, pour une <strong>LED</strong>, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.</p>
+<hr />
+<p><br></p>
+<h3 id="generation-de-la-pwm-dans-un-microcontroleur"><strong>Génération de la PWM dans un microcontrôleur</strong></h3>
+<p>Dans un microcontrôleur, la PWM est généralement générée par un <strong>timer</strong>.</p>
+<p>Le <strong>compteur</strong> (<code>CNT</code>) s’incrémente à chaque coup d’horloge jusqu’à la valeur de <strong>reload</strong> (<code>ARR</code>).<br />
+Une sortie est commutée lorsque la valeur du compteur atteint une valeur de <strong>comparaison</strong> stockée dans un registre <code>CCR</code>.</p>
+<p><strong>Mode PWM1 (le plus courant)</strong></p>
+<p>Le fonctionnement est le suivant :</p>
+<ul>
+<li>tant que <code>CNT &lt; CCR</code>, la sortie est <strong>active</strong> (par exemple à <code>1</code>) ;</li>
+<li>quand <code>CNT ≥ CCR</code>, la sortie devient <strong>inactive</strong> (<code>0</code>) ;</li>
+<li>lorsque <code>CNT = ARR</code>, le compteur est <strong>remis à zéro</strong> et un nouveau cycle commence.</li>
+</ul>
+<p><strong>Fréquence de la PWM</strong></p>
+<p>La fréquence du signal PWM est donnée par :</p>
+<p>[
+f_{PWM} = \frac{f_{timer}}{ARR + 1}
+]</p>
+<p>avec :</p>
+<p>[
+f_{timer} = \frac{f_{ck}}{PSC + 1}
+]</p>
+<p>où :</p>
+<ul>
+<li><code>f_ck</code> : fréquence de l’horloge du timer  </li>
+<li><code>PSC</code> : <strong>prescaler</strong>  </li>
+<li><code>ARR</code> : <strong>Auto Reload Register</strong></li>
+</ul>
+<p><strong>Résolution du rapport cyclique</strong></p>
+<p>La <strong>résolution du rapport cyclique</strong> (nombre de valeurs possibles) est égale à :</p>
+<p>[
+ARR + 1
+]</p>
+<p>Plus la valeur de <code>ARR</code> est grande, plus la <strong>résolution de la PWM est fine</strong>, ce qui permet un contrôle plus précis (par exemple pour la luminosité d’une LED ou la vitesse d’un moteur).</p>
+<hr />
+<p><br></p>
+<h3 id="registres-impliques-dans-la-generation-de-pwm"><strong>Registres impliqués dans la génération de PWM</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Registre</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TIMx_CR1</code></td>
+<td>Contrôle du timer (activation, sens de comptage, alignement)</td>
+</tr>
+<tr>
+<td><code>TIMx_PSC</code></td>
+<td>Prescaler (divise l’horloge d’entrée)</td>
+</tr>
+<tr>
+<td><code>TIMx_ARR</code></td>
+<td>Auto-reload (définit la période)</td>
+</tr>
+<tr>
+<td><code>TIMx_CCRx</code></td>
+<td>Capture/compare (définit le rapport cyclique)</td>
+</tr>
+<tr>
+<td><code>TIMx_CCMRx</code></td>
+<td>Configure le mode du canal (PWM1, PWM2, etc.)</td>
+</tr>
+<tr>
+<td><code>TIMx_CCER</code></td>
+<td>Active la sortie et choisit la polarité</td>
+</tr>
+<tr>
+<td><code>TIMx_BDTR</code></td>
+<td>(pour timers avancés) contrôle de la sortie complémentaire et du break</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="configuration-simple-dune-pwm-sur-pa5-tim2_ch1"><strong>Configuration simple d’une PWM sur PA5 (TIM2_CH1)</strong></h3>
+<p>L’exemple suivant génère un signal <strong>PWM à 1 kHz</strong> sur la broche <strong>PA5</strong><br />
+(qui peut être utilisée comme <strong>TIM2_CH1</strong> sur certains boîtiers).</p>
+<p>Sur la carte <strong>Black Pill</strong>, PA5 est souvent connectée à la <strong>LED utilisateur</strong>, mais il est conseillé de <strong>vérifier le brochage dans le datasheet</strong>.</p>
+<p>Le <strong>rapport cyclique est fixé à 50 %</strong>.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void PWM_Init(void){
+    // 1. Activer les horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;   // Horloge du port A
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;    // Horloge du timer TIM2
+
+    // 2. Configurer PA5 en Alternate Function AF1 (TIM2_CH1)
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (5*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (5*2));        // 10 = Alternate function
+
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (5*4));
+    GPIOA-&gt;AFR[0] |=  (1 &lt;&lt; (5*4));        // AF1 pour TIM2
+
+    // 3. Configurer le timer
+    // f_timer = 84 MHz / 84 = 1 MHz
+    TIM2-&gt;PSC = 84 - 1;                    // Prescaler
+
+    // Période PWM : 1000 ticks → 1 kHz
+    TIM2-&gt;ARR = 1000 - 1;
+
+    // Rapport cyclique 50 %
+    TIM2-&gt;CCR1 = 500 - 1;
+
+    // 4. Mode PWM1 : CNT &lt; CCR =&gt; sortie active
+    TIM2-&gt;CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2; // 110 = PWM Mode 1
+    TIM2-&gt;CCMR1 |= TIM_CCMR1_OC1PE;                    // Précharge CCR
+
+    TIM2-&gt;CCER |= TIM_CCER_CC1E;                       // Activer CH1
+
+    // 5. Activer le timer
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre>
+<p><strong>Modification du rapport cyclique</strong></p>
+<p>Pour modifier le <strong>rapport cyclique pendant l'exécution</strong>, il suffit d’écrire une nouvelle valeur dans le registre :</p>
+<pre><code class="language-c">TIM2-&gt;CCR1 = nouvelle_valeur;
+</code></pre>
+<p>Exemple :</p>
+<pre><code class="language-c">TIM2-&gt;CCR1 = 250;   // 25 %
+TIM2-&gt;CCR1 = 750;   // 75 %
+</code></pre>
+<p>La valeur doit respecter la condition :</p>
+<pre><code>0 ≤ CCR1 ≤ ARR
+</code></pre>
+<p><strong>Exemple de calcul</strong></p>
+<p>Si :</p>
+<ul>
+<li><code>PSC = 83</code></li>
+<li><code>ARR = 999</code></li>
+<li>horloge du timer <code>f_ck = 84 MHz</code></li>
+</ul>
+<p>Alors :</p>
+<pre><code>f_timer = 84 MHz / 84 = 1 MHz
+f_PWM   = 1 MHz / 1000 = 1 kHz
+</code></pre>
+<p>La <strong>résolution du rapport cyclique</strong> est :</p>
+<pre><code>ARR + 1 = 1000 niveaux
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="variation-du-rapport-cyclique-avec-un-potentiometre"><strong>Variation du rapport cyclique avec un potentiomètre</strong></h3>
+<p>Nous reprenons l’exemple du <strong>chapitre ADC</strong> pour faire varier la <strong>luminosité d’une LED</strong> connectée sur <strong>PA5</strong><br />
+(ou une LED externe avec résistance).</p>
+<p>La valeur lue sur le <strong>potentiomètre</strong> varie entre :</p>
+<pre><code>0 → 4095   (résolution ADC 12 bits)
+</code></pre>
+<p>Cette valeur est <strong>mise à l’échelle</strong> sur la plage du registre <code>ARR</code> du timer :</p>
+<pre><code>0 → 999
+</code></pre>
+<p>La valeur obtenue est ensuite écrite dans le registre <code>CCR1</code>, ce qui modifie le <strong>rapport cyclique du signal PWM</strong>.</p>
+<p><strong>Exemple simple (polling)</strong></p>
+<pre><code class="language-c">uint16_t adcValue = ADC_Read();  // lecture ADC (méthode polling)
+
+uint32_t duty = (adcValue * 1000) / 4096;
+
+TIM2-&gt;CCR1 = duty;
+</code></pre>
+<p>Ainsi :</p>
+<ul>
+<li>potentiomètre au minimum → LED éteinte  </li>
+<li>potentiomètre au maximum → LED à pleine luminosité  </li>
+<li>valeurs intermédiaires → luminosité proportionnelle</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="utilisation-avec-freertos"><strong>Utilisation avec FreeRTOS</strong></h3>
+<p>Pour un <strong>contrôle plus structuré et non bloquant</strong>, on peut utiliser <strong>FreeRTOS</strong>.</p>
+<p>Le principe consiste à :</p>
+<ol>
+<li>Lire périodiquement l’ADC dans une tâche dédiée.</li>
+<li>Envoyer la valeur lue dans une <strong>file (queue)</strong>.</li>
+<li>Une tâche de contrôle PWM reçoit la valeur et ajuste le <strong>rapport cyclique</strong>.</li>
+</ol>
+<p>Cela permet :</p>
+<ul>
+<li>de <strong>séparer l’acquisition</strong> (ADC)</li>
+<li>de <strong>séparer le contrôle</strong> (PWM)</li>
+<li>d’éviter le <strong>blocage des tâches</strong></li>
+</ul>
+<p><strong>Exemple : tâche de contrôle PWM</strong></p>
+<pre><code class="language-c">void vTaskPWMControl(void *pvParameters){
+    uint16_t adcValue;
+
+    for (;;)
+    {
+        if (xQueueReceive(xADCQueue, &amp;adcValue, portMAX_DELAY) == pdPASS)
+        {
+            uint32_t duty = (adcValue * (TIM2-&gt;ARR + 1)) / 4096;
+
+            TIM2-&gt;CCR1 = duty;
+        }
+    }
+}
+</code></pre>
+<p>Dans cet exemple :</p>
+<ul>
+<li><code>xADCQueue</code> contient les valeurs lues par l’ADC</li>
+<li><code>xQueueReceive()</code> bloque la tâche jusqu’à réception d’une nouvelle valeur</li>
+<li>le rapport cyclique est recalculé dynamiquement</li>
+</ul>
+<p><strong>Tâche d’acquisition ADC</strong></p>
+<p>Une autre tâche peut se charger de <strong>lire périodiquement l’ADC</strong> et d’envoyer les valeurs dans la file.</p>
+<p>Exemple simplifié :</p>
+<pre><code class="language-c">void vTaskADC(void *pvParameters){
+    uint16_t adcValue;
+
+    for (;;)
+    {
+        adcValue = ADC_Read();
+
+        xQueueSend(xADCQueue, &amp;adcValue, 0);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+</code></pre>
+<p>La lecture est ici réalisée toutes les <strong>100 ms</strong>, mais cette période peut être adaptée selon l’application.</p>
+<hr />
+<p><br></p>
+<h3 id="avantages-de-cette-architecture"><strong>Avantages de cette architecture</strong></h3>
+<ul>
+<li><strong>Découplage des fonctions</strong> (acquisition / contrôle)</li>
+<li><strong>Système non bloquant</strong></li>
+<li><strong>Facilement extensible</strong> (par exemple contrôle moteur, variateur LED, etc.)</li>
+<li><strong>Architecture typique des systèmes embarqués temps réel</strong></li>
+</ul>
+<p><strong>Application typique</strong></p>
+<p>Cette technique est utilisée dans :</p>
+<ul>
+<li>variateurs de <strong>luminosité LED</strong></li>
+<li>contrôle de <strong>vitesse moteur DC</strong></li>
+<li>génération de <strong>signaux analogiques simulés</strong></li>
+<li>interfaces <strong>homme-machine avec potentiomètre</strong></li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
+<p>Pour une architecture temps réel, on peut créer une tâche qui lit les valeurs de l’ADC via une file d’attente. L’ISR (fin de conversion ou DMA) envoie la valeur dans la file, et la tâche les traite (affichage, calcul, etc.).</p>
+<p><strong>Exemple avec déclenchement par interruption</strong></p>
+<pre><code class="language-c">QueueHandle_t xADCQueue;
+
+void ADC_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (ADC1-&gt;SR &amp; ADC_SR_EOC) {
+        uint16_t value = ADC1-&gt;DR;
+        xQueueSendFromISR(xADCQueue, &amp;value, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vTaskADCProcessor(void *pvParameters) {
+    uint16_t val;
+    for (;;) {
+        if (xQueueReceive(xADCQueue, &amp;val, portMAX_DELAY) == pdPASS) {
+            // Utiliser la valeur (ex: calculer une moyenne, envoyer sur UART, etc.)
+        }
+    }
+}
+</code></pre>
+<p><strong>Exemple avec DMA et double buffer</strong></p>
+<p>On peut utiliser deux buffers et alterner leur remplissage. Une fois qu’un buffer est plein, l’ISR DMA notifie la tâche de traitement.</p>
+<hr />
+<p><br></p>
+<h3 id="projet-pwm-servo"><strong>Projet : Commande d’un servomoteur</strong></h3>
+<p>Un <strong>servomoteur standard</strong> (par exemple le <strong>SG90</strong>) se commande à l’aide d’un <strong>signal PWM spécifique</strong> :</p>
+<ul>
+<li>une <strong>période de 20 ms</strong> (fréquence de <strong>50 Hz</strong>) ;</li>
+<li>une <strong>impulsion de commande comprise entre 1 ms et 2 ms</strong>.</li>
+</ul>
+<p>La <strong>position du bras du servomoteur</strong> est proportionnelle à la <strong>largeur de l’impulsion</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Largeur d'impulsion</th>
+<th>Position approximative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 ms</td>
+<td>0°</td>
+</tr>
+<tr>
+<td>1.5 ms</td>
+<td>90°</td>
+</tr>
+<tr>
+<td>2 ms</td>
+<td>180°</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration du timer</strong></p>
+<p>Pour obtenir une <strong>résolution de 1 µs</strong>, on configure le timer à :</p>
+<pre><code>f_timer = 1 MHz
+</code></pre>
+<p>Ainsi :</p>
+<pre><code>1 tick = 1 µs
+</code></pre>
+<p>La période de 20 ms correspond donc à :</p>
+<pre><code>20 ms = 20000 µs
+</code></pre>
+<p>On configure alors :</p>
+<pre><code>ARR = 20000 - 1
+</code></pre>
+<hr />
+<p><strong>Configuration PWM pour servomoteur (TIM2_CH1 sur PA5)</strong></p>
+<pre><code class="language-c">void Servo_Init(void){
+    // Même initialisation GPIO et horloge que précédemment
+
+    // Configuration du timer
+    TIM2-&gt;PSC = 84 - 1;       // Timer à 1 MHz (1 µs par tick)
+    TIM2-&gt;ARR = 20000 - 1;    // Période 20 ms (50 Hz)
+
+    // Position initiale : 1 ms
+    TIM2-&gt;CCR1 = 1000;
+
+    // Mode PWM1
+    TIM2-&gt;CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2;
+    TIM2-&gt;CCMR1 |= TIM_CCMR1_OC1PE;
+
+    // Activer la sortie
+    TIM2-&gt;CCER |= TIM_CCER_CC1E;
+
+    // Démarrer le timer
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre>
+<p><strong>Fonction de positionnement du servomoteur</strong></p>
+<p>On peut contrôler la position du servomoteur avec un angle compris entre <strong>0° et 180°</strong>.</p>
+<p>La largeur d’impulsion correspondante est :</p>
+<pre><code>largeur = 1000 + (angle / 180) × 1000
+</code></pre>
+<p>ce qui donne une largeur comprise entre :</p>
+<pre><code>1000 µs → 2000 µs
+</code></pre>
+<p><strong>Implémentation</strong></p>
+<pre><code class="language-c">void Servo_SetPosition(float angle){
+    // Conversion angle -&gt; largeur impulsion
+
+    uint32_t width = 1000 + (uint32_t)(angle * 1000 / 180);
+
+    if (width &lt; 1000)
+        width = 1000;
+
+    if (width &gt; 2000)
+        width = 2000;
+
+    TIM2-&gt;CCR1 = width;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="utilisation-dans-une-application"><strong>Utilisation dans une application</strong></h3>
+<p>On peut appeler cette fonction depuis :</p>
+<ul>
+<li>une <strong>tâche FreeRTOS</strong></li>
+<li>une <strong>lecture ADC (potentiomètre)</strong></li>
+<li>une <strong>commande UART</strong></li>
+<li>un <strong>algorithme de contrôle</strong></li>
+</ul>
+<p>Exemple :</p>
+<pre><code class="language-c">float angle = 90.0;
+
+Servo_SetPosition(angle);
+</code></pre>
+<p><strong>Exemple avec potentiomètre</strong></p>
+<p>Si l’on lit une valeur ADC sur <strong>12 bits</strong> :</p>
+<pre><code>0 → 4095
+</code></pre>
+<p>on peut la convertir en angle :</p>
+<pre><code class="language-c">float angle = (adcValue * 180.0f) / 4095.0f;
+
+Servo_SetPosition(angle);
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="applications-typiques"><strong>Applications typiques</strong></h3>
+<p>Cette commande PWM de servomoteur est utilisée dans :</p>
+<ul>
+<li><strong>robotique</strong></li>
+<li><strong>bras manipulateurs</strong></li>
+<li><strong>gimbals et stabilisation</strong></li>
+<li><strong>systèmes mécatroniques</strong></li>
+<li><strong>projets pédagogiques de contrôle embarqué</strong></li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../timer/">Timer et Interruption</a></li>
+<li><a href="../usart/">Communication Série USART</a></li>
+<li><a href="../adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
