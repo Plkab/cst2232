@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/pwm/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Acquisition Analogique via ADC - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Génération des signaux PWM - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#acquisition-analogique-via-adc" class="nav-link">Acquisition Analogique via ADC</a>
+            <li class="nav-item" data-bs-level="1"><a href="#generation-des-signaux-pwm" class="nav-link">Génération des signaux PWM</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,7 +63,7 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="acquisition-analogique-via-adc">Acquisition Analogique via ADC</h1>
+<h1 id="generation-des-signaux-pwm">Génération des signaux PWM</h1>
 <p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
 <p><a href="../../#Accueil">Accueil</a></p>
@@ -86,9 +86,7 @@
 <li>une <strong>période</strong> <code>T</code> (ou une <strong>fréquence</strong> <code>f = 1/T</code>) ;</li>
 <li>un <strong>rapport cyclique</strong></li>
 </ul>
-<p>[
-\alpha = \frac{t_{on}}{T}
-]</p>
+<p>[\alpha = \frac{t_{on}}{T}]</p>
 <p>(souvent exprimé en pourcentage).</p>
 <p>La <strong>valeur moyenne du signal</strong> est proportionnelle au rapport cyclique.<br />
 Par exemple, pour une <strong>LED</strong>, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.</p>
