@@ -1,13 +1,11 @@
 # CST2232, Conception des Systèmes Temps Réel à Base de Microcontrôleur 
 
 *Ir Paul S. Kabidu, M.Eng.* 
-{: style="text-align: center;" } 
-
+{: style="text-align: center;" }  
 *Enseignant au Département de Génie Électrique et Informatique*
-{: style="text-align: center;" }
-
-*Institut Supérieur des Techniques Appliquées de Goma (ISTA)* {: style="text-align: center;" }
-
+{: style="text-align: center;" }  
+*Institut Supérieur des Techniques Appliquées de Goma (ISTA)* 
+{: style="text-align: center;" }  
 *Contact : <spaulkabidu@gmail.com>* 
 {: style="text-align: center;" }
 
@@ -23,7 +21,7 @@
  <br> 
  
 
-Bienvenue sur le site du **cours CST2232 – Conception de Systèmes Temps Réel à Base de Microcontrôleur**. Ce cours s’adresse aux étudiants du **Master en Génie Logiciel Industriel** de l’ISTA. Il a pour ambition de former des ingénieurs capables de concevoir et de réaliser des systèmes embarqués temps réel complets, en intégrant à la fois les aspects matériels (microcontrôleurs, capteurs, actionneurs) et logiciels (programmation bas niveau, RTOS, algorithmes de contrôle et de traitement du signal).
+Le **cours CST2232 – Conception de Systèmes Temps Réel à Base de Microcontrôleur** s’adresse aux étudiants du **Master en Génie Logiciel Industriel** de l’ISTA. Il a pour ambition de former des ingénieurs capables de concevoir et de réaliser des systèmes embarqués temps réel complets, en intégrant à la fois les aspects matériels (microcontrôleurs, capteurs, actionneurs) et logiciels (programmation bas niveau, RTOS, algorithmes de contrôle et de traitement du signal).
 
 L’approche pédagogique adoptée est celle d’une **expérience de conception cumulative (Cumulative Design Experience – CDE)** : chaque chapitre apporte une brique nouvelle et les projets finaux synthétisent l’ensemble des connaissances. À l’issue de ce cours, vous serez capable de :
 
