@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/projects/dds_frequencemetre/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Projet : Générateur de signaux DDS piloté par interface Python - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#projet-generateur-de-signaux-dds-pilote-par-interface-python" class="nav-link">Projet : Générateur de signaux DDS piloté par interface Python</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="projet-generateur-de-signaux-dds-pilote-par-interface-python">Projet : Générateur de signaux DDS piloté par interface Python</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Ce projet a pour objectif de réaliser un <strong>générateur de signaux</strong> basé sur la technique de synthèse numérique directe (DDS) à l’aide d’un <strong>DAC externe MCP4822</strong> connecté à notre carte STM32F401. Le signal généré (sinus, triangle, carré, dent de scie) sera contrôlé en fréquence et en forme via une <strong>interface graphique Python</strong> sur PC. La communication entre le STM32 et le PC se fait par liaison série (UART).</p>
+<p>Ce projet illustre l’intégration de plusieurs notions abordées précédemment :</p>
+<ul>
+<li>Synthèse DDS avec DAC externe (SPI)</li>
+<li>Communication UART avec FreeRTOS (files d’attente, tâches)</li>
+<li>Parsing de commandes simples</li>
+<li>Interface homme-machine en Python (Tkinter)</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="cahier-des-charges"><strong>Cahier des charges</strong></h3>
+<ul>
+<li><strong>Génération de signaux</strong> :</li>
+<li>Formes d’onde : sinus, triangle, carré, dent de scie.</li>
+<li>Plage de fréquence : par exemple 1 Hz à 10 kHz (selon les limites du DAC et de la fréquence d’échantillonnage).</li>
+<li>
+<p>Résolution en fréquence : fine grâce à l’accumulateur 32 bits.</p>
+</li>
+<li>
+<p><strong>Contrôle depuis le PC</strong> :</p>
+</li>
+<li>L’utilisateur entre la fréquence souhaitée et choisit la forme d’onde dans une interface Python.</li>
+<li>
+<p>Les commandes sont envoyées sur le port série (UART) au STM32.</p>
+</li>
+<li>
+<p><strong>Communication série</strong> :</p>
+</li>
+<li>Format de commande simple, par exemple : <code>SIN 1000</code> pour un sinus à 1000 Hz, <code>TRI 500</code> pour un triangle à 500 Hz, etc.</li>
+<li>
+<p>Le STM32 accuse réception ou renvoie un message de confirmation.</p>
+</li>
+<li>
+<p><strong>Affichage sur PC</strong> :</p>
+</li>
+<li>
+<p>L’interface Python affiche la commande en cours et éventuellement un graphique en temps réel (optionnel).</p>
+</li>
+<li>
+<p><strong>Contraintes techniques</strong> :</p>
+</li>
+<li>Utilisation de FreeRTOS pour gérer la réception UART et la génération DDS.</li>
+<li>La tâche DDS est déclenchée par un timer matériel pour une fréquence d’échantillonnage stable (par exemple 100 kHz).</li>
+<li>La réception UART utilise une file d’attente (queue) pour transmettre les commandes à une tâche de parsing.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="materiel-necessaire"><strong>Matériel nécessaire</strong></h3>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>DAC externe MCP4822 (ou MCP4922) + éventuellement un amplificateur pour adapter la tension de sortie</li>
+<li>Connexions SPI :</li>
+<li>SCK → PA5</li>
+<li>MOSI → PA7</li>
+<li>CS → PA4 (pour sélectionner le MCP4822)</li>
+<li>(MISO non utilisé)</li>
+<li>Alimentation 3.3V et GND</li>
+<li>Câble USB pour la communication série (via USART2 sur PA2/PA3)</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="code-stm32-freertos"><strong>Code STM32 (FreeRTOS)</strong></h3>
+<p>Le code est organisé en plusieurs parties :</p>
+<ul>
+<li>Initialisation SPI, timer, UART.</li>
+<li>Tables d’onde pré-calculées pour les différentes formes.</li>
+<li>Structure DDS et fonctions de mise à jour.</li>
+<li>Tâche de réception UART (avec file d’attente).</li>
+<li>Tâche de parsing des commandes.</li>
+<li>Tâche de génération DDS déclenchée par timer.</li>
+</ul>
+<pre><code class="language-c">/*
+** Projet DDS piloté par PC avec FreeRTOS sur STM32F401
+*/
+
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;math.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdio.h&gt;
+
+// Définitions 
+
+#define LUT_SIZE 256          // taille de la table d'onde
+#define SAMPLE_FREQ 100000    // 100 kHz
+#define TIMER_PERIOD (84000000 / SAMPLE_FREQ) // PSC et ARR à configurer
+
+// Commandes UART
+#define CMD_BUFFER_SIZE 32
+
+// Tables d'onde 
+
+uint16_t sinLUT[LUT_SIZE];
+uint16_t triLUT[LUT_SIZE];
+uint16_t sqrLUT[LUT_SIZE];
+uint16_t sawLUT[LUT_SIZE];
+
+void generate_wave_tables(void) {
+    for (int i = 0; i &lt; LUT_SIZE; i++) {
+        // Sinus (centré sur 2048, amplitude 2047)
+        float rad = 2 * M_PI * i / LUT_SIZE;
+        sinLUT[i] = (uint16_t)(2048 + 2047 * sinf(rad));
+
+        // Triangle
+        if (i &lt; LUT_SIZE/2)
+            triLUT[i] = (uint16_t)(2048 + 4095 * (i / (float)(LUT_SIZE/2) - 1));
+        else
+            triLUT[i] = (uint16_t)(2048 + 4095 * (1 - (i - LUT_SIZE/2) / (float)(LUT_SIZE/2)));
+
+        // Carré
+        sqrLUT[i] = (i &lt; LUT_SIZE/2) ? 4095 : 0;
+
+        // Dent de scie
+        sawLUT[i] = (uint16_t)(i * 4095 / LUT_SIZE);
+    }
+}
+
+// Structure DDS
+
+typedef struct {
+    uint32_t phase;            // accumulateur de phase
+    uint32_t phase_increment;  // pas de phase (M)
+    uint16_t *lut;             // pointeur vers la table active
+} DDS_Generator;
+
+DDS_Generator dds;
+
+void DDS_Init(void) {
+    dds.phase = 0;
+    dds.phase_increment = 0;
+    dds.lut = sinLUT; // par défaut
+}
+
+// Calcule le pas de phase pour une fréquence donnée
+uint32_t compute_phase_increment(float freq) {
+    return (uint32_t)(freq * (1ULL &lt;&lt; 32) / SAMPLE_FREQ);
+}
+
+// Met à jour l'accumulateur et retourne l'échantillon
+uint16_t DDS_Update(void) {
+    dds.phase += dds.phase_increment;
+    uint8_t index = dds.phase &gt;&gt; 24; // prend les 8 bits de poids fort
+    return dds.lut[index];
+}
+
+// Change la forme d'onde
+void DDS_SetWaveform(char wave) {
+    switch (wave) {
+        case 'S': dds.lut = sinLUT; break;
+        case 'T': dds.lut = triLUT; break;
+        case 'Q': dds.lut = sqrLUT; break;
+        case 'W': dds.lut = sawLUT; break;
+        default: dds.lut = sinLUT;
+    }
+}
+
+// Change la fréquence
+void DDS_SetFrequency(float freq) {
+    if (freq &lt; 1.0f) freq = 1.0f;
+    if (freq &gt; 10000.0f) freq = 10000.0f;
+    dds.phase_increment = compute_phase_increment(freq);
+}
+
+// Interface SPI
+
+void SPI1_Init(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+    // PA5 (SCK), PA7 (MOSI) en AF5, PA4 (CS) en sortie GPIO
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (5*2)) | (3U &lt;&lt; (7*2)) | (3U &lt;&lt; (4*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (5*2)) | (2U &lt;&lt; (7*2))); // AF pour SPI
+    GPIOA-&gt;MODER |=  (1U &lt;&lt; (4*2));  // PA4 sortie
+
+    GPIOA-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (5*4)) | (0xF &lt;&lt; (7*4)));
+    GPIOA-&gt;AFR[0] |=  ((5 &lt;&lt; (5*4)) | (5 &lt;&lt; (7*4)));
+
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4); // CS haut
+
+    // SPI1 : maître, 8 bits, CPOL=0, CPHA=0, fPCLK/8 = 10.5 MHz
+    SPI1-&gt;CR1 = SPI_CR1_MSTR | SPI_CR1_BR_2 | SPI_CR1_BR_1; // BR = 110 -&gt; /8
+    SPI1-&gt;CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;
+    SPI1-&gt;CR1 |= SPI_CR1_SPE;
+}
+
+void SPI1_CS_Low(void) {
+    GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 4);
+}
+
+void SPI1_CS_High(void) {
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4);
+}
+
+void SPI1_Transmit16(uint16_t data) {
+    while (!(SPI1-&gt;SR &amp; SPI_SR_TXE));
+    SPI1-&gt;DR = data;
+    while (!(SPI1-&gt;SR &amp; SPI_SR_RXNE));
+    (void)SPI1-&gt;DR;
+}
+
+// Envoi au MCP4822 (canal A)
+void MCP4822_Write(uint16_t value) {
+    // value 12 bits (0-4095)
+    uint16_t word = 0x6000 | ((value &amp; 0xFFF) &lt;&lt; 4); // canal A, GA=1, SHDN=1
+    SPI1_CS_Low();
+    SPI1_Transmit16(word);
+    SPI1_CS_High();
+}
+
+// Timer pour DDS
+
+SemaphoreHandle_t xDDS_Semaphore;
+
+void TIM2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+        xSemaphoreGiveFromISR(xDDS_Semaphore, &amp;xWoken);
+        portYIELD_FROM_ISR(xWoken);
+    }
+}
+
+void Timer_Init(void) {
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2-&gt;PSC = 84 - 1;        // 1 MHz
+    TIM2-&gt;ARR = 10 - 1;         // 100 kHz
+    TIM2-&gt;DIER |= TIM_DIER_UIE;
+    NVIC_SetPriority(TIM2_IRQn, 5);
+    NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+// UART et files 
+
+QueueHandle_t xUART_RxQueue;   // file pour les caractères reçus
+QueueHandle_t xCommandQueue;    // file pour les commandes parsées
+
+void USART2_Init(uint32_t baud) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (2*2)) | (3U &lt;&lt; (3*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (2*2)) | (2U &lt;&lt; (3*2)));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
+    NVIC_SetPriority(USART2_IRQn, 5);
+    NVIC_EnableIRQ(USART2_IRQn);
+}
+
+void USART2_SendString(char *str) {
+    while (*str) {
+        while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+        USART2-&gt;DR = *str++;
+    }
+}
+
+// Interruption UART (réception)
+void USART2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (USART2-&gt;SR &amp; USART_SR_RXNE) {
+        uint8_t c = USART2-&gt;DR;
+        xQueueSendFromISR(xUART_RxQueue, &amp;c, &amp;xWoken);
+    }
+    portYIELD_FROM_ISR(xWoken);
+}
+
+// Tâche de parsing des commandes
+void vTaskCommandParser(void *pvParameters) {
+    char line[CMD_BUFFER_SIZE];
+    int idx = 0;
+    char cmd[8];
+    float freq;
+
+    for (;;) {
+        uint8_t c;
+        if (xQueueReceive(xUART_RxQueue, &amp;c, portMAX_DELAY) == pdPASS) {
+            if (c == '\n' || c == '\r') {
+                if (idx &gt; 0) {
+                    line[idx] = '\0';
+                    // Format attendu : &quot;SIN 1000&quot; ou &quot;TRI 500&quot;, etc.
+                    if (sscanf(line, &quot;%s %f&quot;, cmd, &amp;freq) == 2) {
+                        // Interpréter la commande
+                        if (strcmp(cmd, &quot;SIN&quot;) == 0) {
+                            DDS_SetWaveform('S');
+                            DDS_SetFrequency(freq);
+                            USART2_SendString(&quot;OK Sinus\r\n&quot;);
+                        } else if (strcmp(cmd, &quot;TRI&quot;) == 0) {
+                            DDS_SetWaveform('T');
+                            DDS_SetFrequency(freq);
+                            USART2_SendString(&quot;OK Triangle\r\n&quot;);
+                        } else if (strcmp(cmd, &quot;SQR&quot;) == 0) {
+                            DDS_SetWaveform('Q');
+                            DDS_SetFrequency(freq);
+                            USART2_SendString(&quot;OK Carre\r\n&quot;);
+                        } else if (strcmp(cmd, &quot;SAW&quot;) == 0) {
+                            DDS_SetWaveform('W');
+                            DDS_SetFrequency(freq);
+                            USART2_SendString(&quot;OK Dent de scie\r\n&quot;);
+                        } else {
+                            USART2_SendString(&quot;Commande inconnue\r\n&quot;);
+                        }
+                    } else {
+                        USART2_SendString(&quot;Format: FORME FREQ\r\n&quot;);
+                    }
+                    idx = 0;
+                }
+            } else if (idx &lt; CMD_BUFFER_SIZE - 1) {
+                line[idx++] = c;
+            }
+        }
+    }
+}
+
+// Tâche DDS (réveillée par le timer)
+void vTaskDDS(void *pvParameters) {
+    uint16_t sample;
+    for (;;) {
+        xSemaphoreTake(xDDS_Semaphore, portMAX_DELAY);
+        sample = DDS_Update();
+        MCP4822_Write(sample);
+    }
+}
+
+// Programme principal
+
+int main(void) {
+    HAL_Init();                 // optionnel si vous utilisez HAL pour le Systick
+    SystemClock_Config();       // à adapter (84 MHz)
+
+    generate_wave_tables();
+    DDS_Init();
+    DDS_SetFrequency(1000.0f); // 1 kHz par défaut
+
+    SPI1_Init();
+    Timer_Init();
+    USART2_Init(115200);
+
+    xDDS_Semaphore = xSemaphoreCreateBinary();
+    xUART_RxQueue = xQueueCreate(64, sizeof(uint8_t));
+
+    xTaskCreate(vTaskCommandParser, &quot;CmdParser&quot;, 256, NULL, 2, NULL);
+    xTaskCreate(vTaskDDS, &quot;DDS&quot;, 128, NULL, 3, NULL);
+
+    vTaskStartScheduler();
+
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="interface-python"><strong>Interface Python</strong></h3>
+<p>L’interface Python envoie des commandes au STM32 via le port série et affiche les réponses. Elle utilise Tkinter pour la saisie de la fréquence et la sélection de la forme d’onde.</p>
+<pre><code class="language-py">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import tkinter as tk
+from tkinter import ttk
+import serial
+import threading
+import time
+
+class DDSController:
+    def __init__(self, master):
+        self.master = master
+        master.title(&quot;Contrôle du générateur DDS&quot;)
+        master.geometry(&quot;400x200&quot;)
+        master.resizable(False, False)
+
+        # Variables
+        self.freq = tk.StringVar(value=&quot;1000&quot;)
+        self.waveform = tk.StringVar(value=&quot;SIN&quot;)
+        self.status = tk.StringVar(value=&quot;Prêt&quot;)
+
+        # Configuration du port série (à adapter)
+        self.ser = None
+        try:
+            self.ser = serial.Serial('COM3', 115200, timeout=1)
+        except Exception as e:
+            self.status.set(f&quot;Erreur: {e}&quot;)
+            return
+
+        # Création des widgets
+        tk.Label(master, text=&quot;Fréquence (Hz):&quot;).grid(row=0, column=0, padx=5, pady=5, sticky=&quot;e&quot;)
+        tk.Entry(master, textvariable=self.freq, width=10).grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(master, text=&quot;Forme d'onde:&quot;).grid(row=1, column=0, padx=5, pady=5, sticky=&quot;e&quot;)
+        wave_combo = ttk.Combobox(master, textvariable=self.waveform,
+                                   values=[&quot;SIN&quot;, &quot;TRI&quot;, &quot;SQR&quot;, &quot;SAW&quot;], state=&quot;readonly&quot;)
+        wave_combo.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(master, text=&quot;Envoyer&quot;, command=self.send_command).grid(row=2, column=0, columnspan=2, pady=10)
+
+        tk.Label(master, text=&quot;Statut:&quot;).grid(row=3, column=0, padx=5, pady=5, sticky=&quot;e&quot;)
+        tk.Label(master, textvariable=self.status, fg=&quot;blue&quot;).grid(row=3, column=1, padx=5, pady=5, sticky=&quot;w&quot;)
+
+        # Thread de lecture des réponses
+        self.running = True
+        self.thread = threading.Thread(target=self.read_serial, daemon=True)
+        self.thread.start()
+
+    def send_command(self):
+        &quot;&quot;&quot;Envoie la commande au STM32.&quot;&quot;&quot;
+        if self.ser is None:
+            self.status.set(&quot;Port série non ouvert&quot;)
+            return
+        freq = self.freq.get()
+        wave = self.waveform.get()
+        command = f&quot;{wave} {freq}\r\n&quot;
+        try:
+            self.ser.write(command.encode())
+            self.status.set(&quot;Commande envoyée&quot;)
+        except Exception as e:
+            self.status.set(f&quot;Erreur envoi: {e}&quot;)
+
+    def read_serial(self):
+        &quot;&quot;&quot;Lit les réponses du STM32 et met à jour le statut.&quot;&quot;&quot;
+        while self.running:
+            try:
+                line = self.ser.readline().decode().strip()
+                if line:
+                    self.master.after(0, self.update_status, line)
+            except:
+                pass
+
+    def update_status(self, msg):
+        self.status.set(msg)
+
+    def on_closing(self):
+        self.running = False
+        if self.ser:
+            self.ser.close()
+        self.master.destroy()
+
+if __name__ == &quot;__main__&quot;:
+    root = tk.Tk()
+    app = DDSController(root)
+    root.protocol(&quot;WM_DELETE_WINDOW&quot;, app.on_closing)
+    root.mainloop()
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="../../stm32f4/adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../stm32f4/usart/">Communication Série USART</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../technique-algos/filtre/">Filtres Numériques</a></li>
+<li><a href="../../technique-algos/dds/">Synthèse Numérique Directe (DDS) avec DAC externe MCP4822</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

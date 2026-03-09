@@ -283,7 +283,7 @@ void Timer_Init_100kHz(void) {
 
 
 
-### **Projet : Générateur de sinus contrôlé par potentiomètre {#projet-dds-pot}
+### **Projet : Générateur de sinus contrôlé par potentiomètre** {#projet-dds-pot}
 Objectif : Lire un potentiomètre sur PA0 (ADC), en déduire une fréquence (par exemple de 100 Hz à 5 kHz), et générer un signal sinusoïdal correspondant via la DDS. Afficher la fréquence sur UART.
 
 Matériel :
