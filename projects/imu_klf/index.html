@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/projects/imu_klf/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Projet : Filtrage des données et Fusion capteur de l'IMU 6050 via Filtre de Kalman - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#projet-filtrage-des-donnees-et-fusion-capteur-de-limu-6050-via-filtre-de-kalman" class="nav-link">Projet : Filtrage des données et Fusion capteur de l'IMU 6050 via Filtre de Kalman</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="projet-filtrage-des-donnees-et-fusion-capteur-de-limu-6050-via-filtre-de-kalman">Projet : Filtrage des données et Fusion capteur de l'IMU 6050 via Filtre de Kalman</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Ce projet a pour objectif de mettre en pratique les notions d’estimation d’état et de fusion de capteurs abordées dans le chapitre précédent. Nous allons interfacer un <strong>module MPU6050</strong> (accéléromètre + gyroscope) avec notre carte STM32F401, lire les mesures brutes, appliquer un <strong>filtre de Kalman</strong> pour estimer l’angle d’inclinaison (par exemple autour de l’axe X), et envoyer cette estimation en temps réel à un PC via la liaison série (USB). Côté PC, une interface graphique Python affichera l’angle estimé et tracera son évolution.</p>
+<p>Ce projet illustre l’intégration d’un capteur I2C, le traitement numérique du signal en temps réel, et la communication avec un ordinateur pour la visualisation.</p>
+<hr />
+<p><br></p>
+<h3 id="cahier-des-charges"><strong>Cahier des charges</strong></h3>
+<ul>
+<li>
+<p><strong>Acquisition des données IMU</strong> :</p>
+<ul>
+<li>Le MPU6050 est connecté au bus I2C du STM32 (par exemple I2C1 sur PB6/PB7).</li>
+<li>L’accéléromètre et le gyroscope sont lus à une fréquence fixe (par exemple 100 Hz).</li>
+</ul>
+</li>
+<li>
+<p><strong>Traitement temps réel</strong> :</p>
+<ul>
+<li>Une tâche FreeRTOS lit périodiquement les capteurs et applique un filtre de Kalman (modèle à deux états : angle et biais du gyroscope).</li>
+<li>L’angle estimé est mis à disposition pour l’envoi vers le PC.</li>
+</ul>
+</li>
+<li>
+<p><strong>Communication avec le PC</strong> :</p>
+<ul>
+<li>Une tâche dédiée envoie l’angle estimé (et éventuellement les données brutes) sur l’USART2 (connecté au port USB de la carte) vers le PC, à une fréquence plus basse (par exemple 10 Hz).</li>
+<li>Le format d’envoi peut être CSV ou JSON simple.</li>
+</ul>
+</li>
+<li>
+<p><strong>Interface Python</strong> :</p>
+<ul>
+<li>Un script Python lit les données sur le port série et les affiche dans une fenêtre graphique.</li>
+<li>L’interface montre l’angle courant (sous forme numérique) et un graphique en temps réel de l’évolution de l’angle (courbe glissante).</li>
+</ul>
+</li>
+<li>
+<p><strong>Contraintes techniques</strong> :</p>
+<ul>
+<li>Utilisation de FreeRTOS pour gérer les tâches (priorités adaptées).</li>
+<li>Les lectures I2C peuvent être bloquantes, mais on peut utiliser des files pour découpler l’acquisition du traitement (optionnel).</li>
+<li>Le filtre de Kalman doit être implémenté en virgule flottante (float).</li>
+<li>La tâche d’envoi sur USART utilise un buffer circulaire ou une file pour ne pas bloquer.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="materiel-necessaire"><strong>Matériel nécessaire</strong></h3>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>Module MPU6050 (GY‑521)</li>
+<li>Connexions I2C :<ul>
+<li>SCL → PB6 (I2C1_SCL)</li>
+<li>SDA → PB7 (I2C1_SDA)</li>
+<li>VCC → 3,3 V</li>
+<li>GND → GND</li>
+</ul>
+</li>
+<li>Câble USB pour la programmation et la communication série avec le PC</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="code-stm32-freertos"><strong>Code STM32 (FreeRTOS)</strong></h3>
+<p>Le code complet est organisé comme suit :</p>
+<ul>
+<li><strong>I2C</strong> : initialisation et fonctions de lecture (mode polling, mais on pourrait les remplacer par des interruptions).</li>
+<li><strong>MPU6050</strong> : initialisation (sortie du sommeil, configuration des plages) et lecture des accélérations et vitesses angulaires.</li>
+<li><strong>Filtre de Kalman</strong> : structure et fonctions de mise à jour (modèle 2D).</li>
+<li><strong>Files</strong> : pour transmettre les angles estimés de la tâche de filtrage à la tâche d’envoi.</li>
+<li><strong>Tâches FreeRTOS</strong> :<ul>
+<li><code>vTaskIMUReader</code> : lit les données à 100 Hz et applique le filtre.</li>
+<li><code>vTaskUARTTransmitter</code> : récupère l’angle et l’envoie sur UART à 10 Hz.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-c">/*****************************************************************************
+ * Projet IMU Kalman avec FreeRTOS sur STM32F401
+ * Lecture du MPU6050 via I2C, filtrage de Kalman, envoi sur UART
+ *****************************************************************************/
+
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;math.h&gt;
+#include &lt;stdio.h&gt;
+
+// ======================== Définitions =========================
+
+#define I2C_TIMEOUT         1000
+#define MPU6050_ADDR        0x68      // AD0 = 0 (si AD0 à VCC, utiliser 0x69)
+
+// Plages de mesure
+#define ACCEL_SCALE         16384.0f   // pour ±2g
+#define GYRO_SCALE          131.0f     // pour ±250°/s
+
+// Fréquences
+#define IMU_READ_FREQ       100        // Hz
+#define IMU_READ_PERIOD_MS  (1000 / IMU_READ_FREQ)   // 10 ms
+#define UART_SEND_FREQ      10         // Hz
+#define UART_SEND_PERIOD_MS (1000 / UART_SEND_FREQ)  // 100 ms
+
+// Taille des files
+#define ANGLE_QUEUE_SIZE    5
+
+// ======================== Structures =========================
+
+// Structure pour le filtre de Kalman (modèle angle + biais)
+typedef struct {
+    float angle;          // angle estimé (rad ou deg)
+    float bias;           // biais estimé du gyroscope
+    float P[2][2];        // matrice de covariance
+    float Q_angle;        // variance du bruit sur l'angle (process)
+    float Q_bias;         // variance du bruit sur le biais
+    float R_measure;      // variance du bruit de mesure (accéléromètre)
+} KalmanFilter_t;
+
+// ======================== Handles FreeRTOS ===================
+
+QueueHandle_t xAngleQueue;      // File pour transmettre l'angle estimé
+
+// ======================== Prototypes =========================
+
+void I2C1_Init(void);
+void MPU6050_Init(void);
+uint8_t MPU6050_ReadAccelGyro(float *ax, float *ay, float *az, float *gx, float *gy, float *gz);
+void Kalman_Init(KalmanFilter_t *kf);
+float Kalman_Update(KalmanFilter_t *kf, float gyroRate, float accAngle, float dt);
+void USART2_Init(uint32_t baud);
+void USART2_SendString(char *str);
+int _write(int file, char *ptr, int len);   // pour printf
+
+// ======================== Initialisation I2C1 ================
+
+/**
+ * @brief Initialise I2C1 sur PB6 (SCL) et PB7 (SDA) à 100 kHz.
+ */
+void I2C1_Init(void) {
+    // Activer horloges GPIOB et I2C1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_I2C1EN;
+
+    // PB6, PB7 en alternate function AF4
+    GPIOB-&gt;MODER &amp;= ~((3U &lt;&lt; (6*2)) | (3U &lt;&lt; (7*2)));
+    GPIOB-&gt;MODER |=  ((2U &lt;&lt; (6*2)) | (2U &lt;&lt; (7*2)));
+    GPIOB-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (6*4)) | (0xF &lt;&lt; (7*4)));
+    GPIOB-&gt;AFR[0] |=  ((4 &lt;&lt; (6*4)) | (4 &lt;&lt; (7*4)));
+
+    // Reset I2C
+    I2C1-&gt;CR1 = I2C_CR1_SWRST;
+    I2C1-&gt;CR1 = 0;
+
+    // Configuration : 100 kHz, APB1 = 42 MHz? Non, sur F401, APB1 peut être à 42 MHz ou 84 MHz selon config.
+    // Nous supposons ici APB1 = 84 MHz (vérifiez votre horloge)
+    I2C1-&gt;CR2 = 42;                 // Fréquence APB1 en MHz (à ajuster si 42 ou 84)
+    I2C1-&gt;CCR = 210;                 // 42 MHz / (2*100 kHz) = 210 (mode standard)
+    I2C1-&gt;TRISE = 43;                // 1000 ns / (1/42 MHz) = 42 + 1 = 43
+    I2C1-&gt;CR1 |= I2C_CR1_PE;
+}
+
+// ======================== Fonctions I2C bas niveau ===========
+
+/**
+ * @brief Écrit un octet dans un registre du MPU6050.
+ */
+uint8_t I2C_WriteReg(uint8_t devAddr, uint8_t regAddr, uint8_t data) {
+    // Attendre que le bus soit libre
+    while (I2C1-&gt;SR2 &amp; I2C_SR2_BUSY);
+
+    // START
+    I2C1-&gt;CR1 |= I2C_CR1_START;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_SB));
+
+    // Adresse + écriture
+    I2C1-&gt;DR = devAddr &lt;&lt; 1;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_ADDR));
+    (void)I2C1-&gt;SR2;
+
+    // Registre
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_TXE));
+    I2C1-&gt;DR = regAddr;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_BTF));
+
+    // Donnée
+    I2C1-&gt;DR = data;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_BTF));
+
+    // STOP
+    I2C1-&gt;CR1 |= I2C_CR1_STOP;
+    return 1;
+}
+
+/**
+ * @brief Lit plusieurs octets séquentiellement à partir d'un registre.
+ */
+uint8_t I2C_ReadRegs(uint8_t devAddr, uint8_t regAddr, uint8_t *buf, uint16_t len) {
+    while (I2C1-&gt;SR2 &amp; I2C_SR2_BUSY);
+
+    // START
+    I2C1-&gt;CR1 |= I2C_CR1_START;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_SB));
+
+    // Adresse + écriture
+    I2C1-&gt;DR = devAddr &lt;&lt; 1;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_ADDR));
+    (void)I2C1-&gt;SR2;
+
+    // Registre
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_TXE));
+    I2C1-&gt;DR = regAddr;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_BTF));
+
+    // RESTART pour la lecture
+    I2C1-&gt;CR1 |= I2C_CR1_START;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_SB));
+
+    // Adresse + lecture
+    I2C1-&gt;DR = (devAddr &lt;&lt; 1) | 1;
+    while (!(I2C1-&gt;SR1 &amp; I2C_SR1_ADDR));
+    (void)I2C1-&gt;SR2;
+
+    // Réception
+    for (uint16_t i = 0; i &lt; len; i++) {
+        if (i == len - 1) {
+            // Désactiver ACK avant le dernier octet
+            I2C1-&gt;CR1 &amp;= ~I2C_CR1_ACK;
+        }
+        while (!(I2C1-&gt;SR1 &amp; I2C_SR1_RXNE));
+        buf[i] = I2C1-&gt;DR;
+    }
+
+    // STOP
+    I2C1-&gt;CR1 |= I2C_CR1_STOP;
+    // Réactiver ACK pour les prochaines transactions
+    I2C1-&gt;CR1 |= I2C_CR1_ACK;
+    return 1;
+}
+
+// ======================== Initialisation MPU6050 =============
+
+/**
+ * @brief Configure le MPU6050 : sortie du sommeil, plages par défaut.
+ */
+void MPU6050_Init(void) {
+    // Sortir du sommeil (register PWR_MGMT_1, bit 6 = 0)
+    I2C_WriteReg(MPU6050_ADDR, 0x6B, 0x00);
+    // Configurer la plage de l'accéléromètre à ±2g (registre ACCEL_CONFIG, bits 4:3 = 00)
+    I2C_WriteReg(MPU6050_ADDR, 0x1C, 0x00);
+    // Configurer la plage du gyroscope à ±250°/s (registre GYRO_CONFIG, bits 4:3 = 00)
+    I2C_WriteReg(MPU6050_ADDR, 0x1B, 0x00);
+    // Optionnel : configurer le filtre passe-bas (registre CONFIG)
+    // I2C_WriteReg(MPU6050_ADDR, 0x1A, 0x03); // filtre 44 Hz
+}
+
+// ======================== Lecture MPU6050 ====================
+
+/**
+ * @brief Lit les accélérations et vitesses angulaires du MPU6050.
+ * @return 1 si succès, 0 sinon.
+ */
+uint8_t MPU6050_ReadAccelGyro(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+    uint8_t buffer[14];
+    if (!I2C_ReadRegs(MPU6050_ADDR, 0x3B, buffer, 14)) return 0;
+
+    int16_t raw_ax = (buffer[0] &lt;&lt; 8) | buffer[1];
+    int16_t raw_ay = (buffer[2] &lt;&lt; 8) | buffer[3];
+    int16_t raw_az = (buffer[4] &lt;&lt; 8) | buffer[5];
+    int16_t raw_gx = (buffer[8] &lt;&lt; 8) | buffer[9];
+    int16_t raw_gy = (buffer[10] &lt;&lt; 8) | buffer[11];
+    int16_t raw_gz = (buffer[12] &lt;&lt; 8) | buffer[13];
+
+    *ax = (float)raw_ax / ACCEL_SCALE;
+    *ay = (float)raw_ay / ACCEL_SCALE;
+    *az = (float)raw_az / ACCEL_SCALE;
+    *gx = (float)raw_gx / GYRO_SCALE;
+    *gy = (float)raw_gy / GYRO_SCALE;
+    *gz = (float)raw_gz / GYRO_SCALE;
+
+    return 1;
+}
+
+// ======================== Filtre de Kalman ===================
+
+/**
+ * @brief Initialise le filtre de Kalman.
+ */
+void Kalman_Init(KalmanFilter_t *kf) {
+    kf-&gt;angle = 0.0f;
+    kf-&gt;bias = 0.0f;
+    kf-&gt;P[0][0] = 0.0f;
+    kf-&gt;P[0][1] = 0.0f;
+    kf-&gt;P[1][0] = 0.0f;
+    kf-&gt;P[1][1] = 0.0f;
+    // À régler expérimentalement
+    kf-&gt;Q_angle = 0.001f;
+    kf-&gt;Q_bias = 0.003f;
+    kf-&gt;R_measure = 0.03f;
+}
+
+/**
+ * @brief Met à jour le filtre avec une nouvelle mesure gyro et accéléromètre.
+ * @param gyroRate Vitesse angulaire mesurée (en °/s)
+ * @param accAngle Angle calculé à partir de l'accéléromètre (en degrés)
+ * @param dt Intervalle de temps depuis la dernière mise à jour (en secondes)
+ * @return Angle estimé (en degrés)
+ */
+float Kalman_Update(KalmanFilter_t *kf, float gyroRate, float accAngle, float dt) {
+    // ---- Prédiction (time update) ----
+    // L'angle est prédit par intégration du gyro (corrigé du biais)
+    kf-&gt;angle += dt * (gyroRate - kf-&gt;bias);
+
+    // Mise à jour de la covariance a priori
+    kf-&gt;P[0][0] += dt * (dt*kf-&gt;P[1][1] - kf-&gt;P[0][1] - kf-&gt;P[1][0] + kf-&gt;Q_angle);
+    kf-&gt;P[0][1] -= dt * kf-&gt;P[1][1];
+    kf-&gt;P[1][0] -= dt * kf-&gt;P[1][1];
+    kf-&gt;P[1][1] += kf-&gt;Q_bias * dt;
+
+    // ---- Mise à jour avec la mesure (measurement update) ----
+    float y = accAngle - kf-&gt;angle;               // innovation
+    float S = kf-&gt;P[0][0] + kf-&gt;R_measure;        // covariance de l'innovation
+    float K[2];                                    // gain de Kalman
+    K[0] = kf-&gt;P[0][0] / S;
+    K[1] = kf-&gt;P[1][0] / S;
+
+    // Correction de l'état
+    kf-&gt;angle += K[0] * y;
+    kf-&gt;bias  += K[1] * y;
+
+    // Mise à jour de la covariance (forme standard)
+    float P00_temp = kf-&gt;P[0][0];
+    float P01_temp = kf-&gt;P[0][1];
+    kf-&gt;P[0][0] -= K[0] * P00_temp;
+    kf-&gt;P[0][1] -= K[0] * P01_temp;
+    kf-&gt;P[1][0] -= K[1] * P00_temp;
+    kf-&gt;P[1][1] -= K[1] * P01_temp;
+
+    return kf-&gt;angle;
+}
+
+// ======================== Initialisation USART2 ===============
+
+void USART2_Init(uint32_t baud) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // PA2 TX, PA3 RX en AF7
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (2*2)) | (3U &lt;&lt; (3*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (2*2)) | (2U &lt;&lt; (3*2)));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_UE; // transmission seule
+}
+
+void USART2_SendChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+    USART2-&gt;DR = c;
+}
+
+void USART2_SendString(char *str) {
+    while (*str) {
+        USART2_SendChar(*str++);
+    }
+}
+
+// Pour printf
+int _write(int file, char *ptr, int len) {
+    for (int i = 0; i &lt; len; i++) {
+        USART2_SendChar(ptr[i]);
+    }
+    return len;
+}
+
+// ======================== Tâches FreeRTOS =====================
+
+// Handle de la file (externe)
+extern QueueHandle_t xAngleQueue;
+
+/**
+ * @brief Tâche de lecture de l'IMU et filtrage de Kalman.
+ *        S'exécute à 100 Hz.
+ */
+void vTaskIMUReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(IMU_READ_PERIOD_MS);
+    float ax, ay, az, gx, gy, gz;
+    float accAngle, gyroRate;
+    float dt = IMU_READ_PERIOD_MS / 1000.0f;  // 0.01 s
+    KalmanFilter_t kf;
+
+    Kalman_Init(&amp;kf);
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+
+        if (MPU6050_ReadAccelGyro(&amp;ax, &amp;ay, &amp;az, &amp;gx, &amp;gy, &amp;gz)) {
+            // Calcul de l'angle à partir de l'accéléromètre (autour de X)
+            // On utilise atan2(ay, az) pour obtenir l'angle d'inclinaison.
+            // Si le capteur est orienté autrement, adapter.
+            accAngle = atan2f(ay, az) * 180.0f / 3.14159f;
+
+            // Vitesse angulaire selon l'axe X (en °/s)
+            gyroRate = gx;
+
+            // Mise à jour du filtre
+            float angle = Kalman_Update(&amp;kf, gyroRate, accAngle, dt);
+
+            // Envoyer l'angle dans la file (pour la tâche d'envoi UART)
+            xQueueSend(xAngleQueue, &amp;angle, 0);
+        }
+    }
+}
+
+/**
+ * @brief Tâche d'envoi des données sur UART (10 Hz).
+ *        Lit l'angle depuis la file et l'envoie formaté.
+ */
+void vTaskUARTTransmitter(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(UART_SEND_PERIOD_MS);
+    float angle;
+    char buffer[32];
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+
+        // Récupérer le dernier angle (non bloquant)
+        if (xQueueReceive(xAngleQueue, &amp;angle, 0) == pdPASS) {
+            sprintf(buffer, &quot;%.2f\r\n&quot;, angle);
+            USART2_SendString(buffer);
+        }
+    }
+}
+
+// ======================== Programme principal =================
+
+QueueHandle_t xAngleQueue;
+
+int main(void) {
+    // Initialisations matérielles
+    HAL_Init();                 // si vous utilisez HAL pour le Systick (optionnel)
+    SystemClock_Config();       // à adapter (doit fournir 84 MHz)
+    I2C1_Init();
+    MPU6050_Init();
+    USART2_Init(115200);
+
+    // Création de la file
+    xAngleQueue = xQueueCreate(ANGLE_QUEUE_SIZE, sizeof(float));
+
+    if (xAngleQueue != NULL) {
+        xTaskCreate(vTaskIMUReader, &quot;IMUReader&quot;, 256, NULL, 2, NULL);
+        xTaskCreate(vTaskUARTTransmitter, &quot;UARTTx&quot;, 128, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<p><strong>Remarques :</strong></p>
+<p>Le calcul de l’angle à partir de l’accéléromètre dépend de l’orientation du capteur. Ici on suppose que l’axe X est l’axe de roulis.</p>
+<p>Les paramètres du filtre (<code>Q_angle</code>, <code>Q_bias</code>, <code>R_measure</code>) sont à ajuster expérimentalement pour obtenir un bon compromis entre réactivité et lissage.</p>
+<p>La tâche d’envoi UART lit la file sans attendre (<code>timeout = 0</code>) et envoie l’angle s’il est disponible. On pourrait aussi utiliser une file avec <code>portMAX_DELAY</code> pour une cadence régulière.</p>
+<hr />
+<p><br></p>
+<h3 id="interface-python"><strong>Interface Python</strong></h3>
+<p>Côté PC, le script Python lit les données série et affiche l’angle sous forme numérique ainsi qu’un graphique en temps réel.</p>
+<pre><code class="language-py">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import tkinter as tk
+from tkinter import ttk
+import serial
+import threading
+import time
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import numpy as np
+
+class IMUApp:
+    def __init__(self, master):
+        self.master = master
+        master.title(&quot;Filtre de Kalman - MPU6050&quot;)
+        master.geometry(&quot;800x600&quot;)
+        master.resizable(False, False)
+
+        # Variable pour l'angle courant
+        self.current_angle = tk.StringVar(value=&quot;0.00&quot;)
+
+        # Historique pour le graphique
+        self.time_data = []
+        self.angle_data = []
+        self.max_points = 200  # nombre de points affichés
+
+        # Configuration du port série
+        self.serial_port = None
+        try:
+            self.serial_port = serial.Serial('COM3', 115200, timeout=1)  # à adapter
+        except Exception as e:
+            self.current_angle.set(f&quot;Erreur: {e}&quot;)
+            return
+
+        # Création de l'interface
+        self.create_widgets()
+
+        self.running = True
+        self.thread = threading.Thread(target=self.read_serial, daemon=True)
+        self.thread.start()
+
+        # Mise à jour périodique du graphique (toutes les 100 ms)
+        self.update_graph()
+
+    def create_widgets(self):
+        # Cadre supérieur pour l'affichage numérique
+        top_frame = ttk.Frame(self.master)
+        top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+
+        ttk.Label(top_frame, text=&quot;Angle estimé (°) :&quot;, font=(&quot;Arial&quot;, 14)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(top_frame, textvariable=self.current_angle, font=(&quot;Arial&quot;, 14, &quot;bold&quot;),
+                  foreground=&quot;blue&quot;).pack(side=tk.LEFT, padx=5)
+
+        # Cadre pour le graphique
+        graph_frame = ttk.Frame(self.master)
+        graph_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Création de la figure matplotlib
+        self.fig = Figure(figsize=(8, 4), dpi=100)
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_title(&quot;Évolution de l'angle estimé&quot;)
+        self.ax.set_xlabel(&quot;Temps (s)&quot;)
+        self.ax.set_ylabel(&quot;Angle (°)&quot;)
+        self.ax.grid(True)
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def read_serial(self):
+        &quot;&quot;&quot;Lit les données série et met à jour l'angle courant.&quot;&quot;&quot;
+        while self.running:
+            try:
+                line = self.serial_port.readline().decode().strip()
+                if line:
+                    # On s'attend à un flottant suivi de retour chariot
+                    angle = float(line)
+                    self.current_angle.set(f&quot;{angle:.2f}&quot;)
+                    # Ajouter au graphe
+                    self.time_data.append(time.time())
+                    self.angle_data.append(angle)
+                    if len(self.time_data) &gt; self.max_points:
+                        self.time_data.pop(0)
+                        self.angle_data.pop(0)
+            except Exception as e:
+                print(&quot;Erreur de lecture:&quot;, e)
+                break
+
+    def update_graph(self):
+        &quot;&quot;&quot;Met à jour le graphique toutes les 100 ms.&quot;&quot;&quot;
+        if self.running:
+            self.ax.clear()
+            self.ax.set_title(&quot;Évolution de l'angle estimé&quot;)
+            self.ax.set_xlabel(&quot;Temps (s)&quot;)
+            self.ax.set_ylabel(&quot;Angle (°)&quot;)
+            self.ax.grid(True)
+
+            if self.time_data:
+                # Convertir les temps en secondes relatives pour l'affichage
+                t0 = self.time_data[0]
+                t_rel = [t - t0 for t in self.time_data]
+                self.ax.plot(t_rel, self.angle_data, 'b-')
+                self.ax.set_xlim(max(0, t_rel[-1] - 10), t_rel[-1] + 1)  # affiche les 10 dernières secondes
+
+            self.canvas.draw()
+            self.master.after(100, self.update_graph)
+
+    def on_closing(self):
+        self.running = False
+        if self.serial_port:
+            self.serial_port.close()
+        self.master.destroy()
+
+if __name__ == &quot;__main__&quot;:
+    root = tk.Tk()
+    app = IMUApp(root)
+    root.protocol(&quot;WM_DELETE_WINDOW&quot;, app.on_closing)
+    root.mainloop()
+</code></pre>
+<p><strong>Explication :</strong></p>
+<ul>
+<li>Le script utilise matplotlib intégré dans Tkinter pour afficher un graphe dynamique.</li>
+<li>Un thread lit les données série en arrière‑plan et met à jour une variable Tkinter ainsi que les listes de points pour le graphique.</li>
+<li>La fonction update_graph est appelée toutes les 100 ms pour redessiner la courbe.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../stm32f4/gpio/index.md">GPIO et Interruptions</a></li>
+<li><a href="../stm32f4/timer/index.md">Timer et Interruption</a></li>
+<li><a href="../stm32f4/usart/index.md">Communication Série USART</a></li>
+<li><a href="../stm32f4/i2c/index.md">Communication Série I2C</a></li>
+<li><a href="../stm32f4/pwm/index.md">Génération des signaux PWM</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="technique-algos/estimation/index.md">Estimation d’État et Fusion Capteurs</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
