@@ -288,17 +288,14 @@ Objectif : Lire un potentiomètre sur PA0 (ADC), en déduire une fréquence (par
 
 Matériel :
 
-STM32F401 (Black Pill)
-
-MCP4822 + ampli (éventuellement)
-
-Potentiomètre 10 kΩ
-
-Câble USB pour l’affichage série
+- STM32F401 (Black Pill)
+- MCP4822 + ampli (éventuellement)
+- Potentiomètre 10 kΩ
+- Câble USB pour l’affichage série
 
 Code additionnel (intégration avec les chapitres précédents)
 
-c
+```c
 void vTaskADCReader(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(100); // lecture toutes les 100 ms
@@ -314,17 +311,9 @@ void vTaskADCReader(void *pvParameters) {
         // On pourrait utiliser une file pour communiquer avec la tâche DDS
     }
 }
+```
+
 Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une file ou une variable protégée par mutex. Dans la tâche DDS, on lirait la fréquence mise à jour périodiquement.
-
-
-
-
-
-
-
-
-
-
 
 
 ---
@@ -342,7 +331,6 @@ Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une f
 - [Communication Série I2C](../../stm32f4/i2c/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
 - [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
-
 - [Filtres Numériques](../../technique-algos/filtre/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
 
