@@ -66,6 +66,8 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Analyse fréquentielle avec FFT](technique-algos/fft/index.md)
 - [Synthèse Numérique Directe (DDS) avec DAC externe MCP4822](technique-algos/dds/index.md)
 - [Bases du Graphisme Embarqué sur écran TFT ili9488 3.2](technique-algos/graphisme/index.md)
+- [Pilote graphique de l'afficheur TFT ili9488 3.2](technique-algos/tftili9488/index.md)
+- [Pilote graphique de l'afficheur de l'écran VGA](technique-algos/vga/index.md)
 
 ---
 <br>
