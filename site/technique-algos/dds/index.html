@@ -109,7 +109,7 @@ f_{out} = \frac{M \cdot f_{clk}}{2^N}
 <li>Interface SPI simple : données sur 16 bits (bit de configuration + 12 bits de valeur).</li>
 <li>Temps d’établissement rapide (4.5 µs typ.).</li>
 </ul>
-<h4 id="trame-spi"><strong>Trame SPI</strong></h4>
+<p><strong>Trame SPI</strong></p>
 <p>Les 16 bits sont formatés ainsi :</p>
 <table>
 <thead>
@@ -135,7 +135,7 @@ f_{out} = \frac{M \cdot f_{clk}}{2^N}
 <li><strong>Bit 13</strong> : SHDN = 1 pour sortie active, 0 pour sortie haute impédance.</li>
 <li><strong>Bits 12-1</strong> : valeur 12 bits (les bits 12-1 sont les bits de donnée, le bit 0 est ignoré car les données sont justifiées à gauche). En pratique, on envoie un uint16_t où les bits 15-4 sont la valeur 12 bits décalée de 4.</li>
 </ul>
-<h4 id="connexion-au-stm32"><strong>Connexion au STM32</strong></h4>
+<p><strong>Connexion au STM32</strong></p>
 <p>On utilisera le SPI1 (par exemple) avec les broches :</p>
 <ul>
 <li>PA5 (SCLK)</li>
@@ -147,7 +147,7 @@ f_{out} = \frac{M \cdot f_{clk}}{2^N}
 <p><br></p>
 <h3 id="implementation-de-la-dds"><strong>Implémentation de la DDS</strong></h3>
 <p>Nous allons générer un signal sinusoïdal. Pour cela, nous créons une table d’onde contenant 256 échantillons d’une période de sinus (codés sur 12 bits). La résolution de phase est donc de 8 bits (2^8 = 256). L’accumulateur de phase sera sur 32 bits pour une bonne résolution en fréquence.</p>
-<h4 id="table-donde-look-up-table"><strong>Table d’onde (look-up table)</strong></h4>
+<p><strong>Table d’onde (look-up table)</strong></p>
 <pre><code class="language-c">#define LUT_SIZE 256
 uint16_t sinLUT[LUT_SIZE];
 
@@ -160,6 +160,156 @@ void generate_sin_lut(void) {
     }
 }
 </code></pre>
+<p><strong>Structure DDS</strong></p>
+<pre><code class="language-c">typedef struct {
+    uint32_t phase;         // accumulateur de phase courant
+    uint32_t phase_increment; // pas de phase (M)
+    uint16_t (*lut)[LUT_SIZE]; // pointeur vers la table
+} DDS_Generator;
+</code></pre>
+<p><strong>Mise à jour de la phase et lecture de l’échantillon</strong></p>
+<pre><code class="language-c">uint16_t DDS_Update(DDS_Generator *dds) {
+    dds-&gt;phase += dds-&gt;phase_increment;
+    uint8_t index = (dds-&gt;phase &gt;&gt; 24) &amp; 0xFF; // prend les 8 bits de poids fort
+    return (*dds-&gt;lut)[index];
+}
+</code></pre>
+<p><strong>Calcul du pas de phase</strong></p>
+<p>Pour une fréquence d’échantillonnage<br />
+fs (fréquence à laquelle on envoie les échantillons au DAC) et une fréquence de sortie désirée<br />
+fout, avec un accumulateur sur 32 bits :</p>
+<p>M = (fout × 2^32) / fs</p>
+<p>En pratique, on utilise des <strong>entiers 32 bits</strong> pour éviter les flottants.</p>
+<pre><code class="language-c">// f_s = 100 kHz (période 10 µs) par exemple
+uint32_t compute_phase_increment(float f_out, float f_s) {
+    return (uint32_t)(f_out * (1LL &lt;&lt; 32) / f_s);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="interface-spi-avec-le-mcp4822"><strong>Interface SPI avec le MCP4822</strong></h3>
+<p><strong>Initialisation SPI</strong></p>
+<pre><code class="language-c">void SPI1_Init(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+    // PA5 (SCK), PA6 (MISO), PA7 (MOSI) en AF5
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (5*2)) | (3U &lt;&lt; (6*2)) | (3U &lt;&lt; (7*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (5*2)) | (2U &lt;&lt; (6*2)) | (2U &lt;&lt; (7*2)));
+    GPIOA-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (5*4)) | (0xF &lt;&lt; (6*4)) | (0xF &lt;&lt; (7*4)));
+    GPIOA-&gt;AFR[0] |=  ((5 &lt;&lt; (5*4)) | (5 &lt;&lt; (6*4)) | (5 &lt;&lt; (7*4)));
+
+    // PA4 en sortie GPIO pour CS
+    GPIOA-&gt;MODER |= (1U &lt;&lt; (4*2));
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4); // CS haut par défaut
+
+    // Configuration SPI1 : maître, 8 bits, CPOL=0, CPHA=0, fPCLK/8 = 10.5 MHz (si 84 MHz)
+    SPI1-&gt;CR1 = SPI_CR1_MSTR | SPI_CR1_BR_2 | SPI_CR1_BR_1; // BR = 110 -&gt; /8
+    SPI1-&gt;CR1 |= SPI_CR1_SSM | SPI_CR1_SSI; // gestion logicielle du CS
+    SPI1-&gt;CR1 |= SPI_CR1_SPE;
+}
+
+void SPI1_CS_Low(void) {
+    GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 4);
+}
+
+void SPI1_CS_High(void) {
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4);
+}
+
+// Envoi d'un mot 16 bits
+void SPI1_Transmit16(uint16_t data) {
+    while (!(SPI1-&gt;SR &amp; SPI_SR_TXE));
+    SPI1-&gt;DR = data;
+    while (!(SPI1-&gt;SR &amp; SPI_SR_RXNE)); // attendre fin de transmission
+    (void)SPI1-&gt;DR; // vide le buffer RX
+}
+</code></pre>
+<p><strong>Envoi d’une valeur au DAC</strong></p>
+<p>Pour le MCP4822, on construit le mot de 16 bits :</p>
+<pre><code class="language-c">void MCP4822_Write(uint8_t channel, uint16_t value) {
+    // value doit être sur 12 bits (0-4095)
+    uint16_t word = (channel ? 0x8000 : 0x0000) | // bit 15: canal
+                    0x4000 |                       // bit 14: GA = 1 (référence interne x1)
+                    0x2000 |                       // bit 13: SHDN = 1 (sortie active)
+                    ((value &amp; 0xFFF) &lt;&lt; 4);        // valeur décalée de 4 bits
+
+    SPI1_CS_Low();
+    SPI1_Transmit16(word);
+    SPI1_CS_High();
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
+<p>Nous allons créer une tâche dédiée à la génération du signal. Pour une fréquence d’échantillonnage stable, on peut utiliser un timer matériel pour déclencher la tâche à intervalles réguliers, ou simplement utiliser <code>vTaskDelayUntil</code> si la fréquence n’est pas trop élevée.</p>
+<p><strong>Option 1 : avec timer et sémaphore</strong></p>
+<p>Un timer génère une interruption à la fréquence d’échantillonnage (par exemple 100 kHz). L’ISR donne un sémaphore à la tâche DDS.</p>
+<pre><code class="language-c">SemaphoreHandle_t xDDS_Semaphore;
+
+void TIM2_IRQHandler(void) {
+    BaseType_t xWoken = pdFALSE;
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+        xSemaphoreGiveFromISR(xDDS_Semaphore, &amp;xWoken);
+        portYIELD_FROM_ISR(xWoken);
+    }
+}
+</code></pre>
+<p><strong>Option 2 : avec vTaskDelayUntil</strong></p>
+<p>Si la fréquence d’échantillonnage est modérée (par exemple 1 kHz), on peut utiliser <code>vTaskDelayUntil</code>. Pour 100 kHz, la période est 10 µs, trop petite pour FreeRTOS (le tick est généralement 1 ms). On utilisera donc un timer matériel.</p>
+<p><strong>Tâche DDS</strong></p>
+<pre><code class="language-c">void vTaskDDS(void *pvParameters) {
+    DDS_Generator dds;
+    dds.phase = 0;
+    dds.phase_increment = compute_phase_increment(1000.0f, 100000.0f); // 1 kHz
+    dds.lut = &amp;sinLUT;
+
+    for (;;) {
+        xSemaphoreTake(xDDS_Semaphore, portMAX_DELAY);
+        uint16_t sample = DDS_Update(&amp;dds);
+        MCP4822_Write(0, sample); // canal A
+    }
+}
+</code></pre>
+<p><strong>Configuration du timer pour 100 kHz</strong></p>
+<pre><code class="language-c">void Timer_Init_100kHz(void) {
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2-&gt;PSC = 84 - 1;        // 1 MHz (si APB1 = 84 MHz)
+    TIM2-&gt;ARR = 10 - 1;         // 100 kHz (1 MHz / 10 = 100 kHz)
+    TIM2-&gt;DIER |= TIM_DIER_UIE;
+    NVIC_SetPriority(TIM2_IRQn, 5);
+    NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-dds-pot">**Projet : Générateur de sinus contrôlé par potentiomètre</h3>
+<p>Objectif : Lire un potentiomètre sur PA0 (ADC), en déduire une fréquence (par exemple de 100 Hz à 5 kHz), et générer un signal sinusoïdal correspondant via la DDS. Afficher la fréquence sur UART.</p>
+<p>Matériel :</p>
+<p>STM32F401 (Black Pill)</p>
+<p>MCP4822 + ampli (éventuellement)</p>
+<p>Potentiomètre 10 kΩ</p>
+<p>Câble USB pour l’affichage série</p>
+<p>Code additionnel (intégration avec les chapitres précédents)</p>
+<p>c
+void vTaskADCReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(100); // lecture toutes les 100 ms
+    uint16_t adc;
+    float freq;</p>
+<pre><code>for (;;) {
+    vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+    adc = ADC_Read();
+    // Conversion en fréquence (par exemple 100 Hz à 5000 Hz)
+    freq = 100.0f + (adc * (5000.0f - 100.0f) / 4095.0f);
+    // Calculer le nouveau pas de phase pour la tâche DDS
+    // On pourrait utiliser une file pour communiquer avec la tâche DDS
+}
+</code></pre>
+<p>}
+Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une file ou une variable protégée par mutex. Dans la tâche DDS, on lirait la fréquence mise à jour périodiquement.</p>
 <hr />
 <p><br></p>
 <h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
