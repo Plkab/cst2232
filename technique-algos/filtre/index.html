@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/technique-algos/filtre/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Filtres Numériques - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,12 +53,393 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#filtres-numeriques" class="nav-link">Filtres Numériques</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# Filtres num‚riques" </p></div>
+<h1 id="filtres-numeriques">Filtres Numériques</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-aux-filtres-numeriques"><strong>Introduction aux filtres numériques</strong></h3>
+<p>Dans les systèmes embarqués, les signaux issus de capteurs sont souvent bruités. Le bruit peut provenir de l’environnement (perturbations électromagnétiques), du capteur lui-même (bruit thermique) ou de la numérisation (bruit de quantification). Pour extraire l’information utile, on utilise des <strong>filtres numériques</strong>.</p>
+<p>Un filtre numérique est un algorithme qui transforme un signal d’entrée (une séquence d’échantillons) en un signal de sortie selon une règle mathématique. Contrairement aux filtres analogiques (circuits RLC), les filtres numériques sont :</p>
+<ul>
+<li><strong>Programmables</strong> : on peut changer leurs caractéristiques par logiciel.</li>
+<li><strong>Stables</strong> : pas de dérive due aux composants.</li>
+<li><strong>Reproductibles</strong> : identiques d’un système à l’autre.</li>
+<li><strong>Capables de réalisations complexes</strong> (phase linéaire, réponse impulsionnelle finie).</li>
+</ul>
+<p>Dans ce chapitre, nous verrons les deux grandes familles de filtres numériques :</p>
+<ul>
+<li>Les filtres à réponse impulsionnelle finie (<strong>FIR</strong> – Finite Impulse Response)</li>
+<li>Les filtres à réponse impulsionnelle infinie (<strong>IIR</strong> – Infinite Impulse Response)</li>
+</ul>
+<p>Nous apprendrons à les implémenter en C sur STM32, à les intégrer dans une tâche FreeRTOS pour un traitement temps réel, et nous réaliserons un projet de lissage d’un signal analogique (ADC) avec affichage sur UART ou écran.</p>
+<hr />
+<p><br></p>
+<h3 id="rappels-sur-lechantillonnage"><strong>Rappels sur l’échantillonnage</strong></h3>
+<p>Avant d’aborder les filtres, rappelons quelques notions fondamentales.</p>
+<ul>
+<li>
+<p><strong>Échantillonnage</strong> : conversion d’un signal continu en une suite de valeurs discrètes à intervalles réguliers (T_e) (période d’échantillonnage). La fréquence d’échantillonnage (f_e = 1/T_e) doit respecter le théorème de Shannon-Nyquist : (f_e &gt; 2 f_{max}) pour éviter le repliement de spectre (aliasing).</p>
+</li>
+<li>
+<p><strong>Quantification</strong> : chaque échantillon est représenté par un nombre binaire sur N bits (ex: 12 bits pour l’ADC du STM32F4). Cela introduit une erreur de quantification.</p>
+</li>
+<li>
+<p><strong>Traitement numérique</strong> : les échantillons sont traités par des algorithmes (filtres, FFT, etc.) pour extraire l’information désirée.</p>
+</li>
+</ul>
+<p>Dans la suite, nous considérerons un signal d’entrée (x[n]) et un signal de sortie (y[n]), où (n) est l’indice d’échantillonnage.</p>
+<hr />
+<p><br></p>
+<h3 id="filtres-a-reponse-impulsionnelle-finie-fir"><strong>Filtres à réponse impulsionnelle finie (FIR)</strong></h3>
+<p>Un filtre FIR est caractérisé par une équation aux différences de la forme :</p>
+<p>[
+y[n] = \sum_{k=0}^{M} b_k \, x[n-k]
+]</p>
+<p>où les (b_k) sont les coefficients du filtre et (M) est l’ordre du filtre (nombre de coefficients moins 1). La sortie est une combinaison linéaire des (M+1) derniers échantillons d’entrée.</p>
+<p><strong>Propriétés importantes :</strong></p>
+<ul>
+<li>La réponse impulsionnelle est finie (après (M+1) échantillons, elle s’annule).</li>
+<li>Toujours stables (pas de pôles).</li>
+<li>Peuvent avoir une phase linéaire (si les coefficients sont symétriques), ce qui est important pour éviter la distorsion de phase dans certains traitements (audio, biomédical).</li>
+</ul>
+<p><strong>Exemple : moyenne glissante (filtre passe-bas simple)</strong></p>
+<p>Un filtre moyenneur sur (N) échantillons est un FIR d’ordre (N-1) avec tous les coefficients égaux à (1/N) :</p>
+<p>[
+y[n] = \frac{1}{N} \sum_{k=0}^{N-1} x[n-k]
+]</p>
+<p>Implémentation en C :</p>
+<pre><code class="language-c">#define N 16
+float buffer[N];
+uint8_t index = 0;
+float sum = 0;
+
+float moving_average(float new_sample) {
+    sum -= buffer[index];        // enlever l'ancien échantillon
+    buffer[index] = new_sample;  // stocker le nouveau
+    sum += new_sample;            // ajouter au total
+    index = (index + 1) % N;      // avancer l'index
+    return sum / N;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="implementation-generique-dun-fir"><strong>Implémentation générique d’un FIR</strong></h3>
+<p>Pour un filtre FIR d’ordre M avec coefficients quelconques, on peut utiliser un buffer circulaire pour les échantillons et un produit scalaire.</p>
+<pre><code class="language-c">typedef struct {
+    float *coeffs;       // tableau des coefficients (taille M+1)
+    float *buffer;       // buffer circulaire pour les échantillons
+    uint16_t order;      // ordre M
+    uint16_t index;      // position courante dans le buffer
+} FIRFilter;
+
+void FIR_Init(FIRFilter *fir, float *coeffs, uint16_t order) {
+    fir-&gt;coeffs = coeffs;
+    fir-&gt;order = order;
+    fir-&gt;buffer = (float*)calloc(order+1, sizeof(float)); // à adapter (allocation statique possible)
+    fir-&gt;index = 0;
+}
+
+float FIR_Update(FIRFilter *fir, float input) {
+    uint16_t i, idx;
+    float output = 0;
+
+    // Stocker le nouvel échantillon
+    fir-&gt;buffer[fir-&gt;index] = input;
+
+    // Calcul du produit scalaire (convoluer)
+    for (i = 0; i &lt;= fir-&gt;order; i++) {
+        idx = (fir-&gt;index - i + fir-&gt;order + 1) % (fir-&gt;order + 1); // accès circulaire
+        output += fir-&gt;coeffs[i] * fir-&gt;buffer[idx];
+    }
+
+    // Avancer l'index
+    fir-&gt;index = (fir-&gt;index + 1) % (fir-&gt;order + 1);
+
+    return output;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="filtres-a-reponse-impulsionnelle-infinie-iir">Filtres à réponse impulsionnelle infinie (IIR)</h3>
+<p>Les filtres IIR sont caractérisés par une équation aux différences avec récursion :</p>
+<p>y[n] = Σ(k=0→M) b_k x[n−k] − Σ(k=1→N) a_k y[n−k]</p>
+<p>La sortie dépend à la fois des <strong>entrées passées</strong> et des <strong>sorties passées</strong>.<br />
+Cela permet d’obtenir une <strong>réponse impulsionnelle infinie</strong> avec <strong>moins de coefficients qu’un filtre FIR</strong> pour des performances similaires.</p>
+<p>Cependant, les filtres IIR peuvent devenir <strong>instables</strong> si les <strong>pôles sortent du cercle unité</strong> dans le plan Z.</p>
+<p><strong>Exemple : filtre passe-bas du premier ordre (type RC)</strong></p>
+<p>L’équation analogique :</p>
+<p>τ dy/dt + y = x</p>
+<p>peut être discrétisée (par la méthode d’Euler ou la transformée bilinéaire) pour donner :</p>
+<p>y[n] = α x[n] + (1 − α) y[n−1]</p>
+<p>avec :</p>
+<p>α = Te / (τ + Te)</p>
+<p>(si on utilise l’approximation d’Euler).</p>
+<p>C’est un <strong>filtre IIR d’ordre 1</strong>.</p>
+<p><strong>Implémentation en C</strong></p>
+<pre><code class="language-c">typedef struct {
+    float alpha;
+    float y_prev;
+} LowPassFilter;
+
+void LPF_Init(LowPassFilter *lpf, float tau, float Te) {
+    lpf-&gt;alpha = Te / (tau + Te);
+    lpf-&gt;y_prev = 0;
+}
+
+float LPF_Update(LowPassFilter *lpf, float input) {
+    float output = lpf-&gt;alpha * input + (1 - lpf-&gt;alpha) * lpf-&gt;y_prev;
+    lpf-&gt;y_prev = output;
+    return output;
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="filtre-biquad-section-du-second-ordre">Filtre biquad (section du second ordre)</h3>
+<p>Les filtres IIR d’ordre supérieur sont souvent implémentés comme une <strong>cascade de cellules du second ordre</strong> (<em>biquads</em>) afin d’améliorer la <strong>stabilité numérique</strong> et la <strong>précision des calculs</strong>.</p>
+<p>Une cellule biquad est décrite par l’équation aux différences suivante :</p>
+<p>y[n] = b0 x[n] + b1 x[n−1] + b2 x[n−2] − a1 y[n−1] − a2 y[n−2]</p>
+<p>où :</p>
+<ul>
+<li><code>x[n]</code> est l’entrée du filtre,</li>
+<li><code>y[n]</code> est la sortie du filtre,</li>
+<li><code>b0, b1, b2</code> sont les coefficients de la partie <strong>numérateur</strong>,</li>
+<li><code>a1, a2</code> sont les coefficients de la partie <strong>dénominateur</strong>.</li>
+</ul>
+<p>Les filtres d’ordre élevé sont souvent réalisés en <strong>mettant plusieurs biquads en cascade</strong>, ce qui permet :</p>
+<ul>
+<li>une meilleure <strong>stabilité numérique</strong>,</li>
+<li>une <strong>implémentation plus robuste</strong> en calcul flottant ou fixe,</li>
+<li>une <strong>réduction des erreurs d’arrondi</strong>.</li>
+</ul>
+<p>Les coefficients peuvent être calculés pour différents types de filtres classiques :</p>
+<ul>
+<li><strong>Butterworth</strong></li>
+<li><strong>Chebyshev</strong></li>
+<li><strong>Elliptique</strong></li>
+<li><strong>Bessel</strong></li>
+</ul>
+<p>Ces coefficients sont généralement obtenus à l’aide d’outils de calcul comme :</p>
+<ul>
+<li><strong>Matlab</strong></li>
+<li><strong>Python (SciPy / NumPy)</strong></li>
+<li>générateurs de filtres numériques en ligne</li>
+<li>tables de coefficients pré-calculées.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos">Intégration avec FreeRTOS</h3>
+<p>Dans un système temps réel, le filtrage est souvent effectué dans une <strong>tâche périodique</strong> qui lit les échantillons (par exemple depuis l’ADC) et applique le filtre. Les résultats peuvent être envoyés sur <strong>UART</strong>, affichés, ou utilisés dans une <strong>boucle de contrôle</strong>.</p>
+<p><strong>Structure typique</strong></p>
+<p>Une architecture classique avec <strong>FreeRTOS</strong> est la suivante :</p>
+<ul>
+<li>Une tâche <strong>vTaskADCReader</strong> déclenchée par un timer (ou via une file) lit l’ADC et place les échantillons dans une file.</li>
+<li>Une tâche <strong>vTaskFilter</strong> récupère les échantillons, applique le filtre, et met le résultat à disposition (variable globale ou autre file).</li>
+<li>Une tâche <strong>vTaskDisplay</strong> lit périodiquement le résultat et l’affiche (UART, écran).</li>
+</ul>
+<p><strong>Exemple simple : lissage d’un signal ADC avec filtre moyenneur</strong></p>
+<pre><code class="language-c">QueueHandle_t xADCQueue;
+QueueHandle_t xFilteredQueue;
+
+void vTaskADCReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(10); // 100 Hz
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+        uint16_t adc = ADC_Read();  // lecture directe
+        xQueueSend(xADCQueue, &amp;adc, 0);
+    }
+}
+
+void vTaskFilter(void *pvParameters) {
+    uint16_t adc;
+    float filtered;
+
+    // Filtre moyenneur sur 16 points
+    #define FILTER_ORDER 16
+    float buffer[FILTER_ORDER] = {0};
+    uint8_t index = 0;
+    float sum = 0;
+
+    for (;;) {
+        if (xQueueReceive(xADCQueue, &amp;adc, portMAX_DELAY) == pdPASS) {
+            sum -= buffer[index];
+            buffer[index] = (float)adc;
+            sum += buffer[index];
+
+            index = (index + 1) % FILTER_ORDER;
+
+            filtered = sum / FILTER_ORDER;
+
+            xQueueSend(xFilteredQueue, &amp;filtered, 0);
+        }
+    }
+}
+
+void vTaskDisplay(void *pvParameters) {
+    float filtered;
+    char buffer[32];
+
+    for (;;) {
+        if (xQueueReceive(xFilteredQueue, &amp;filtered, portMAX_DELAY) == pdPASS) {
+            sprintf(buffer, &quot;%.2f\r\n&quot;, filtered);
+            USART2_SendString(buffer);
+        }
+    }
+}
+</code></pre>
+<p><strong>Principe de fonctionnement</strong></p>
+<ul>
+<li>Lecture ADC : La tâche <code>vTaskADCReader</code> lit la valeur de l’ADC toutes les 10 ms (100 Hz).</li>
+<li>Filtrage : La tâche <code>vTaskFilter</code> applique un filtre moyenneur glissant sur 16 échantillons.</li>
+<li>Affichage : La tâche <code>vTaskDisplay</code> récupère la valeur filtrée et l’envoie via UART (USART2).</li>
+</ul>
+<p>Cette architecture permet de séparer clairement les responsabilités acquisition, traitement, affichage et améliore la modularité et la maintenabilité du système.</p>
+<hr />
+<p><br></p>
+<h3 id="projet-filtre-iir"><strong>Projet : Lissage d’un signal ADC avec filtre passe-bas IIR</strong></h3>
+<p><strong>Objectif :</strong> Lire un potentiomètre sur <strong>PA0 (ADC)</strong>, appliquer un <strong>filtre passe-bas du premier ordre (type RC numérique)</strong>, et afficher la <strong>valeur filtrée</strong> sur <strong>UART</strong> (ou sur un écran <strong>OLED</strong>).<br />
+On pourra comparer la <strong>valeur brute</strong> et la <strong>valeur filtrée</strong> pour visualiser l’effet du filtre.</p>
+<p><strong>Matériel</strong></p>
+<ul>
+<li>Carte <strong>STM32F401 (Black Pill)</strong></li>
+<li><strong>Potentiomètre 10 kΩ</strong> sur <strong>PA0</strong></li>
+<li><em>(Optionnel)</em> <strong>écran OLED I2C</strong></li>
+</ul>
+<p><strong>Code principal</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+
+// Fonctions ADC et UART (à implémenter)
+void ADC_Init(void);
+uint16_t ADC_Read(void);
+void USART2_Init(uint32_t baud);
+void USART2_SendString(char *str);
+int _write(int file, char *ptr, int len);
+
+// Filtre passe-bas premier ordre
+typedef struct {
+    float alpha;
+    float y_prev;
+} LPF;
+
+void LPF_Init(LPF *lpf, float tau, float Te) {
+    lpf-&gt;alpha = Te / (tau + Te);
+    lpf-&gt;y_prev = 0;
+}
+
+float LPF_Update(LPF *lpf, float input) {
+    float output = lpf-&gt;alpha * input + (1 - lpf-&gt;alpha) * lpf-&gt;y_prev;
+    lpf-&gt;y_prev = output;
+    return output;
+}
+
+// Handles
+QueueHandle_t xRawQueue;
+QueueHandle_t xFilteredQueue;
+
+// Tâches
+void vTaskADCReader(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(10); // 100 Hz
+    uint16_t raw;
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+        raw = ADC_Read();
+        xQueueSend(xRawQueue, &amp;raw, 0);
+    }
+}
+
+void vTaskFilter(void *pvParameters) {
+    uint16_t raw;
+    float filtered;
+    LPF lpf;
+    LPF_Init(&amp;lpf, 0.1f, 0.01f); // tau = 0.1 s, Te = 0.01 s
+
+    for (;;) {
+        if (xQueueReceive(xRawQueue, &amp;raw, portMAX_DELAY) == pdPASS) {
+            filtered = LPF_Update(&amp;lpf, (float)raw);
+            xQueueSend(xFilteredQueue, &amp;filtered, 0);
+        }
+    }
+}
+
+void vTaskDisplay(void *pvParameters) {
+    float filtered;
+    char buffer[32];
+
+    for (;;) {
+        if (xQueueReceive(xFilteredQueue, &amp;filtered, portMAX_DELAY) == pdPASS) {
+            sprintf(buffer, &quot;%.2f\r\n&quot;, filtered);
+            USART2_SendString(buffer);
+        }
+    }
+}
+
+int main(void) {
+    HAL_Init();            // si vous utilisez HAL pour le Systick
+    SystemClock_Config();  // à adapter
+    ADC_Init();
+    USART2_Init(115200);
+
+    xRawQueue = xQueueCreate(5, sizeof(uint16_t));
+    xFilteredQueue = xQueueCreate(5, sizeof(float));
+
+    if (xRawQueue != NULL &amp;&amp; xFilteredQueue != NULL) {
+        xTaskCreate(vTaskADCReader, &quot;ADCReader&quot;, 128, NULL, 2, NULL);
+        xTaskCreate(vTaskFilter,    &quot;Filter&quot;,    128, NULL, 2, NULL);
+        xTaskCreate(vTaskDisplay,   &quot;Display&quot;,   128, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<p><strong>Explication</strong></p>
+<ul>
+<li>La tâche <code>vTaskADCReader</code> lit l’ADC à 100 Hz et place les valeurs brutes dans xRawQueue.</li>
+<li>La tâche <code>vTaskFilter</code> récupère les valeurs brutes, applique le filtre passe-bas, et place le résultat dans <code>xFilteredQueue</code>.</li>
+<li>La tâche <code>vTaskDisplay</code> récupère les valeurs filtrées et les affiche sur UART (par exemple dans le terminal série du PC).</li>
+</ul>
+<p><strong>Réglage du filtre</strong></p>
+<p>On peut modifier le paramètre : tau</p>
+<ul>
+<li>pour ajuster la fréquence de coupure du filtre.</li>
+<li>τ petit → filtre rapide (peu de lissage)</li>
+<li>τ grand → filtrage plus fort (réponse plus lente)</li>
+</ul>
+<p>Ce paramètre contrôle donc le compromis entre rapidité et filtrage du bruit.</p>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="../../stm32f4/adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../stm32f4/pwm/">Génération des signaux PWM</a></li>
+<li><a href="../../stm32f4/usart/">Communication Série USART</a></li>
+<li><a href="../../stm32f4/i2c/">Communication Série I2C</a></li>
+<li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../estimation/">Estimation d’État et Fusion Capteurs</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 
