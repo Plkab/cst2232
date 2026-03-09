@@ -625,7 +625,7 @@ if __name__ == "__main__":
 - [Communication Série I2C](../../stm32f4/i2c/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
 - [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
-- [Estimation d’État et Fusion Capteurs](/technique-algos/estimation/index.md)
+- [Estimation d’État et Fusion Capteurs](../../technique-algos/estimation/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
 
 
