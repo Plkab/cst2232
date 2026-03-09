@@ -616,14 +616,18 @@ if __name__ == "__main__":
 
 ### **Liens connexes**
 
+
 - [GPIO et Interruptions](../../stm32f4/gpio/index.md)
 - [Timer et Interruption](../../stm32f4/timer/index.md)
+- [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)
+- [Génération des signaux PWM](../../stm32f4/pwm/index.md)
 - [Communication Série USART](../../stm32f4/usart/index.md)
 - [Communication Série I2C](../../stm32f4/i2c/index.md)
-- [Génération des signaux PWM](../../stm32f4/pwm/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
-- [Estimation d’État et Fusion Capteurs](../technique-algos/estimation/index.md)
+- [Optimisation de Transfert des Données avec DMA](../../stm32f4/dma/index.md)
+- [Estimation d’État et Fusion Capteurs](../../technique-algos/estimation/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/#introduction-a-freertos)
+
 
 
 
