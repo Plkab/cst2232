@@ -69,7 +69,7 @@
 <p><a href="../../#Accueil">Accueil</a></p>
 <p><br>
 <br></p>
-<h3 id="introduction-aux-filtres-numeriques"><strong>Introduction aux filtres numériques</strong></h3>
+<h3 id="introduction-aux-filtres-numeriques"><strong>Introduction aux Filtres Numériques</strong></h3>
 <p>Dans les systèmes embarqués, les signaux issus de capteurs sont souvent bruités. Le bruit peut provenir de l’environnement (perturbations électromagnétiques), du capteur lui-même (bruit thermique) ou de la numérisation (bruit de quantification). Pour extraire l’information utile, on utilise des <strong>filtres numériques</strong>.</p>
 <p>Un filtre numérique est un algorithme qui transforme un signal d’entrée (une séquence d’échantillons) en un signal de sortie selon une règle mathématique. Contrairement aux filtres analogiques (circuits RLC), les filtres numériques sont :</p>
 <ul>
@@ -102,7 +102,7 @@
 <p>Dans la suite, nous considérerons un signal d’entrée (x[n]) et un signal de sortie (y[n]), où (n) est l’indice d’échantillonnage.</p>
 <hr />
 <p><br></p>
-<h3 id="filtres-a-reponse-impulsionnelle-finie-fir"><strong>Filtres à réponse impulsionnelle finie (FIR)</strong></h3>
+<h3 id="filtres-a-reponse-impulsionnelle-finie-fir"><strong>Filtres à Réponse Impulsionnelle finie (FIR)</strong></h3>
 <p>Un filtre FIR est caractérisé par une équation aux différences de la forme :</p>
 <p>[
 y[n] = \sum_{k=0}^{M} b_k \, x[n-k]
@@ -172,7 +172,7 @@ float FIR_Update(FIRFilter *fir, float input) {
 </code></pre>
 <hr />
 <p><br></p>
-<h3 id="filtres-a-reponse-impulsionnelle-infinie-iir">Filtres à réponse impulsionnelle infinie (IIR)</h3>
+<h3 id="filtres-a-reponse-impulsionnelle-infinie-iir">Filtres à Réponse Impulsionnelle Infinie (IIR)</h3>
 <p>Les filtres IIR sont caractérisés par une équation aux différences avec récursion :</p>
 <p>y[n] = Σ(k=0→M) b_k x[n−k] − Σ(k=1→N) a_k y[n−k]</p>
 <p>La sortie dépend à la fois des <strong>entrées passées</strong> et des <strong>sorties passées</strong>.<br />
