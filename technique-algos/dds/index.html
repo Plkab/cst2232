@@ -288,28 +288,30 @@ void TIM2_IRQHandler(void) {
 <h3 id="projet-dds-pot">**Projet : Générateur de sinus contrôlé par potentiomètre</h3>
 <p>Objectif : Lire un potentiomètre sur PA0 (ADC), en déduire une fréquence (par exemple de 100 Hz à 5 kHz), et générer un signal sinusoïdal correspondant via la DDS. Afficher la fréquence sur UART.</p>
 <p>Matériel :</p>
-<p>STM32F401 (Black Pill)</p>
-<p>MCP4822 + ampli (éventuellement)</p>
-<p>Potentiomètre 10 kΩ</p>
-<p>Câble USB pour l’affichage série</p>
+<ul>
+<li>STM32F401 (Black Pill)</li>
+<li>MCP4822 + ampli (éventuellement)</li>
+<li>Potentiomètre 10 kΩ</li>
+<li>Câble USB pour l’affichage série</li>
+</ul>
 <p>Code additionnel (intégration avec les chapitres précédents)</p>
-<p>c
-void vTaskADCReader(void *pvParameters) {
+<pre><code class="language-c">void vTaskADCReader(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(100); // lecture toutes les 100 ms
     uint16_t adc;
-    float freq;</p>
-<pre><code>for (;;) {
-    vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
-    adc = ADC_Read();
-    // Conversion en fréquence (par exemple 100 Hz à 5000 Hz)
-    freq = 100.0f + (adc * (5000.0f - 100.0f) / 4095.0f);
-    // Calculer le nouveau pas de phase pour la tâche DDS
-    // On pourrait utiliser une file pour communiquer avec la tâche DDS
+    float freq;
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+        adc = ADC_Read();
+        // Conversion en fréquence (par exemple 100 Hz à 5000 Hz)
+        freq = 100.0f + (adc * (5000.0f - 100.0f) / 4095.0f);
+        // Calculer le nouveau pas de phase pour la tâche DDS
+        // On pourrait utiliser une file pour communiquer avec la tâche DDS
+    }
 }
 </code></pre>
-<p>}
-Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une file ou une variable protégée par mutex. Dans la tâche DDS, on lirait la fréquence mise à jour périodiquement.</p>
+<p>Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une file ou une variable protégée par mutex. Dans la tâche DDS, on lirait la fréquence mise à jour périodiquement.</p>
 <hr />
 <p><br></p>
 <h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
@@ -321,12 +323,8 @@ Pour communiquer la nouvelle fréquence à la tâche DDS, on peut utiliser une f
 <li><a href="../../stm32f4/usart/">Communication Série USART</a></li>
 <li><a href="../../stm32f4/i2c/">Communication Série I2C</a></li>
 <li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
-<li>
-<p><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></p>
-</li>
-<li>
-<p><a href="../filtre/">Filtres Numériques</a></p>
-</li>
+<li><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../filtre/">Filtres Numériques</a></li>
 <li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
 </ul></div>
             </div>
