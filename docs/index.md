@@ -72,6 +72,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 
 ### Projets d’Application
 - [Générateur de signaux DDS : Frequencemetre sur TFT](projects/frequencemetre/index.md)
+- [Analyse spectrale d’un signal audio](technique-algos/fft/{#projet-fft-audio})
 - [Filtrage des données du IMU 6050 via Filtre de Kalman](projects/imu_klf/index.md)
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](technique-algos/estimation/#projet-estimation-angle)
 - [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)

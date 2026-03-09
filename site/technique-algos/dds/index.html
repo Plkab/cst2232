@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/technique-algos/dds/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Synthèse Numérique Directe (DDS) avec DAC externe MCP4822 - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link"></a>
+            <li class="nav-item" data-bs-level="1"><a href="#synthese-numerique-directe-dds-avec-dac-externe-mcp4822" class="nav-link">Synthèse Numérique Directe (DDS) avec DAC externe MCP4822</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,8 +63,122 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="_1"></h1>
-<p>Contenu Ã  rÃ©diger...</p></div>
+<h1 id="synthese-numerique-directe-dds-avec-dac-externe-mcp4822">Synthèse Numérique Directe (DDS) avec DAC externe MCP4822</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>La <strong>synthèse numérique directe (DDS)</strong> est une technique de génération de signaux analogiques (sinus, triangle, carré, etc.) à partir d’une horloge de référence et d’une table d’onde. Elle permet de produire des fréquences très précises et facilement ajustables avec une grande résolution. On la trouve dans les générateurs de signaux, les synthétiseurs de fréquence, les instruments de mesure, etc.</p>
+<p>Le STM32F401 ne dispose pas de convertisseur numérique-analogique (DAC) interne. Pour générer un signal analogique, nous utiliserons un <strong>DAC externe</strong> via le bus SPI. Le <strong>MCP4822</strong> de Microchip est un DAC double canal 12 bits avec interface SPI, très simple d’utilisation. Dans ce chapitre, nous allons :</p>
+<ul>
+<li>Comprendre le principe de la DDS.</li>
+<li>Configurer le MCP4822 pour recevoir des données via SPI.</li>
+<li>Implémenter un générateur de signaux sinusoïdaux avec contrôle de fréquence.</li>
+<li>Intégrer le tout dans une tâche FreeRTOS pour une génération en temps réel.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="principe-de-la-dds"><strong>Principe de la DDS</strong></h3>
+<p>Un système DDS classique se compose de :</p>
+<ul>
+<li>Un <strong>accumulateur de phase</strong> (registre qui s’incrémente à chaque coup d’horloge).</li>
+<li>Une <strong>table d’onde</strong> (look-up table) contenant les échantillons d’une période du signal désiré.</li>
+<li>Un <strong>convertisseur numérique-analogique</strong> (DAC) qui transforme la valeur lue en tension.</li>
+</ul>
+<p>La fréquence du signal de sortie est donnée par :</p>
+<p>[
+f_{out} = \frac{M \cdot f_{clk}}{2^N}
+]</p>
+<p>où :
+- (M) est le pas d’incrémentation (mot de réglage de fréquence),
+- (f_{clk}) est la fréquence d’horloge du système (cadence d’envoi au DAC),
+- (N) est le nombre de bits de l’accumulateur de phase (ex: 32 bits).</p>
+<p>En modifiant (M), on change la fréquence sans modifier la table d’onde. La résolution en fréquence est :</p>
+<p>[
+\Delta f = \frac{f_{clk}}{2^N}
+]</p>
+<hr />
+<p><br></p>
+<h3 id="le-dac-externe-mcp4822"><strong>Le DAC externe MCP4822</strong></h3>
+<p>Le <strong>MCP4822</strong> est un DAC double canal 12 bits avec sortie rail-to-rail. Il communique via SPI (mode 0,0) et nécessite une tension de référence (peut être interne ou externe). Caractéristiques :</p>
+<ul>
+<li>Résolution 12 bits (0 à 4095).</li>
+<li>Tension de sortie : 0 à (V_{ref}) (interne 2.048V ou externe jusqu’à 5V).</li>
+<li>Interface SPI simple : données sur 16 bits (bit de configuration + 12 bits de valeur).</li>
+<li>Temps d’établissement rapide (4.5 µs typ.).</li>
+</ul>
+<h4 id="trame-spi"><strong>Trame SPI</strong></h4>
+<p>Les 16 bits sont formatés ainsi :</p>
+<table>
+<thead>
+<tr>
+<th>Bit 15</th>
+<th>Bit 14</th>
+<th>Bit 13</th>
+<th>Bits 12-0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0/1 (A/B)</td>
+<td>1 (GA)</td>
+<td>1 (SHDN)</td>
+<td>Données 12 bits (justifiés à gauche)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Bit 15</strong> : sélection du canal (0 = canal A, 1 = canal B).</li>
+<li><strong>Bit 14</strong> : GA = 1 pour utiliser la référence interne (x1), 0 pour x2.</li>
+<li><strong>Bit 13</strong> : SHDN = 1 pour sortie active, 0 pour sortie haute impédance.</li>
+<li><strong>Bits 12-1</strong> : valeur 12 bits (les bits 12-1 sont les bits de donnée, le bit 0 est ignoré car les données sont justifiées à gauche). En pratique, on envoie un uint16_t où les bits 15-4 sont la valeur 12 bits décalée de 4.</li>
+</ul>
+<h4 id="connexion-au-stm32"><strong>Connexion au STM32</strong></h4>
+<p>On utilisera le SPI1 (par exemple) avec les broches :</p>
+<ul>
+<li>PA5 (SCLK)</li>
+<li>PA6 (MISO non utilisé ici)</li>
+<li>PA7 (MOSI)</li>
+<li>PA4 (CS) pour sélectionner le MCP4822.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="implementation-de-la-dds"><strong>Implémentation de la DDS</strong></h3>
+<p>Nous allons générer un signal sinusoïdal. Pour cela, nous créons une table d’onde contenant 256 échantillons d’une période de sinus (codés sur 12 bits). La résolution de phase est donc de 8 bits (2^8 = 256). L’accumulateur de phase sera sur 32 bits pour une bonne résolution en fréquence.</p>
+<h4 id="table-donde-look-up-table"><strong>Table d’onde (look-up table)</strong></h4>
+<pre><code class="language-c">#define LUT_SIZE 256
+uint16_t sinLUT[LUT_SIZE];
+
+void generate_sin_lut(void) {
+    for (int i = 0; i &lt; LUT_SIZE; i++) {
+        // Valeur entre 0 et 4095, centrée sur 2048 pour un sinus bipolaire
+        // On génère un sinus entre 0 et 4095 (offset 2048)
+        float val = sinf(2 * M_PI * i / LUT_SIZE);
+        sinLUT[i] = (uint16_t)((val + 1.0f) * 2047.5f); // 0..4095
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="../../stm32f4/adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../stm32f4/pwm/">Génération des signaux PWM</a></li>
+<li><a href="../../stm32f4/usart/">Communication Série USART</a></li>
+<li><a href="../../stm32f4/i2c/">Communication Série I2C</a></li>
+<li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
+<li>
+<p><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></p>
+</li>
+<li>
+<p><a href="../filtre/">Filtres Numériques</a></p>
+</li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 

@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/technique-algos/fft/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Analyse fréquentielle avec FFT - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,12 +53,414 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#analyse-frequentielle-avec-fft" class="nav-link">Analyse fréquentielle avec FFT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# Analyse frï¿½quentielle (FFT)" </p></div>
+<h1 id="analyse-frequentielle-avec-fft">Analyse fréquentielle avec FFT</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>L’analyse fréquentielle consiste à étudier le contenu spectral d’un signal, c’est-à-dire à déterminer quelles fréquences le composent et avec quelle amplitude. C’est un outil fondamental en traitement du signal, utilisé dans de nombreux domaines :</p>
+<ul>
+<li>analyse vibratoire pour la maintenance prédictive ;</li>
+<li>traitement audio (égaliseurs, reconnaissance vocale) ;</li>
+<li>communications (analyse de spectre, filtrage) ;</li>
+<li>instrumentation scientifique.</li>
+</ul>
+<p>La <strong>Transformée de Fourier Rapide (FFT)</strong> est un algorithme efficace pour calculer la transformée de Fourier discrète (DFT) d’un signal échantillonné. Dans ce chapitre, nous implémenterons une FFT en <strong>bare metal C</strong> (sans bibliothèque externe), nous l’intégrerons dans une tâche FreeRTOS, et nous réaliserons un projet d’analyse spectrale en temps réel d’un signal audio (via ADC) avec affichage sur UART ou écran.</p>
+<hr />
+<p><br></p>
+<h3 id="rappels-sur-la-transformee-de-fourier-discrete-dft"><strong>Rappels sur la transformée de Fourier discrète (DFT)</strong></h3>
+<p>Pour un signal discret (x[n]) de longueur (N), la DFT est définie par :</p>
+<p>[
+X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j \frac{2\pi}{N} k n}, \quad k = 0, 1, \dots, N-1
+]</p>
+<p>Le calcul direct de la DFT nécessite (O(N^2)) opérations, ce qui est trop coûteux pour des signaux longs ou du temps réel. La FFT réduit cette complexité à (O(N \log_2 N)) en exploitant la symétrie et la périodicité des exponentielles complexes.</p>
+<hr />
+<p><br></p>
+<h3 id="principe-de-la-fft-radix-2"><strong>Principe de la FFT (radix-2)</strong></h3>
+<p>L’algorithme le plus connu est celui de <strong>Cooley-Tukey</strong> pour des tailles (N) puissance de deux (radix-2). Il décompose récursivement la DFT en deux DFT de taille (N/2) :</p>
+<p>[
+X[k] = X_{\text{pair}}[k] + W_N^k \, X_{\text{impair}}[k]
+]
+[
+X[k + N/2] = X_{\text{pair}}[k] - W_N^k \, X_{\text{impair}}[k]
+]</p>
+<p>où (W_N = e^{-j 2\pi/N}) est le <strong>twiddle factor</strong>, et (X_{\text{pair}}) et (X_{\text{impair}}) sont les DFT des échantillons pairs et impairs.</p>
+<p>Cette décomposition mène à une structure en <strong>papillon</strong> (butterfly) qui est l’unité de base de la FFT.</p>
+<hr />
+<p><br></p>
+<h3 id="implementation-en-c-virgule-flottante"><strong>Implémentation en C (virgule flottante)</strong></h3>
+<p>Nous allons implémenter une FFT en C pour des nombres complexes (partie réelle et imaginaire). Nous utiliserons des tableaux de <code>float</code> pour représenter les parties réelles et imaginaires séparément.</p>
+<p><strong>1. Inversion des bits (bit-reversal)</strong></p>
+<p>Avant le calcul, il faut réordonner les échantillons d’entrée dans l’ordre binaire inversé. Par exemple, pour (N=8), l’indice 3 (binaire 011) devient 6 (binaire 110). On peut générer cette permutation par une fonction simple.</p>
+<pre><code class="language-c">// Réordonnancement par inversion de bits (in-place)
+void bit_reverse(float *real, float *imag, int n) {
+    int i, j, k;
+    float tr, ti;
+    for (i = 1, j = 0; i &lt; n; i++) {
+        int bit = n &gt;&gt; 1;
+        for (; j &amp; bit; bit &gt;&gt;= 1)
+            j ^= bit;
+        j ^= bit;
+        if (i &lt; j) {
+            tr = real[i]; ti = imag[i];
+            real[i] = real[j]; imag[i] = imag[j];
+            real[j] = tr; imag[j] = ti;
+        }
+    }
+}
+</code></pre>
+<p><strong>2. Calcul des twiddle factors</strong></p>
+<p>Les <strong>twiddle factors</strong> sont les coefficients complexes utilisés dans l’algorithme <strong>FFT (Fast Fourier Transform)</strong>.</p>
+<p>Ils sont définis par :</p>
+<p>W_N^k = cos(2πk/N) − j sin(2πk/N)</p>
+<p>où :</p>
+<ul>
+<li><code>N</code> est la taille de la FFT,</li>
+<li><code>k</code> est l’indice du coefficient,</li>
+<li><code>j</code> est l’unité imaginaire (<code>j² = -1</code>).</li>
+</ul>
+<p>Ces coefficients représentent les <strong>racines N-ièmes de l’unité</strong> dans le plan complexe.</p>
+<p>Dans une implémentation embarquée (par exemple sur <strong>STM32</strong>), les twiddle factors sont généralement <strong>pré-calculés</strong> afin d’éviter de recalculer les fonctions trigonométriques pendant l’exécution.</p>
+<p><strong>Exemple : pré-calcul en C</strong></p>
+<pre><code class="language-c">#include &lt;math.h&gt;
+
+#define N 64
+
+float W_real[N/2];
+float W_imag[N/2];
+
+void ComputeTwiddleFactors(void) {
+    for (int k = 0; k &lt; N/2; k++) {
+        W_real[k] = cosf(2.0f * M_PI * k / N);
+        W_imag[k] = -sinf(2.0f * M_PI * k / N);
+    }
+}
+</code></pre>
+<p>Dans cet exemple :</p>
+<ul>
+<li><code>W_real[k]</code> contient la partie réelle <code>cos(2πk/N)</code></li>
+<li><code>W_imag[k]</code> contient la partie imaginaire <code>−sin(2πk/N)</code></li>
+</ul>
+<p>Ces valeurs sont ensuite utilisées dans les opérations papillon (butterfly) de la FFT.</p>
+<pre><code class="language-c">// Pré-calcul des twiddle factors pour une étape donnée
+float cos_factor(int step, int n) {
+    return cos(2 * M_PI * step / n);
+}
+
+float sin_factor(int step, int n) {
+    return -sin(2 * M_PI * step / n);
+}
+</code></pre>
+<p><strong>3. Boucle principale de la FFT</strong></p>
+<p>L’algorithme procède par étapes, chaque étape fusionnant des DFT de tailles plus petites. La taille de la FFT doit être une puissance de deux.</p>
+<pre><code class="language-c">void fft(float *real, float *imag, int n) {
+    int i, j, k, len, step;
+    float tr, ti, wr, wi, tempr, tempi;
+
+    // 1. Réordonnancement
+    bit_reverse(real, imag, n);
+
+    // 2. Boucle sur les étapes (len = taille des sous-DFT)
+    for (len = 2; len &lt;= n; len &lt;&lt;= 1) {
+        step = n / len;  // pas entre les twiddle factors pour cette étape
+        for (i = 0; i &lt; n; i += len) {
+            // Papillons pour cette sous-DFT
+            for (j = 0; j &lt; len / 2; j++) {
+                // Indice du twiddle factor
+                int tw = j * step;
+                wr = cos_factor(tw, n);
+                wi = sin_factor(tw, n);
+
+                // Indice des échantillons
+                int i1 = i + j;
+                int i2 = i + j + len / 2;
+
+                // Papillon
+                tempr = real[i2] * wr - imag[i2] * wi;
+                tempi = real[i2] * wi + imag[i2] * wr;
+
+                real[i2] = real[i1] - tempr;
+                imag[i2] = imag[i1] - tempi;
+                real[i1] = real[i1] + tempr;
+                imag[i1] = imag[i1] + tempi;
+            }
+        }
+    }
+}
+</code></pre>
+<p><strong>4. Calcul de l’amplitude</strong></p>
+<p>Après la FFT, on obtient les parties réelle et imaginaire pour chaque fréquence. L’amplitude (module) est :</p>
+<p>amp[k] = √(real[k]² + imag[k]²) / N (pour k = 0, N/2)</p>
+<p>Pour les autres indices, on divise par N/2 pour obtenir l’amplitude réelle (si le signal est réel, les amplitudes sont symétriques). Souvent on ne s’intéresse qu’aux fréquences positives (de 0 à N/2).</p>
+<pre><code class="language-c">void compute_amplitude(float *real, float *imag, float *amp, int n) {
+    for (int i = 0; i &lt; n/2; i++) {
+        amp[i] = 2.0f * sqrtf(real[i]*real[i] + imag[i]*imag[i]) / n;
+    }
+    amp[0] = sqrtf(real[0]*real[0] + imag[0]*imag[0]) / n; // composante continue
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="optimisations-pour-lembarque"><strong>Optimisations pour l’embarqué</strong></h3>
+<p>Sur un microcontrôleur sans FPU (ou avec FPU mais limité), on peut :</p>
+<ul>
+<li>Utiliser la virgule fixe pour éviter les flottants lents. Mais la mise en œuvre est plus complexe.</li>
+<li>Pré-calculer tous les twiddle factors une fois pour toutes (gain de temps).</li>
+<li>Utiliser une taille de FFT fixe (ex: 256, 512) pour simplifier.</li>
+</ul>
+<p>Notre code utilisera des flottants simples, ce qui est acceptable sur STM32F4 (avec FPU).</p>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos"><strong>Intégration avec FreeRTOS</strong></h3>
+<p>Pour une analyse spectrale en temps réel, on peut :</p>
+<ul>
+<li>Acquérir un bloc d’échantillons via l’ADC (par exemple 256 échantillons à 1 kHz).</li>
+<li>Une fois le buffer rempli, lancer la FFT dans une tâche dédiée.</li>
+<li>Afficher les résultats (fréquence du pic, amplitude) sur UART ou écran.</li>
+</ul>
+<p><strong>Structure du projet</strong></p>
+<ul>
+<li>Tâche <code>vTaskADC</code> : acquiert les échantillons dans un buffer circulaire ou un double buffer (avec DMA).</li>
+<li>Tâche <code>vTaskFFT</code> : attend qu’un buffer soit plein, effectue la FFT, extrait le pic principal, et envoie le résultat à une file.</li>
+<li>Tâche <code>vTaskDisplay</code> : reçoit les résultats et les affiche.</li>
+</ul>
+<p>Exemple simplifié avec double buffer</p>
+<pre><code class="language-c">#define FFT_SIZE 256
+float buffer1[FFT_SIZE];
+float buffer2[FFT_SIZE];
+volatile uint8_t activeBuffer = 0;
+volatile uint8_t bufferReady = 0;
+
+// Interruption ADC (fin de conversion) ou DMA
+void ADC_IRQHandler(void) {
+    static int count = 0;
+    if (activeBuffer == 0) {
+        buffer1[count++] = ADC_Read();
+    } else {
+        buffer2[count++] = ADC_Read();
+    }
+    if (count &gt;= FFT_SIZE) {
+        bufferReady = 1;
+        count = 0;
+        activeBuffer ^= 1; // basculer de buffer
+        // Notifier la tâche FFT (par exemple via un sémaphore)
+    }
+}
+</code></pre>
+<p><strong>Tâche FFT</strong></p>
+<pre><code class="language-c">void vTaskFFT(void *pvParameters) {
+    float real[FFT_SIZE], imag[FFT_SIZE];
+    float amp[FFT_SIZE/2];
+
+    for (;;) {
+        // Attendre qu'un buffer soit prêt (par exemple sémaphore)
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        // Copier le buffer inactif (celui qui n'est plus en cours d'acquisition)
+        int bufferToProcess = activeBuffer ^ 1;
+        for (int i = 0; i &lt; FFT_SIZE; i++) {
+            if (bufferToProcess == 0)
+                real[i] = buffer1[i];
+            else
+                real[i] = buffer2[i];
+            imag[i] = 0.0f;
+        }
+
+        // Calcul FFT
+        fft(real, imag, FFT_SIZE);
+        compute_amplitude(real, imag, amp, FFT_SIZE);
+
+        // Trouver le pic (hors composante continue)
+        int peakIndex = 1;
+        for (int i = 2; i &lt; FFT_SIZE/2; i++) {
+            if (amp[i] &gt; amp[peakIndex]) peakIndex = i;
+        }
+        float freq = (float)peakIndex * SAMPLING_FREQ / FFT_SIZE;
+
+        // Envoyer résultat à la tâche d'affichage (par file)
+        xQueueSend(xResultQueue, &amp;freq, 0);
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-fft-audio"><strong>Projet : Analyse spectrale d’un signal audio</strong></h3>
+<p>Objectif : Acquérir un signal audio via l’ADC (microphone ou entrée ligne), effectuer une FFT de 256 points à 1 kHz, et afficher la fréquence dominante sur UART (ou sur un écran OLED).</p>
+<p><strong>Matériel :</strong></p>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>Microphone avec sortie analogique (ou module comme MAX9814) connecté à PA0</li>
+<li>(Optionnel) écran OLED I2C</li>
+</ul>
+<p><strong>Code principal</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;math.h&gt;
+#include &lt;stdio.h&gt;
+
+#define FFT_SIZE 256
+#define SAMPLING_FREQ 1000.0f  // 1 kHz
+
+// Buffers
+float buffer[2][FFT_SIZE];
+volatile uint8_t activeBuffer = 0;
+volatile uint8_t bufferCount = 0;
+SemaphoreHandle_t xFFTSemaphore;
+QueueHandle_t xResultQueue;
+
+// Prototypes
+void ADC_Init(void);
+void USART2_Init(uint32_t baud);
+void USART2_SendString(char *str);
+int _write(int file, char *ptr, int len);
+
+// Fonctions FFT
+void bit_reverse(float *real, float *imag, int n);
+void fft(float *real, float *imag, int n);
+void compute_amplitude(float *real, float *imag, float *amp, int n);
+
+// Interruption ADC (déclenchée par timer)
+void TIM2_IRQHandler(void) {
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+        // Lancer conversion ADC
+        ADC1-&gt;CR2 |= ADC_CR2_SWSTART;
+    }
+}
+
+void ADC_IRQHandler(void) {
+    if (ADC1-&gt;SR &amp; ADC_SR_EOC) {
+        uint16_t val = ADC1-&gt;DR;
+        // Stocker dans le buffer actif
+        buffer[activeBuffer][bufferCount++] = (float)val;
+        if (bufferCount &gt;= FFT_SIZE) {
+            bufferCount = 0;
+            activeBuffer ^= 1;  // basculer
+            // Donner le sémaphore pour réveiller la tâche FFT
+            BaseType_t xWoken = pdFALSE;
+            xSemaphoreGiveFromISR(xFFTSemaphore, &amp;xWoken);
+            portYIELD_FROM_ISR(xWoken);
+        }
+    }
+}
+
+// Tâche FFT
+void vTaskFFT(void *pvParameters) {
+    float real[FFT_SIZE], imag[FFT_SIZE];
+    float amp[FFT_SIZE/2];
+
+    for (;;) {
+        xSemaphoreTake(xFFTSemaphore, portMAX_DELAY);
+
+        // Traiter le buffer inactif (celui qui vient d'être rempli)
+        int bufferIdx = activeBuffer ^ 1;
+        for (int i = 0; i &lt; FFT_SIZE; i++) {
+            real[i] = buffer[bufferIdx][i];
+            imag[i] = 0.0f;
+        }
+
+        fft(real, imag, FFT_SIZE);
+        compute_amplitude(real, imag, amp, FFT_SIZE);
+
+        // Trouver le pic (hors DC)
+        int peakIdx = 1;
+        for (int i = 2; i &lt; FFT_SIZE/2; i++) {
+            if (amp[i] &gt; amp[peakIdx]) peakIdx = i;
+        }
+        float freq = peakIdx * SAMPLING_FREQ / FFT_SIZE;
+
+        xQueueSend(xResultQueue, &amp;freq, 0);
+    }
+}
+
+// Tâche d'affichage
+void vTaskDisplay(void *pvParameters) {
+    float freq;
+    char buffer[32];
+
+    for (;;) {
+        if (xQueueReceive(xResultQueue, &amp;freq, portMAX_DELAY) == pdPASS) {
+            sprintf(buffer, &quot;Freq max: %.1f Hz\r\n&quot;, freq);
+            USART2_SendString(buffer);
+        }
+    }
+}
+
+int main(void) {
+    HAL_Init();
+    SystemClock_Config(); // doit fournir 84 MHz
+
+    ADC_Init();
+    USART2_Init(115200);
+
+    // Timer 2 pour déclencher l'ADC à 1 kHz (période 1 ms)
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2-&gt;PSC = 84 - 1;       // 1 MHz
+    TIM2-&gt;ARR = 1000 - 1;     // 1 kHz
+    TIM2-&gt;DIER |= TIM_DIER_UIE;
+    NVIC_SetPriority(TIM2_IRQn, 5);
+    NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+
+    xFFTSemaphore = xSemaphoreCreateBinary();
+    xResultQueue = xQueueCreate(5, sizeof(float));
+
+    xTaskCreate(vTaskFFT, &quot;FFT&quot;, 512, NULL, 3, NULL);
+    xTaskCreate(vTaskDisplay, &quot;Display&quot;, 128, NULL, 1, NULL);
+
+    vTaskStartScheduler();
+
+    while(1);
+}
+</code></pre>
+<p><strong>Explications</strong></p>
+<p>Le timer <strong>TIM2</strong> génère une interruption toutes les <strong>1 ms</strong>. Dans son handler, on lance une conversion <strong>ADC</strong>.</p>
+<p>La fin de conversion <strong>ADC</strong> déclenche une interruption qui stocke l’échantillon dans un <strong>buffer circulaire double</strong>.</p>
+<p>Quand un buffer est plein (<strong>256 échantillons</strong>), on donne un <strong>sémaphore</strong> pour réveiller la <strong>tâche FFT</strong>.</p>
+<p>La tâche <strong>FFT</strong> effectue la transformée et extrait la fréquence du pic (hors composante continue). Le résultat est envoyé à la <strong>tâche d’affichage</strong>.</p>
+<p>La tâche d’affichage envoie la fréquence sur <strong>UART</strong> (via <code>printf</code> redirigé).</p>
+<hr />
+<p><br></p>
+<h3 id="limitations-et-ameliorations">Limitations et améliorations</h3>
+<p>La résolution fréquentielle est :
+fe / N</p>
+<p>Avec :
+fe = 1 kHz
+N = 256</p>
+<p>la résolution est d’environ <strong>3,9 Hz</strong>.</p>
+<p>Pour une meilleure résolution, il faut <strong>augmenter N</strong> ou <strong>diminuer fe</strong>.</p>
+<p>Le calcul en <strong>flottants</strong> est assez rapide sur <strong>STM32F4 (FPU)</strong>, mais pour des FFT plus grandes, on peut utiliser la <strong>bibliothèque CMSIS-DSP optimisée</strong>.</p>
+<p>Le <strong>fenêtrage</strong> (Hamming, Hann) n’est pas appliqué ici ; il réduit les <strong>fuites spectrales</strong>. On pourrait multiplier le signal d’entrée par une <strong>fenêtre</strong> avant la FFT.</p>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="../../stm32f4/adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../stm32f4/pwm/">Génération des signaux PWM</a></li>
+<li><a href="../../stm32f4/usart/">Communication Série USART</a></li>
+<li><a href="../../stm32f4/i2c/">Communication Série I2C</a></li>
+<li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../estimation/">Estimation d’État et Fusion Capteurs</a></li>
+<li><a href="../filtre/">Filtres Numériques</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 
