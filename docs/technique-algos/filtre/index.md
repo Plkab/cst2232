@@ -11,7 +11,7 @@
 <br>
 
 
-### **Introduction aux filtres numériques**
+### **Introduction aux Filtres Numériques**
 
 Dans les systèmes embarqués, les signaux issus de capteurs sont souvent bruités. Le bruit peut provenir de l’environnement (perturbations électromagnétiques), du capteur lui-même (bruit thermique) ou de la numérisation (bruit de quantification). Pour extraire l’information utile, on utilise des **filtres numériques**.
 
@@ -51,7 +51,7 @@ Dans la suite, nous considérerons un signal d’entrée \(x[n]\) et un signal d
 
 
 
-### **Filtres à réponse impulsionnelle finie (FIR)**
+### **Filtres à Réponse Impulsionnelle finie (FIR)**
 
 Un filtre FIR est caractérisé par une équation aux différences de la forme :
 
@@ -142,7 +142,7 @@ float FIR_Update(FIRFilter *fir, float input) {
 
 
 
-### Filtres à réponse impulsionnelle infinie (IIR)
+### Filtres à Réponse Impulsionnelle Infinie (IIR)
 
 Les filtres IIR sont caractérisés par une équation aux différences avec récursion :
 

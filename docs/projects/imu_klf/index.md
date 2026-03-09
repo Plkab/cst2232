@@ -616,7 +616,6 @@ if __name__ == "__main__":
 
 ### **Liens connexes**
 
-
 - [GPIO et Interruptions](../../stm32f4/gpio/index.md)
 - [Timer et Interruption](../../stm32f4/timer/index.md)
 - [Acquisition Analogique via ADC](../../stm32f4/adc/index.md)

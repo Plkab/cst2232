@@ -64,7 +64,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Estimation d’État et Fusion Capteurs](technique-algos/estimation/index.md)
 - [Filtres Numériques](technique-algos/filtre/index.md)
 - [Analyse fréquentielle avec FFT](technique-algos/fft/index.md)
-- [Synthèse Numérique Directe (DDS)](technique-algos/dds/index.md)
+- [Synthèse Numérique Directe (DDS) avec DAC externe MCP4822](technique-algos/dds/index.md)
 - [Bases du Graphisme Embarqué sur écran TFT ili9488 3.2](technique-algos/graphisme/index.md)
 
 ---
