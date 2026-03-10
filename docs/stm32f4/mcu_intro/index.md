@@ -30,16 +30,17 @@ Tous ces éléments communiquent via un **bus** (ici un bus 32 bits). Le fonctio
 
 Actuellement, les microcontrôleurs les plus populaires sont basés sur l'architecture **32 bits ARM Cortex-M**, un standard de l'industrie offrant un excellent rapport performance/consommation.
 
-
-  
 ---
 <br>
 
-### **STM32F401**
 
-Le **STM32F4** est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur **ARM Cortex-M4 32 bits**, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (**FPU, Floating Point Unit**). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.
 
-Le manuel de référence pour le [STM32F401 (RM0368)] (https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres.
+
+### **Architecture du microcontrôleur STM32F401**
+
+Le **STM32F401** est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur **ARM® Cortex-M4 32 bits**, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (**FPU, Floating Point Unit**). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.
+
+Le manuel de référence pour le [STM32F401 (RM0368)](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres.
 
 **Caractéristiques principales** :
 
@@ -57,26 +58,49 @@ Le manuel de référence pour le [STM32F401 (RM0368)] (https://www.st.com/resour
 ---
 <br>
 
+
+
 ### **Organisation Mémoire**
 
 Le STM32F4 utilise une architecture de type **Harvard** (bus séparés pour les instructions et les données), mais organisée sur une carte mémoire unifiée de 4 Go (adressage 32 bits). Chaque élément (Flash, RAM, périphériques) possède une adresse fixe et unique dans cet espace mémoire. Cela permet au processeur, grâce aux bus séparés, de lire une instruction en Flash tout en accédant simultanément à une donnée en RAM, améliorant ainsi les performances.
 
-Chaque registre de configuration d'un périphérique est accessible via une adresse spécifique. Par exemple :
+Chaque registre de configuration d'un périphérique est accessible via une adresse spécifique. 
 
-- GPIOA commence à l'adresse 0x40020000
-- USART2 à 0x40004400
-- TIM2 à 0x40000000
+
+|Mémoire/périphérique	|Taille	|Plage d'adresses| Description|
+|-----------------------|-------|----------------|------------|
+|Flash	|256 Ko	|0x0800 0000 – 0x0803 FFFF| Flash principale (code)|
+|SRAM	|64 Ko	|0x2000 0000 – 0x2000 FFFF| SRAM (variables, pile)|
+|Périphériques	|variable (Ici 512 Mo)	|0x4000 0000 – 0x5FFF FFFF| Périphériques (GPIO, timers, etc.)|
+|CPU| 1 Mo| 0xE000 0000 – 0xE00F FFFF| Cortex-M4 interne (NVIC, SysTick, etc.)|
+
+- La Flash contient le programme et d'éventuelles données constantes.
+- La SRAM contient les variables, la pile et les tampons.
+- Les registres des périphériques (GPIO, timers, ADC, etc.) sont accessibles dans la région des périphériques.
 
 Le reference manual ([RM0368 pour le F401](https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)) fournit des tableaux détaillés. En programmation bas niveau, on utilise des structures C pour représenter ces registres, comme le font les [CMSIS](https://arm-software.github.io/CMSIS_6/latest/Core/modules.html) (Cortex Microcontroller Software Interface Standard).
+
+L'adresse de base de chaque port est donnée dans le manuel de référence. Par exemple :
+
+- GPIOA_BASE = 0x4002 0000
+- GPIOB_BASE = 0x4002 0400
+- GPIOC_BASE = 0x4002 0800
+
+Pour accéder à ces registres en C, on utilise des structures et des pointeurs, comme défini dans les fichiers CMSIS (`stm32f4xx.h`). Par exemple, `GPIOA->MODER` permet d'accéder au registre `MODER` du port A.
 
 Exemple de structure pour GPIO :
 
 ```c
 typedef struct {
-    volatile uint32_t MODER;   // Offset 0x00
-    volatile uint32_t OTYPER;  // Offset 0x04
-    volatile uint32_t OSPEEDR; // Offset 0x08
-    // ...
+    volatile uint32_t MODER;   // Offset 0x00   // Mode (0x00)
+    volatile uint32_t OTYPER;  // Offset 0x04   // Output type (0x04)
+    volatile uint32_t OSPEEDR; // Offset 0x08   // Output speed (0x08)
+    volatile uint32_t PUPDR;   // Pull-up/down (0x0C)
+    volatile uint32_t IDR;     // Input data (0x10)
+    volatile uint32_t ODR;     // Output data (0x14)
+    volatile uint32_t BSRR;    // Bit set/reset (0x18)
+    volatile uint32_t LCKR;    // Lock (0x1C)
+    volatile uint32_t AFR[2];  // Alternate function (0x20-0x24)
 } GPIO_TypeDef;
 
 #define GPIOA ((GPIO_TypeDef *) 0x40020000)
@@ -86,6 +110,7 @@ Quand on programme en bas niveau il est conseillé de toujours lire le [Referenc
 
 ---
 <br>
+
 
 
 ### **Gestion des horloges (RCC)**
@@ -104,8 +129,48 @@ Le système d'horloge est le cœur battant du microcontrôleur. Il détermine la
 
 Un bon équilibre entre performance et consommation passe par un choix judicieux des fréquences et l'activation sélective des horloges des périphériques via le registre RCC_AHB1ENR, RCC_APB1ENR, etc. Oublier d'activer l'horloge d'un périphérique est une erreur classique : le périphérique ne répondra pas.
 
+
+Registres clés du RCC :
+
+- `RCC_CR` : contrôle des oscillateurs (HSI, HSE, PLL)
+- `RCC_PLLCFGR` : configuration de la PLL
+- `RCC_CFGR` : sélection des sources d'horloge et prescalers
+- `RCC_AHB1ENR` : active l'horloge des périphériques AHB (GPIO, DMA, etc.)
+- `RCC_APB1ENR` / `RCC_APB2ENR` : active les horloges APB (USART, I2C, TIM, etc.)
+
+Exemple d'activation de GPIOA :
+
+```c
+RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+```
+
+Nous allons utiliser chaque fois cette fonction pour configurer l'horloge princiaple a 84MHz:
+
+```c
+void clockConfig84MHz(void){
+    RCC->CR |= RCC_CR_HSEON;
+    while (!(RCC->CR & RCC_CR_HSERDY));
+
+    RCC->PLLCFGR = RCC_PLLCFGR_PLLSRC_HSE
+                | (4 << 0)       // PLLM = 4
+                | (168 << 6)     // PLLN = 168
+                | (0 << 16)      // PLLP = 2
+                | (7 << 24);     // PLLQ = 7
+    RCC->CR |= RCC_CR_PLLON;
+    while (!(RCC->CR & RCC_CR_PLLRDY));
+
+    RCC->CFGR = RCC_CFGR_HPRE_DIV1
+                | RCC_CFGR_PPRE1_DIV2
+                | RCC_CFGR_PPRE2_DIV1
+                | RCC_CFGR_SW_PLL;
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
+}
+```
+
 ---
 <br>
+
+
 
 ### **Le Gestionnaire d'Interruption NVIC (Nested Vectored Interrupt Controller)**
 
@@ -117,9 +182,10 @@ Le NVIC est le gestionnaire d'interruptions du Cortex-M. Il permet de :
 
 Pour un système temps réel, la gestion des priorités est cruciale. Les interruptions associées à des tâches critiques (arrêt d'urgence, timer de contrôle) doivent avoir une priorité élevée. Les fonctions FreeRTOS comme xSemaphoreGiveFromISR nécessitent que la priorité de l'interruption soit inférieure ou égale à la priorité maximale configurée pour le noyau (généralement configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY).
 
-
 ---
 <br>
+
+
 
 ### **DMA (Direct Memory Access)**
 
@@ -146,17 +212,11 @@ DMA_Stream0->CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 ---
 <br>
 
-### **Gestion des horloges (RCC)**
-
-Configuration des horloges système et périphériques.
-
----
-<br>
 
 
 ### **Présentation de la carte de développement utilisée**
 
-La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse ([environ 10$](https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/)) et très répandue dans le monde de l'embarqué.
+La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), un support de développement peu coûteux ([environ 10$](https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/)) et très répandue dans le monde de l'embarqué.
 
 ![La carte Black Pill](board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg){ width=250, align=center }
 
@@ -187,6 +247,9 @@ Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK
 
 ---
 <br>
+
+
+
 
 ### Lien connexe
 

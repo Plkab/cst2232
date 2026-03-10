@@ -13,7 +13,7 @@
 
 ### **GPIO**
 
-Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
+Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
 
 **Registres principaux :**
 
@@ -23,6 +23,7 @@ Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée
 |IDR	|Input Data Register	|Permet de lire l'état logique présent sur les broches configurées en entrée.|
 |ODR	|Output |Data Register	|Permet d’écrire (ou de lire) l’état des broches configurées en sortie. Attention : une opération comme `ODR |= (1<<13)` n’est pas atomique (lecture-modification-écriture) et peut être interrompue.|
 |BSRR	|Bit Set/Reset Register	|Permet de modifier l’état de manière **atomique** en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.|
+| AFR| | Sélection de la fonction alternative (AF0 à AF15).|
 
 ---
 <br>
@@ -33,11 +34,12 @@ Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée
 
 Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :
 
-- Activer l’horloge du port (RCC) : Sans horloge, le périphérique est inactif. Exemple : RCC_AHB1ENR
-- Configurer la broche en sortie via le registre MODER.
-- Piloter l’état en écrivant dans BSRR ou ODR.
+- Activer l’horloge du port (`RCC`) : Sans horloge, le périphérique est inactif. Avant d'utiliser un GPIO, il faut activer son horloge via le registre `RCC_AHB1ENR`.
+- Configurer la broche en sortie via le registre `MODER`.
+- Piloter l’état en écrivant dans `BSRR` ou `ODR`.
 
 Exemple Pratique : Faire clignoter la LED (PC13)
+La carte Black Pill intègre une LED connectée à PC13 (active à l'état bas).
 
 ```c
 #include "stm32f4xx.h"
@@ -50,7 +52,7 @@ void main(void) {
     GPIOC->MODER |= (1 << (13 * 2));            // 2. PC13 en Sortie
 
     while(1) {
-        GPIOC->BSRR = (1 << (13 + 16));         // LED ON (Reset bit 13)
+        GPIOC->BSRR = (1 << (13 + 16));         // LED ON (Reset bit 13) → LED allumée (active bas)
         for(int i=0; i<500000; i++);            // Attente logicielle (Bloque le CPU)
         GPIOC->BSRR = (1 << 13);                // LED OFF (Set bit 13)
         for(int i=0; i<500000; i++);
@@ -75,6 +77,13 @@ void main(void) {
     }
 }
 ```
+
+Explications :
+
+- L'horloge du port C est activée via RCC_AHB1ENR. Sans cela, le port ne répond pas.
+- Le mode de la broche est configuré en sortie (MODER = 01).
+- On utilise BSRR pour modifier l'état de manière atomique : écrire dans les bits 0‑15 met la broche correspondante à 1, écrire dans les bits 16‑31 la remet à 0.
+- ODR est utilisé pour le toggle (lecture‑modification‑écriture, non atomique).
 
 **Problème des boucles `for` :**
 
@@ -162,8 +171,8 @@ Le NVIC est le gestionnaire d’interruptions du Cortex‑M. Il permet d’activ
 Pour activer une interruption, on utilise les fonctions CMSIS :
 
 ```c
-NVIC_SetPriority(EXTI0_IRQn, priorité);
-NVIC_EnableIRQ(EXTI0_IRQn);
+NVIC_SetPriority(EXTI0_IRQn, priorité); // NVIC_SetPriority(IRQn, priority) (priorité 0..15)
+NVIC_EnableIRQ(EXTI0_IRQn);     // NVIC_GetPriority(IRQn)
 ```
 
 La priorité est un nombre entre 0 (la plus haute) et 15 (la plus basse) sur 4 bits.
