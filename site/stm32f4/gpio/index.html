@@ -150,7 +150,7 @@ void main(void) {
 <p>Pendant ces attentes, le processeur est totalement occupé à décrémenter un compteur. Si un événement externe survient (appui sur un bouton), il ne pourra pas y réagir avant la fin de la boucle. C'est pourquoi, dans un système temps réel, on préfère des mécanismes non bloquants comme les interruptions ou les délais gérés par un RTOS (par exemple vTaskDelay() sous FreeRTOS).</p>
 <hr />
 <p><br></p>
-<h3 id="gestion-des-entreessorties-dans-une-tache"><strong>Gestion des Entrées/Sorties dans une Tâche</strong></h3>
+<h3 id="gestion-des-entreessorties-dans-une-tache-freertos"><strong>Gestion des Entrées/Sorties dans une Tâche FreeRTOS</strong></h3>
 <p>Dans une approche bare metal classique, on utilise des boucles d'attente active (<code>for(i=0; i&lt;delay; i++);</code>) pour créer des temporisations <code>delay()</code>. Ces boucles monopolisent le processeur, l'empêchant de réagir à d'autres événements pendant toute leur durée.</p>
 <p>Avec FreeRTOS, la philosophie change : quand une tâche n'a rien d'utile à faire (par exemple en attendant qu'une LED clignote), elle doit rendre la main pour qu'une autre tâche puisse s'exécuter. C'est le rôle de <code>vTaskDelay()</code>.</p>
 <p>La fonction <code>vTaskDelay()</code> place la tâche courante dans l'état Blocked pendant une durée donnée. Pendant ce temps, le processeur peut exécuter d'autres tâches prêtes. À l'expiration du délai, la tâche repasse dans l'état Ready et sera automatiquement reprise par l'ordonnanceur.</p>
@@ -172,15 +172,98 @@ void main(void) {
 <hr />
 <p><br></p>
 <h3 id="lapproche-interruptions-externes-exti-gpio-interruption-freertos"><strong>L'Approche Interruptions Externes (EXTI) : GPIO + Interruption + FreeRTOS</strong></h3>
-<p>Pour ne plus ignorer un événement comme l'appui sur un bouton, on utilise le mécanisme des <strong>interruptions externes (EXTI)</strong>. Une interruption est un signal matériel qui force le processeur à suspendre temporairement le programme en cours pour exécuter une routine spécifique appelée <strong>ISR (Interrupt Service Routine)</strong>. C'est l'équivalent d'une sonnette : le processeur, quelle que soit sa tâche, s'arrête, répond à la sonnette, puis reprend son activité là où il s'était arrêté.</p>
-<p>Sur STM32F4, la configuration d'une interruption externe sur une broche (par exemple PA0) suit plusieurs étapes clés :</p>
+<p>Dans un système embarqué, il est souvent nécessaire de réagir à des événements asynchrones provenant de l’extérieur, comme l’appui sur un bouton, un signal de capteur, ou une communication. Le mécanisme le plus efficace pour cela est l’interruption matérielle. Une interruption force le processeur à suspendre temporairement le programme en cours pour exécuter une routine spécifique appelée <strong>ISR (Interrupt Service Routine)</strong>. C'est l'équivalent d'une sonnette : le processeur, quelle que soit sa tâche, s'arrête, répond à la sonnette, puis reprend son activité là où il s'était arrêté.</p>
+<p>Le STM32F401 dispose de 23 lignes d’interruptions externes (EXTI), dont 16 sont connectées aux broches des ports GPIO. Dans ce chapitre, nous allons voir comment configurer et utiliser ces interruptions en programmation <em>bare metal</em> (sans HAL), puis comment les intégrer dans un environnement FreeRTOS pour une architecture temps réel robuste.</p>
+<p><strong>Architecture des interruptions externes sur STM32F4</strong></p>
+<p>Le contrôleur EXTI (External Interrupt/Event Controller) gère jusqu’à 23 lignes. Pour les lignes 0 à 15, elles sont partagées entre les broches de même numéro de tous les ports GPIO. Par exemple, la ligne EXTI0 est connectée à PA0, PB0, PC0, etc. Un multiplexeur (voir figure) permet de sélectionner quelle broche est effectivement liée à la ligne EXTI.</p>
+<p>Les autres lignes (16 à 22) sont réservées à des événements internes (RTC, USB, Ethernet, etc.).</p>
+<p><strong>1. Registres de configuration EXTI</strong>
+Les registres suivants contrôlent le comportement des lignes EXTI :</p>
+<table>
+<thead>
+<tr>
+<th>Registre</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EXTI_IMR</code></td>
+<td>Masque d’interruption. Un bit à 1 autorise l’interruption sur la ligne correspondante.</td>
+</tr>
+<tr>
+<td><code>EXTI_RTSR</code></td>
+<td>Sélection du front montant. Un bit à 1 configure l’interruption sur front montant.</td>
+</tr>
+<tr>
+<td><code>EXTI_FTSR</code></td>
+<td>Sélection du front descendant. Un bit à 1 configure l’interruption sur front descendant.</td>
+</tr>
+<tr>
+<td><code>EXTI_PR</code></td>
+<td>Registre de pending. Un bit passe à 1 lorsqu’un événement est détecté. Il doit être effacé en écrivant 1 (écriture qui remet à 0).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>2. Sélection de la broche GPIO : registres <code>SYSCFG_EXTICR</code></strong></p>
+<p>Pour connecter une ligne EXTI à une broche spécifique, on utilise les registres <code>SYSCFG_EXTICR[0..3]</code>. Chaque registre est divisé en quatre champs de 4 bits, chacun correspondant à une ligne EXTI. Par exemple :</p>
 <ul>
-<li><strong>Activer l'horloge du GPIO</strong> et du module <code>SYSCF</code> (System Configuration Controller) qui permet de connecter la ligne d'interruption au bon port.</li>
-<li><strong>Configurer la broche en entrée</strong> avec éventuellement une résistance de pull-up/pull-down.</li>
-<li><strong>Sélectionner la source EXTI</strong> via les registres <code>SYSCFG_EXTICR</code>, on associe la ligne EXTI (par exemple EXTI0) au port souhaité (GPIOA).</li>
-<li><strong>Configurer le front déclencheur</strong>, on choisit si l'interruption se déclenche sur un front montant (<code>EXTI_RTSR</code>), descendant (<code>EXTI_FTSR</code>), ou les deux.</li>
-<li><strong>Démasquer la ligne EXTI</strong> : on autorise l'interruption pour cette ligne via le registre EXTI_IMR.</li>
-<li><strong>Configurer et activer l'interruption dans le NVIC</strong> : le <em>Nested Vectored Interrupt Controller</em> (NVIC) est le gestionnaire d'interruptions du Cortex-M. On doit définir sa priorité et l'activer.</li>
+<li><code>SYSCFG_EXTICR[0]</code> bits 3‑0 → EXTI0, bits 7‑4 → EXTI1, bits 11‑8 → EXTI2, bits 15‑12 → EXTI3.</li>
+<li>La valeur du champ indique le port : 0 = GPIOA, 1 = GPIOB, 2 = GPIOC, 3 = GPIOD, 4 = GPIOE, etc.</li>
+</ul>
+<p>Ainsi, pour connecter EXTI0 à PA0, on écrit 0 dans le champ correspondant (ce qui est la valeur par défaut). Pour PB0, on écrirait 1.</p>
+<p><strong>3. NVIC (Nested Vectored Interrupt Controller)</strong></p>
+<p>Le NVIC est le gestionnaire d’interruptions du Cortex‑M. Il permet d’activer/désactiver les interruptions et de définir leur priorité. Chaque ligne EXTI est associée à un numéro d’IRQ :</p>
+<table>
+<thead>
+<tr>
+<th>IRQn</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EXTI0_IRQn</code></td>
+<td>Ligne EXTI0</td>
+</tr>
+<tr>
+<td><code>EXTI1_IRQn</code></td>
+<td>Ligne EXTI1</td>
+</tr>
+<tr>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr>
+<td><code>EXTI4_IRQn</code></td>
+<td>Ligne EXTI4</td>
+</tr>
+<tr>
+<td><code>EXTI9_5_IRQn</code></td>
+<td>Lignes EXTI5 à EXTI9</td>
+</tr>
+<tr>
+<td><code>EXTI15_10_IRQn</code></td>
+<td>Lignes EXTI10 à EXTI15</td>
+</tr>
+</tbody>
+</table>
+<p>Pour activer une interruption, on utilise les fonctions CMSIS :</p>
+<pre><code class="language-c">NVIC_SetPriority(EXTI0_IRQn, priorité);
+NVIC_EnableIRQ(EXTI0_IRQn);
+</code></pre>
+<p>La priorité est un nombre entre 0 (la plus haute) et 15 (la plus basse) sur 4 bits.</p>
+<p><strong>4. Configuration d’une interruption externe (bare metal)</strong></p>
+<p>Prenons l’exemple d’un bouton connecté sur PA0, avec une résistance de pull‑down (ou pull‑up). Nous voulons déclencher une interruption sur front montant (appui). Dans l’ISR, nous allons simplement incrémenter un compteur et basculer une LED sur PC13.</p>
+<p>Étapes de configuration: </p>
+<ul>
+<li>Activer les horloges des ports GPIO concernés (GPIOA, GPIOC) et  du module <code>SYSCFG</code> (System Configuration Controller).</li>
+<li>Configurer la broche PA0 en entrée (avec ou sans résistance interne).</li>
+<li>Connecter EXTI0 au port A via registre <code>SYSCFG_EXTICR</code>, on associe la ligne EXTI0 au port souhaité (GPIOA).</li>
+<li>Configurer le front déclencheur, on choisit si l'interruption se déclenche sur un front montant (<code>EXTI_RTSR</code>), descendant (<code>EXTI_FTSR</code>), ou les deux. (ici montant) dans EXTI_RTSR.</li>
+<li>Démasquer la ligne EXTI : on autorise l'interruption pour cette ligne via le registre <code>EXTI_IMR</code>.</li>
+<li>Configurer la priorité et activer l’interruption dans le NVIC.</li>
+<li>Écrire le handler <code>EXTI0_IRQHandler</code>.</li>
 </ul>
 <p>Une fois ces étapes réalisées, chaque fois que le front configuré se produit sur la broche, le processeur exécute immédiatement la fonction handler correspondante (par exemple <code>EXTI0_IRQHandler</code>). L'ISR doit être <strong>la plus courte possible</strong>; son seul rôle est de signaler l'événement à une tâche (via un sémaphore ou une notification) pour que le traitement long soit effectué hors interruption, dans le contexte d'une tâche RTOS.</p>
 <p>Voici un exemple complet et détaillé de configuration d'une interruption externe (EXTI) sur la broche PA0 d'un STM32F4. Dans le handler ISR, on bascule l'état d'une LED sur PC13 (ou on incrémente un compteur).</p>
@@ -262,13 +345,29 @@ int main(void) {
     }
 }
 </code></pre>
+<p>Remarques :</p>
+<ul>
+<li>Le flag dans <code>EXTI_PR</code> doit être effacé manuellement dans l’ISR.</li>
+<li>Si plusieurs broches partagent le même vecteur (par exemple <code>EXTI9_5_IRQn</code>), il faut lire <code>EXTI_PR</code> pour identifier la source.</li>
+</ul>
 <hr />
 <p><br></p>
 <h3 id="synchronisation-isr-vers-tache-semaphore"><strong>Synchronisation ISR vers Tâche (Sémaphore)</strong></h3>
 <p>Le principe fondamental dans un système temps réel est de <strong>déléguer le traitement des événements matériels à des tâches</strong>. L'interruption (ISR) doit être la plus courte possible : elle ne fait que signaler l'événement à une tâche qui, elle, effectuera le traitement long. C'est-a-dire tout simplement elle ne fait que "réveiller" une tâche de traitement. Pour cette signalisation, on utilise un <a href="../../rtos/#Semaphores">Sémaphore Binaire</a>.</p>
 <p>Un sémaphore binaire est un objet RTOS qui peut être soit disponible, soit non disponible. Une tâche qui attend un sémaphore (<code>xSemaphoreTake</code>) se bloque jusqu'à ce que le sémaphore soit donné (<code>xSemaphoreGive</code>). L'interruption donne le sémaphore, réveillant ainsi la tâche.</p>
+<p><strong>Règles importantes</strong></p>
+<ul>
+<li>
+<p>Dans une ISR, on doit utiliser les versions spéciales des fonctions FreeRTOS suffixées par FromISR : <code>xSemaphoreGiveFromISR</code>, <code>xQueueSendFromISR</code>, etc.</p>
+</li>
+<li>
+<p>La priorité de l’interruption doit être numériquement supérieure ou égale à <code>configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY</code> (généralement 5) pour pouvoir appeler ces fonctions. Une priorité plus haute (chiffre plus petit) est réservée aux interruptions qui n’utilisent pas l’API FreeRTOS.</p>
+</li>
+<li>
+<p>Après avoir donné le sémaphore, on peut forcer une commutation de contexte si une tâche de plus haute priorité a été réveillée, en utilisant <code>portYIELD_FROM_ISR</code>.</p>
+</li>
+</ul>
 <p>Exemple : Un bouton (PA0) réveillant une tâche via une interruption EXTI.</p>
-<p><strong>A. Le Handler d'Interruption (ISR)</strong></p>
 <pre><code class="language-c">#include &quot;stm32f401xx.h&quot;          // Définitions des registres STM32F4
 #include &quot;FreeRTOS.h&quot;             // Types et macros FreeRTOS
 #include &quot;task.h&quot;                 // API tâches
@@ -276,6 +375,10 @@ int main(void) {
 
 // Handle du sémaphore (déclaré externe ou global)
 extern SemaphoreHandle_t xSemBouton;
+
+// Initialisation matérielle (identique à la section 3)
+void GPIO_Init(void) { /* ... */ }
+void EXTI_Init(void) { /* ... */ }
 
 // 1. L'Interruption (Courte et rapide)
 void EXTI0_IRQHandler(void) {
@@ -292,9 +395,8 @@ void EXTI0_IRQHandler(void) {
         portYIELD_FROM_ISR(xWoken);
     }
 }
-</code></pre>
-<p><strong>B. La Tâche de Traitement</strong></p>
-<pre><code class="language-c">// 2. La Tâche (Tranquille et organisée)
+
+// 2. La Tâche (Tranquille et organisée)
 void vTaskBouton(void *pvParameters) {
     for (;;) {
         // Attend l'alerte de l'interruption, le sémaphore indéfiniment (bloqué jusqu'à réception) (0% CPU en attente)
@@ -303,6 +405,18 @@ void vTaskBouton(void *pvParameters) {
             Action_Apres_Appui();
         }
     }
+}
+
+int main(void) {
+    GPIO_Init();
+    EXTI_Init();
+
+    xSemBouton = xSemaphoreCreateBinary();
+    if (xSemBouton != NULL) {
+        xTaskCreate(vTaskBouton, &quot;Bouton&quot;, 128, NULL, 2, NULL);
+        vTaskStartScheduler();
+    }
+    while (1);
 }
 </code></pre>
 <p><strong>Remarque importante pour FreeRTOS :</strong></p>
@@ -494,8 +608,13 @@ int main(void) {
 <p><br></p>
 <h3 id="liens-connexe">Liens connexe</h3>
 <ul>
+<li><a href="./">GPIO et Interruptions</a></li>
 <li><a href="../timer/">Timer et Interruption</a></li>
 <li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/freertos/">Introduction pratique à freeRTOS</a></li>
+<li><a href="../adc/">Acquisition Analogique via ADC</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../stm32f4/mcu_intro/index.md">Présentation architecturale du Microcontrôleur STM32F4</a></li>
 </ul></div>
             </div>
         </div>
