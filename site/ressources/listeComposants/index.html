@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/ressources/listeComposants/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Liste des composants du cours CST2232 - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#liste-des-composants-du-cours-cst2232" class="nav-link">Liste des composants du cours CST2232</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="liste-des-composants-du-cours-cst2232">Liste des composants du cours CST2232</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Cette page récapitule l'ensemble du <strong>matériel nécessaire</strong> pour suivre le cours CST2232 dans son intégralité. Les composants sont organisés par catégorie fonctionnelle afin de faciliter la préparation des kits pédagogiques.</p>
+<hr />
+<p><br></p>
+<h3 id="1-carte-de-developpement-principale-mcu"><strong>1. Carte de développement principale (MCU)</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Carte Black Pill</strong></td>
+<td>WeAct Studio Black Pill V3.0 (STM32F401CCU6)</td>
+<td>1 par étudiant</td>
+<td>Carte principale du cours. Basée sur STM32F401CCU6 (Cortex-M4, 84 MHz, 256 Ko Flash, 64 Ko SRAM). Supporte FreeRTOS et tous les périphériques étudiés.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="2-programmation-et-debogage"><strong>2. Programmation et débogage</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Programmateur ST-LINK V2</strong></td>
+<td>ST-LINK V2 (clone ou officiel)</td>
+<td>1 pour 2 étudiants</td>
+<td>Programmation et débogage via SWD. Interface 4 fils : SWDIO, SWCLK, GND, 3.3V.</td>
+</tr>
+<tr>
+<td><strong>Câble USB</strong></td>
+<td>USB-C vers USB-A</td>
+<td>1</td>
+<td>Alimentation de la carte et communication série (USART2).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="3-capteurs-et-modules-de-mesure"><strong>3. Capteurs et modules de mesure</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Centrale inertielle (IMU)</strong></td>
+<td>MPU6050 (GY-521)</td>
+<td>1</td>
+<td>Accéléromètre 3 axes + gyroscope 3 axes. Communication I2C. Utilisé pour l'estimation d'angle (filtre complémentaire/Kalman).</td>
+</tr>
+<tr>
+<td><strong>Capteur de température</strong></td>
+<td>LM75 ou DS1621</td>
+<td>1</td>
+<td>Capteur de température avec interface I2C. Utilisé pour le projet de lecture I2C.</td>
+</tr>
+<tr>
+<td><strong>Module GPS</strong></td>
+<td>NEO-6M / NEO-7M</td>
+<td>1</td>
+<td>Récepteur GPS avec interface UART. Utilisé pour le projet de parsing NMEA et affichage Python.</td>
+</tr>
+<tr>
+<td><strong>Potentiomètre</strong></td>
+<td>10 kΩ linéaire</td>
+<td>3-4</td>
+<td>Génération de tension analogique variable pour les TP ADC (consigne de vitesse, contrôle de fréquence, etc.).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="4-actionneurs-et-controle-moteur"><strong>4. Actionneurs et contrôle moteur</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Moteur DC avec encodeur</strong></td>
+<td>JGA25-370 (6V/12V) avec encodeur Hall</td>
+<td>1-2</td>
+<td>Moteur à courant continu avec encodeur quadrature. Utilisé pour l'asservissement PID (régulation de vitesse).</td>
+</tr>
+<tr>
+<td><strong>Driver moteur (pont en H)</strong></td>
+<td>L298N ou TB6612</td>
+<td>1</td>
+<td>Pilotage du moteur DC à partir des signaux PWM du STM32.</td>
+</tr>
+<tr>
+<td><strong>Servomoteur</strong></td>
+<td>SG90 ou MG996R</td>
+<td>1</td>
+<td>Servomoteur standard commandé par PWM (projet DDS / positionnement).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="5-communication-et-connectivite"><strong>5. Communication et connectivité</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Module Wi-Fi</strong></td>
+<td>ESP8266 (ESP-01)</td>
+<td>1</td>
+<td>Module Wi-Fi avec interface UART (commandes AT). Utilisé pour l'IoT et le monitoring industriel.</td>
+</tr>
+<tr>
+<td><strong>Module Bluetooth</strong> (optionnel)</td>
+<td>HC-05 / HC-06</td>
+<td>1</td>
+<td>Alternative pour communication sans-fil locale.</td>
+</tr>
+<tr>
+<td><strong>Module CAN</strong> (optionnel)</td>
+<td>MCP2515 + TJA1050</td>
+<td>1</td>
+<td>Pour les TP sur le bus CAN (communication entre deux cartes).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="6-conversion-numerique-analogique-dac"><strong>6. Conversion numérique-analogique (DAC)</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DAC externe SPI</strong></td>
+<td>MCP4822 (double 12 bits)</td>
+<td>1</td>
+<td>Convertisseur numérique-analogique pour la synthèse DDS (génération de signaux) car le STM32F401 n'a pas de DAC interne.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="7-affichage-et-interface-utilisateur"><strong>7. Affichage et interface utilisateur</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Écran TFT couleur</strong></td>
+<td>ILI9488 (320x480, SPI)</td>
+<td>1</td>
+<td>Écran TFT couleur pour le graphisme embarqué et l'affichage de données.</td>
+</tr>
+<tr>
+<td><strong>Module OLED</strong> (optionnel)</td>
+<td>SSD1306 (I2C)</td>
+<td>1</td>
+<td>Alternative plus simple pour l'affichage.</td>
+</tr>
+<tr>
+<td><strong>Boutons poussoirs</strong></td>
+<td>Boutons tactiles 6x6mm</td>
+<td>4-5</td>
+<td>Entrées utilisateur pour menus, calibration, reset.</td>
+</tr>
+<tr>
+<td><strong>Encodeur rotatif</strong></td>
+<td>Encodeur incrémental avec bouton</td>
+<td>1</td>
+<td>Interface de réglage précis.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="8-stockage-et-horodatage"><strong>8. Stockage et horodatage</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Référence / Modèle</th>
+<th>Quantité</th>
+<th>Description / Rôle dans le cours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Carte microSD + adaptateur SPI</strong></td>
+<td>Module lecteur microSD (SPI)</td>
+<td>1</td>
+<td>Stockage local de données (datalogger).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="9-composants-passifs-et-conditionnement"><strong>9. Composants passifs et conditionnement</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Valeur / Référence</th>
+<th>Quantité</th>
+<th>Description / Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Résistances</strong></td>
+<td>220 Ω, 1 kΩ, 4,7 kΩ, 10 kΩ</td>
+<td>Lot</td>
+<td>LEDs, pull-up I2C, ponts diviseurs.</td>
+</tr>
+<tr>
+<td><strong>Condensateurs</strong></td>
+<td>100 nF, 10 µF</td>
+<td>Lot</td>
+<td>Filtrage d'alimentation, découplage.</td>
+</tr>
+<tr>
+<td><strong>LEDs</strong></td>
+<td>Rouge, verte, jaune</td>
+<td>5-10</td>
+<td>Indication visuelle (état, debug).</td>
+</tr>
+<tr>
+<td><strong>Résistances de tirage (pull-up)</strong></td>
+<td>4,7 kΩ (pour I2C)</td>
+<td>Lot</td>
+<td>Obligatoires pour le bus I2C (MPU6050, LM75, etc.).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="10-alimentation"><strong>10. Alimentation</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Spécification</th>
+<th>Quantité</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Alimentation secteur</strong></td>
+<td>12V / 2A (ou 5V / 3A)</td>
+<td>1</td>
+<td>Alimentation principale pour la carte et les moteurs.</td>
+</tr>
+<tr>
+<td><strong>Câbles d'alimentation</strong></td>
+<td>Jack DC / bornier</td>
+<td>1</td>
+<td>Connexion alimentation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="11-outillage-et-consommables"><strong>11. Outillage et consommables</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Câbles Dupont</strong></td>
+<td>Lot de câbles femelle-femelle, femelle-mâle, mâle-mâle (au moins 40 de chaque).</td>
+</tr>
+<tr>
+<td><strong>Breadboard</strong></td>
+<td>Platine d'expérimentation sans soudure (400-800 points).</td>
+</tr>
+<tr>
+<td><strong>Oscilloscope</strong></td>
+<td>(1 pour 2-3 étudiants) Pour visualisation des signaux PWM, I2C, UART, mesure de gigue.</td>
+</tr>
+<tr>
+<td><strong>Analyseur logique</strong></td>
+<td>Optionnel mais recommandé (ex: 8 canaux 24 MHz).</td>
+</tr>
+<tr>
+<td><strong>Multimètre</strong></td>
+<td>(1 par étudiant idéalement) Pour vérification des tensions et continuité.</td>
+</tr>
+<tr>
+<td><strong>Fer à souder + étain</strong></td>
+<td>Pour les montages définitifs (optionnel).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="recapitulatif-par-projet-tp"><strong>Récapitulatif par projet / TP</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Projet / TP</th>
+<th>Composants spécifiques utilisés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TP GPIO &amp; Interruptions</strong></td>
+<td>Bouton, LED, résistances.</td>
+</tr>
+<tr>
+<td><strong>TP Timer &amp; PWM</strong></td>
+<td>LED (pour visualisation PWM), oscilloscope.</td>
+</tr>
+<tr>
+<td><strong>TP ADC</strong></td>
+<td>Potentiomètre.</td>
+</tr>
+<tr>
+<td><strong>TP UART</strong></td>
+<td>Câble USB, terminal série PC.</td>
+</tr>
+<tr>
+<td><strong>TP I2C</strong></td>
+<td>MPU6050 (IMU), résistances de pull-up 4,7 kΩ.</td>
+</tr>
+<tr>
+<td><strong>TP SPI</strong></td>
+<td>MCP4822 (DAC), écran TFT ILI9488 (optionnel).</td>
+</tr>
+<tr>
+<td><strong>TP CAN</strong></td>
+<td>Deux cartes Black Pill + modules MCP2515.</td>
+</tr>
+<tr>
+<td><strong>Projet PID (moteur)</strong></td>
+<td>Moteur DC avec encodeur, driver L298N, potentiomètre.</td>
+</tr>
+<tr>
+<td><strong>Projet DDS</strong></td>
+<td>MCP4822 (DAC), potentiomètre, écran TFT ou PC (Python).</td>
+</tr>
+<tr>
+<td><strong>Projet GPS</strong></td>
+<td>Module GPS NEO-6M, câble USB.</td>
+</tr>
+<tr>
+<td><strong>Projet IoT</strong></td>
+<td>Module ESP8266.</td>
+</tr>
+<tr>
+<td><strong>Projet IMU + Filtre de Kalman</strong></td>
+<td>MPU6050, résistances pull-up.</td>
+</tr>
+<tr>
+<td><strong>Laboratoire final</strong></td>
+<td>Combinaison selon projet choisi (ex: IMU + PID, GPS + IoT, etc.).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../#Accueil">Accueil</a></li>
+<li><a href="../../philosophie/index.md">Philosophie du cours</a></li>
+<li><a href="../../ressources/index.md">Ressources et références</a></li>
+</ul>
+<hr /></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

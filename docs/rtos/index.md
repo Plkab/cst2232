@@ -56,8 +56,10 @@ Pour gérer ces contraintes, deux approches sont possibles sur un processeur :
 On distingue classiquement trois catégories :
 
 - **Systèmes temps réel stricts (Hard Real-Time)**
-Dans cette catégorie, le non-respect du délais entraîne une catastophe ou une défaillance totale du système. 
+Dans cette catégorie, le non-respect du délais entraîne une catastophe ou une **défaillance totale** du système. 
 Exemple : comme précédement cité, le déclenchement d'un airbag ou le système de freinage d'un train, commande de vol d'un avion. Si le signal arrive avec centaines de millisecondes de retard, le système est inutile et les conséquences peuvent être fatales.
+
+Les systèmes de traitement numérique du signal (DSP) sont généralement des systèmes temps réel stricts. Prenons l'exemple d'un signal analogique échantillonné à 8 kHz (pour préserver des fréquences jusqu'à 4 kHz). La période d'échantillonnage est de 125 µs. Cela signifie que le système dispose de 125 µs pour effectuer tout le traitement nécessaire avant l'arrivée de l'échantillon suivant. Si le système ne peut pas suivre ce rythme, il échoue. C'est une caractéristique typique d'un système temps réel strict.
 
 - **Systèmes temps réel mous (Soft Real-Time)**
 Pour ce type de système, léger retard est tolérable sans conséquences graves, même si l'on cherche toujours à respecter les délais. 
@@ -74,7 +76,7 @@ Exemple : Un flux vidéo en direct, un système de contrôle qualité sur une li
 
 ### **Les Systèmes d'Exploitation Temps Réels (RTOS)**
 
-Un **système d'exploitation temps réel** (RTOS, Real-Time Operating System) est conçu spécifiquement pour gérer des applications qui exigent un comportement **déterministe** et une précision temporelle absolue. Il doit garantir que les tâches critiques sont exécutées exactement au moment voulu. Sa priorité est le respect des échéances ou délais, contrairement aux systèmes d'exploitation généralistes (Windows, Linux, Android) qui sont avant tout optimisés pour l'expérience utilisateur et le partage équitable des ressources. Exemples de RTOS couramment utilisés dans l'embarqué : FreeRTOS, Zephyr, VxWorks, QNX,...
+Un **système d'exploitation temps réel** (RTOS, *Real-Time Operating System*) est conçu spécifiquement pour gérer des applications qui exigent un comportement **déterministe** et une précision temporelle absolue. Il doit garantir que les tâches critiques sont exécutées exactement au moment voulu. Sa priorité est le respect des échéances ou délais, contrairement aux systèmes d'exploitation généralistes (Windows, Linux, Android) qui sont avant tout optimisés pour l'expérience utilisateur et le partage équitable des ressources. Exemples de RTOS couramment utilisés dans l'embarqué : FreeRTOS, Zephyr, VxWorks, QNX,...
 
 Lorsque le nombre de tâches est limité, on peut les gérer directement avec les interruptions matérielles du microcontrôleur. Dès que la complexité augmente et que la précision temporelle devient critique, l'utilisation d'un RTOS s'impose. Il permet d'exécuter plusieurs tâches sur un même processeur en donnant l'illusion du **parallélisme**, et organise le partage des ressources (temps CPU, mémoire, périphériques) selon des règles prédéfinies.  
 
@@ -88,6 +90,15 @@ Une tâche (task) est une unité logicielle indépendante. Chaque tâche peut se
 
 ![Etat d'une tache](tskstate.gif){ width=300, align=center }
 
+Au‑delà des états de base (running, ready, blocked), on trouve souvent :
+
+- **Suspendu (suspend)** : la tâche est volontairement mise en sommeil (soi‑même ou par une autre) et ne sera pas ordonnancée tant qu’elle n’est pas reprise.
+- **Endormi (sleep)** : suspension temporaire pour une durée définie, gérée par le tick.
+- **Bloqué (blocked)** : la tâche attend une ressource (sémaphore, file, etc.). Peut inclure un timeout.
+- **Terminé / fini (finished)** : la fonction principale s’est terminée. Nécessite une réinitialisation pour être réexécutée.
+- **Supprimé (deleted)** : après destruction dynamique.
+
+
 #### **Le Noyau**
 
 Le **cœur du système**, ou _kernel_, est le module responsable du partage du processeur entre les différentes tâches. Il est très léger (quelques kilo-octets), ce qui le rend adapté aux microcontrôleurs aux ressources limitées.
@@ -98,9 +109,22 @@ L'**ordonnanceur** est la partie la plus critique du RTOS. Il gère les priorit�
 
 Exemple : on peut assigner une priorité élevée (10) à une routine d'arrêt d'urgence, et une priorité basse (1) à une tâche d'affichage.
 
+L'**Ordonnancement préemptif** (*Preemptive Scheduling*) est la capacité du système à interrompre une tâche en cours d'exécution pour en démarrer une autre de priorité supérieure.
+
+Deux algorithmes théoriques majeurs se dégagent : le Rate-Monotonic Scheduling (RMS) et l'Earliest-Deadline-First (EDF).
+
+- **Rate-Monotonic Scheduling (RMS)** : l'ordonnancement monotonique par taux est un algorithme à priorités statiques. Les tâches sont **périodiques** et leur échéance (deadline) est exactement égale à leur période. Les priorités sont **statiques**, plus la période d'une tâche est courte, plus sa priorité est élevée. Dans l'ordonnancement est préemptif la tâche de plus haute priorité s'exécute toujours.
+
+- **Earliest-Deadline-First (EDF)** : l'ordonnancement par échéance la plus proche (EDF) est un algorithme à **priorités dynamiques**. Les tâches (périodiques ou non) sont triées par ordre d'échéance croissant, celle dont l'échéance est la plus proche a la plus haute priorité. La priorité d'une tâche change à chaque instant en fonction de l'urgence de son échéance.
+
+- **Deadline-Monotonic Scheduling (DMS)** : le Deadline-Monotonic Scheduling est une généralisation de RMS pour les cas où l'échéance peut être inférieure ou égale à la période. Les tâches avec les échéances les plus courtes reçoivent les priorités les plus élevées.
+
+
 #### **Commutation de contexte (Context Switch)**
 
 Lorsqu'une préemption a lieu, le RTOS sauvegarde l'état des registres du processeur pour la tâche interrompue. Cette opération, appelée **commutation de contexte**, permet de reprendre ultérieurement l'exécution de la tâche exactement là où elle s'était arrêtée, comme si rien ne s'était passé.
+
+Ce qui constitue le contexte d’une tâche est l’ensemble des registres du processeur, la pile (stack) locale à la tâche (contenant les variables automatiques, adresses de retour, etc.). Et éventuellement d’autres données propres à la tâche.
 
 #### **Le Tick système**
 
@@ -130,16 +154,24 @@ Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréque
 
 
 
-### **Introduction pratique à FreeRTOS** {#introduction-a-freertos}
+### **Introduction Pratique à FreeRTOS** {#introduction-a-freertos}
 
 FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqués, supportant plus de 40 microcontrôleurs. Il se présente sous la forme d'une API qui nous permet de mettre en œuvre des applications temps réel sur microcontrôleur. Nous allons apprendre à utiliser ses fonctions pré-écrites pour structurer nos projets de manière efficace.
+
+FreeRTOS utilise un ordonnancement **préemptif à priorités fixes** par défaut. Cependant, pour les tâches de **même priorité**, plusieurs stratégies sont possibles :
+
+- **Round-Robin avec time-slice** : les tâches de même priorité s'exécutent à tour de rôle pendant une durée fixe (le *time slice*, généralement 1 tick).
+- **Coopératif** : les tâches de même priorité ne sont pas préemptées entre elles ; elles doivent explicitement céder la main (`taskYIELD()`) ou se bloquer volontairement.
+
+Cette flexibilité permet d'adapter le comportement du système aux besoins de l'application.
 
 On peut avoir sur le site web officiel le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible : [freertos.](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
 
 ---
 <br>
 
-#### **Création de Tâches (xTaskCreate)**
+
+#### **Création de Tâches (`xTaskCreate`)**
 
 La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.
 
@@ -159,7 +191,7 @@ void maTache(void * pvParameters) {
 
 **Création d'une tâche dans le main**
 
-La fonction _xTaskCreate()_ est la porte d'entrée de FreeRTOS.
+La fonction _`xTaskCreate()`_ est la porte d'entrée de FreeRTOS.
 
 ```c
 xTaskCreate(
@@ -172,9 +204,9 @@ xTaskCreate(
 );
 ```
 
-**Le lancement (vTaskStartScheduler)**
+**Le lancement (`vTaskStartScheduler`)**
 
-Après avoir créé les tâches, on appelle vTaskStartScheduler(). Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.
+Après avoir créé les tâches, on appelle `vTaskStartScheduler()`. Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.
 
 ```c
 // Prototype de la tâche
@@ -194,9 +226,9 @@ void main(void) {
 ---
 <br>
 
-#### **Gestion du Temps (vTaskDelay) et (vTaskDelayUntil)**
+#### **Gestion du Temps (`vTaskDelay`) et (`vTaskDelayUntil`)**
 
-Contrairement à une simple boucle d'attente active (comme delay()) qui bloque tout le processeur, vTaskDelay place la tâche dans l'état "Blocked" pendant un nombre de ticks spécifié. Pendant ce temps, le CPU est libéré et peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
+Contrairement à une simple boucle d'attente active (comme `delay()`) qui bloque tout le processeur, `vTaskDelay` place la tâche dans l'état "Blocked" pendant un nombre de ticks spécifié. Pendant ce temps, le CPU est libéré et peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.
 
 ```c
 void vTaskMoteur(void * pvParameters) {
@@ -207,7 +239,7 @@ void vTaskMoteur(void * pvParameters) {
     }
 }
 ```
-Pour cette fonction nous avons une limitation, si le code de traitement prend 10ms, et que l'on utilise _vTaskDelay(90ms)_, la période réelle sera de 100ms + temps de traitement, provoquant une dérive temporelle.
+Pour cette fonction nous avons une limitation, si le code de traitement prend 10ms, et que l'on utilise _`vTaskDelay(90ms)`_, la période réelle sera de 100ms + temps de traitement, provoquant une dérive temporelle.
 
 Prenons un autre exemple qui fait du temps réel périodique précis: 
 
@@ -235,16 +267,16 @@ void Task_Stabilisation(void *pvParameters) {
 
 Cette fonction garantit que la tâche _Stabilisation()_ s'exécutera exactement toutes les 20ms, sans dérive, même si le code de traitement varie (tant qu'il reste inférieur à la période)
 
-**Pourquoi utiliser vTaskDelayUntil plutôt que vTaskDelay ?**
+**Pourquoi utiliser vTaskDelayUntil plutôt que `vTaskDelay` ?**
 
-- **vTaskDelay** : spécifie un délai relatif à partir de l'appel. Si le code à l'intérieur de la tâche prend du temps, la prochaine exécution sera décalée (dérive temporelle).
+- **`vTaskDelay`** : spécifie un délai relatif à partir de l'appel. Si le code à l'intérieur de la tâche prend du temps, la prochaine exécution sera décalée (dérive temporelle).
 
-- **vTaskDelayUntil** : spécifie un instant absolu de réveil. Il garantit que la tâche s'exécute à une fréquence fixe, sans dérive, quelle que soit la durée du traitement (tant qu'il reste inférieur à la période). Il permet d'éviter la dérive temporelle.
+- **`vTaskDelayUntil`** : spécifie un instant absolu de réveil. Il garantit que la tâche s'exécute à une fréquence fixe, sans dérive, quelle que soit la durée du traitement (tant qu'il reste inférieur à la période). Il permet d'éviter la dérive temporelle.
 
 **Remarques importantes**
 
-- Initialisation : xLastWakeTime doit être initialisée avec l'heure courante avant la première utilisation.
-- Premier appel : vTaskDelayUntil attendra que xLastWakeTime + xPeriod soit atteint. La première exécution effective aura donc lieu après une période complète.
+- Initialisation : `xLastWakeTime` doit être initialisée avec l'heure courante avant la première utilisation.
+- Premier appel : `vTaskDelayUntil` attendra que `xLastWakeTime + xPeriod` soit atteint. La première exécution effective aura donc lieu après une période complète.
 - Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.
 
 ---
@@ -297,10 +329,10 @@ void main() {
 }
 ```
 
-**Utilisation dans les tâches: xSemaphoreTake et xSemaphoreGive**
+**Utilisation dans les tâches: `xSemaphoreTake` et `xSemaphoreGive`**
 
-- xSemaphoreTake(xMutex, portMAX_DELAY) : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).
-- xSemaphoreGive(xMutex) : libère le jeton pour les autres tâches.
+- `xSemaphoreTake(xMutex, portMAX_DELAY)` : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).
+- `xSemaphoreGive(xMutex)` : libère le jeton pour les autres tâches.
 
 ```c
 void vTaskA(void * pvParameters) {
@@ -324,11 +356,11 @@ void vTaskA(void * pvParameters) {
 
 **On a trois types de Sémaphores à connaître :**
 
-- **Le Mutex** (xSemaphoreCreateMutex) : Utilisé pour protéger une ressource partagée (Écran, I2C, Moteur). Il intègre un mécanisme d'héritage de priorité qui évite qu'une tâche de priorité moyenne ne bloque indéfiniment une tâche haute priorité.
+- **Le Mutex** (`xSemaphoreCreateMutex`) : Utilisé pour protéger une ressource partagée (Écran, I2C, Moteur). Il intègre un mécanisme d'héritage de priorité qui évite qu'une tâche de priorité moyenne ne bloque indéfiniment une tâche haute priorité.
 
-- **Le Sémaphore Binaire** (xSemaphoreCreateBinary) : utilisé pour la synchronisation simple. Par exemple, une interruption matérielle (appui sur un bouton) "donne" le sémaphore, et une tâche qui "attendait" se réveille instantanément.
+- **Le Sémaphore Binaire** (`xSemaphoreCreateBinary`) : utilisé pour la synchronisation simple. Par exemple, une interruption matérielle (appui sur un bouton) "donne" le sémaphore, et une tâche qui "attendait" se réveille instantanément.
 
-- **Le Sémaphore à Comptage** (xSemaphoreCreateCounting) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).
+- **Le Sémaphore à Comptage** (`xSemaphoreCreateCounting`) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).
 
 **Exemple de synchronisation avec une ISR :**
 
@@ -395,9 +427,9 @@ int main(void) {
 
 C'est la méthode propre pour échanger des données entre tâches de manière propre. Les données sont copiées dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.
 
-- **Créer la file** : xQueueCreate(taille, taille_d'un_élément);
-- **Poster un message** : xQueueSend(file, &donnee, delai);
-- **Lire un message** : xQueueReceive(file, &reception, delai);
+- **Créer la file** : `xQueueCreate(taille, taille_d'un_élément)`;
+- **Poster un message** : `xQueueSend(file, &donnee, delai)`;
+- **Lire un message** : `xQueueReceive(file, &reception, delai)`;
 
 ```c
 #include "FreeRTOS.h"
@@ -463,8 +495,8 @@ int main(void) {
 #### **Trois règles d'or a connaitre :**
 
 - **Priorité** : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).
-- **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par _vTaskDelete()_.
-- **Section Critique** : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser taskENTER_CRITICAL() et taskEXIT_CRITICAL() pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.
+- **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par _`vTaskDelete()`_.
+- **Section Critique** : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser `taskENTER_CRITICAL()` et `taskEXIT_CRITICAL()` pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.
 
 
 ---

@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/technique-algos/graphisme/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Index - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Bases du Graphisme Embarqué sur écran TFT ILI9488 et VGA - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -53,12 +53,348 @@
     
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#bases-du-graphisme-embarque-sur-ecran-tft-ili9488-et-vga" class="nav-link">Bases du Graphisme Embarqué sur écran TFT ILI9488 et VGA</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#partie-1-pilotage-dun-ecran-tft-ili9488" class="nav-link">Partie 1 : Pilotage d’un écran TFT ILI9488</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
                     <div class="col-md-9" role="main">
 
-<p>"# Graphisme embarqu‚" </p></div>
+<h1 id="bases-du-graphisme-embarque-sur-ecran-tft-ili9488-et-vga">Bases du Graphisme Embarqué sur écran TFT ILI9488 et VGA</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-au-graphisme-embarque"><strong>Introduction au graphisme embarqué</strong></h3>
+<p>Les interfaces homme-machine (IHM) sont omniprésentes dans les systèmes embarqués modernes : affichage de données, menus, graphiques, etc. Deux technologies courantes sont :</p>
+<ul>
+<li><strong>Les écrans TFT couleur</strong> (par exemple ILI9488) pilotés via SPI ou parallèle, offrant une résolution et des couleurs riches.</li>
+<li><strong>La génération de signal VGA</strong> permettant de connecter un écran d’ordinateur ou un moniteur, avec une résolution standard (640x480) et une palette limitée.</li>
+</ul>
+<p>Dans ce chapitre, nous aborderons les concepts communs (framebuffer, résolution, codage couleur) puis nous détaillerons le pilotage de ces deux types d’affichage sur notre carte STM32F401 (Black Pill). Nous fournirons des pilotes simples et des exemples d’intégration avec FreeRTOS.</p>
+<hr />
+<p><br></p>
+<h3 id="concepts-de-base-du-graphisme"><strong>Concepts de base du graphisme</strong></h3>
+<p><strong>Pixel et résolution</strong></p>
+<p>Un <strong>pixel</strong> est le plus petit élément adressable d’un écran. La <strong>résolution</strong> est le nombre de pixels en largeur et hauteur (ex: 320x240 pour un petit TFT, 640x480 pour VGA).</p>
+<p><strong>Framebuffer</strong></p>
+<p>Le <strong>framebuffer</strong> est une zone mémoire qui stocke l’image à afficher. Chaque pixel est représenté par un nombre de bits (couleur). Pour un écran couleur, on peut utiliser :</p>
+<ul>
+<li>16 bits par pixel (RGB565) : 5 bits pour rouge, 6 pour vert, 5 pour bleu.</li>
+<li>24 bits (RGB888) : 8 bits par composante.</li>
+<li>Palette indexée : chaque pixel est un index dans une table de couleurs.</li>
+</ul>
+<p>Le framebuffer est mis à jour par le microcontrôleur, puis le contrôleur d’affichage (ou le programme) envoie les données à l’écran.</p>
+<p><strong>Coordonnées</strong></p>
+<p>L’origine (0,0) est généralement en haut à gauche. Les axes X (horizontal) et Y (vertical) permettent de positionner les pixels.</p>
+<p><strong>Bibliothèques graphiques</strong></p>
+<p>Des bibliothèques comme <strong>LVGL</strong>, <strong>uGUI</strong> ou <strong>emWin</strong> offrent des primitives de haut niveau (lignes, cercles, polices). Ici, nous nous concentrerons sur le pilotage bas niveau.</p>
+<hr />
+<p><br></p>
+<h2 id="partie-1-pilotage-dun-ecran-tft-ili9488"><strong>Partie 1 : Pilotage d’un écran TFT ILI9488</strong></h2>
+<p>Le <strong>ILI9488</strong> est un contrôleur d’écran TFT très répandu, capable d’afficher 262 000 couleurs (RGB666) avec une résolution typique de 320x480. Il peut être piloté en mode SPI (série) ou parallèle. Nous utiliserons le mode SPI pour économiser les broches.</p>
+<p><strong>Brochage</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Broche STM32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SCK</td>
+<td>PA5 (SPI1_SCK)</td>
+</tr>
+<tr>
+<td>MOSI</td>
+<td>PA7 (SPI1_MOSI)</td>
+</tr>
+<tr>
+<td>CS</td>
+<td>PA4 (sortie GPIO)</td>
+</tr>
+<tr>
+<td>DC</td>
+<td>PA3 (sortie GPIO) – Data/Command</td>
+</tr>
+<tr>
+<td>RST</td>
+<td>PA2 (sortie GPIO) – Reset</td>
+</tr>
+<tr>
+<td>BL</td>
+<td>PA1 (sortie GPIO) – Backlight (optionnel)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Protocole SPI</strong></p>
+<p>Le ILI9488 attend des commandes et des données via SPI. La broche DC indique si l’octet envoyé est une commande (DC=0) ou une donnée (DC=1). Les données sont généralement envoyées sur plusieurs octets (ex: 3 octets pour une couleur RGB666).</p>
+<p><strong>Initialisation</strong></p>
+<p>L’initialisation consiste à envoyer une séquence de commandes pour configurer le contrôleur (orientation, polarité, etc.). Voici une séquence typique (simplifiée) :</p>
+<pre><code class="language-c">void ILI9488_WriteCmd(uint8_t cmd) {
+    GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 3); // DC bas
+    SPI1_CS_Low();
+    SPI1_Transmit8(cmd);
+    SPI1_CS_High();
+}
+
+void ILI9488_WriteData(uint8_t data) {
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 3); // DC haut
+    SPI1_CS_Low();
+    SPI1_Transmit8(data);
+    SPI1_CS_High();
+}
+
+void ILI9488_Init(void) {
+    // Reset
+    GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 2); // RST bas
+    delay_ms(10);
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 2); // RST haut
+    delay_ms(120);
+
+    // Séquence d'initialisation (issue de la datasheet)
+    ILI9488_WriteCmd(0x11); // Sleep out
+    delay_ms(120);
+    ILI9488_WriteCmd(0x36); // Memory Access Control
+    ILI9488_WriteData(0x48); // BGR, orientation
+    ILI9488_WriteCmd(0x3A); // Interface Pixel Format
+    ILI9488_WriteData(0x66); // 18 bits (RGB666) par pixel
+    ILI9488_WriteCmd(0xC2); // Display Control
+    ILI9488_WriteData(0x44);
+    ILI9488_WriteCmd(0xC5); // VCOM Control
+    ILI9488_WriteData(0x00);
+    ILI9488_WriteData(0x00);
+    ILI9488_WriteData(0x00);
+    ILI9488_WriteCmd(0xE0); // Positive Gamma
+    // ... (séquence gamma, omise pour brièveté)
+    ILI9488_WriteCmd(0xE1); // Negative Gamma
+    // ... (séquence gamma)
+    ILI9488_WriteCmd(0x29); // Display ON
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="fonction-de-dessin-dun-pixel"><strong>Fonction de dessin d’un pixel</strong></h3>
+<p>Pour dessiner un pixel en RGB666 (18 bits), on doit envoyer 3 octets par pixel. On définit d’abord une fenêtre (zone) puis on envoie les données.</p>
+<pre><code class="language-c">void ILI9488_SetWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+    ILI9488_WriteCmd(0x2A); // Column address set
+    ILI9488_WriteData(x1 &gt;&gt; 8); ILI9488_WriteData(x1 &amp; 0xFF);
+    ILI9488_WriteData(x2 &gt;&gt; 8); ILI9488_WriteData(x2 &amp; 0xFF);
+    ILI9488_WriteCmd(0x2B); // Row address set
+    ILI9488_WriteData(y1 &gt;&gt; 8); ILI9488_WriteData(y1 &amp; 0xFF);
+    ILI9488_WriteData(y2 &gt;&gt; 8); ILI9488_WriteData(y2 &amp; 0xFF);
+    ILI9488_WriteCmd(0x2C); // Memory write
+}
+
+void ILI9488_DrawPixel(uint16_t x, uint16_t y, uint16_t color565) {
+    // color565 en RGB565, on convertit en RGB666 approximatif
+    uint8_t r = (color565 &gt;&gt; 11) &amp; 0x1F; // 5 bits
+    uint8_t g = (color565 &gt;&gt; 5) &amp; 0x3F; // 6 bits
+    uint8_t b = color565 &amp; 0x1F; // 5 bits
+    // Conversion en 6 bits par duplication
+    r = (r &lt;&lt; 1) | (r &gt;&gt; 4);
+    b = (b &lt;&lt; 1) | (b &gt;&gt; 4);
+    ILI9488_SetWindow(x, y, x, y);
+    ILI9488_WriteData(r); // rouge 6 bits
+    ILI9488_WriteData(g); // vert 6 bits
+    ILI9488_WriteData(b); // bleu 6 bits
+}
+</code></pre>
+<p><strong>Remplissage d’écran</strong></p>
+<p>Pour remplir rapidement, on peut envoyer une longue série de données sans repositionner la fenêtre.</p>
+<pre><code class="language-c">void ILI9488_FillScreen(uint16_t color565) {
+    uint8_t r = (color565 &gt;&gt; 11) &amp; 0x1F;
+    uint8_t g = (color565 &gt;&gt; 5) &amp; 0x3F;
+    uint8_t b = color565 &amp; 0x1F;
+    r = (r &lt;&lt; 1) | (r &gt;&gt; 4);
+    b = (b &lt;&lt; 1) | (b &gt;&gt; 4);
+    ILI9488_SetWindow(0, 0, 319, 479);
+    for (uint32_t i = 0; i &lt; 320*480; i++) {
+        ILI9488_WriteData(r);
+        ILI9488_WriteData(g);
+        ILI9488_WriteData(b);
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="partie-2-generation-de-signal-vga">Partie 2 : Génération de signal VGA</h3>
+<p>Le <strong>VGA</strong> est un standard analogique avec 5 signaux : Rouge, Vert, Bleu (analogiques 0-0.7V), synchronisation horizontale (<strong>HSYNC</strong>) et verticale (<strong>VSYNC</strong>). Les timings sont très stricts : pour une résolution 640x480 à 60 Hz, il faut générer des impulsions à des intervalles précis.</p>
+<p>Sur un microcontrôleur sans DAC vidéo, on peut générer :</p>
+<ul>
+<li>les signaux de synchronisation par des <strong>timers</strong>,</li>
+<li>les couleurs par des <strong>GPIO rapides</strong> (R-2R ou sorties numériques avec résistances).</li>
+</ul>
+<p>La palette sera limitée (par exemple <strong>8 couleurs</strong> avec 3 bits).</p>
+<p><strong>Timings VGA 640x480 @ 60 Hz</strong></p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Durée (µs)</th>
+<th>Pixels (à 25.175 MHz)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Visible (ligne)</td>
+<td>25.42</td>
+<td>640</td>
+</tr>
+<tr>
+<td>Front porch (H)</td>
+<td>0.64</td>
+<td>16</td>
+</tr>
+<tr>
+<td>HSYNC pulse</td>
+<td>3.81</td>
+<td>96</td>
+</tr>
+<tr>
+<td>Back porch (H)</td>
+<td>1.91</td>
+<td>48</td>
+</tr>
+<tr>
+<td>Total ligne</td>
+<td>31.78</td>
+<td>800</td>
+</tr>
+</tbody>
+</table>
+<p>Pour le vertical, une trame comporte <strong>525 lignes</strong> (dont 480 visibles).</p>
+<p><strong>Principe de génération</strong></p>
+<ul>
+<li>Un <strong>timer</strong> génère une interruption au début de chaque ligne.</li>
+<li>Dans l’ISR, on gère <strong>HSYNC</strong> et <strong>VSYNC</strong>, et on envoie les pixels ligne par ligne (via un framebuffer).</li>
+<li>Pour 640 pixels par ligne à 25 MHz, le CPU ne peut pas envoyer chaque pixel en temps réel. On utilise généralement un <strong>DMA</strong> ou un <strong>timer PWM</strong> pour les couleurs.</li>
+<li>Approche simplifiée : résolution plus basse (ex. 160x120) et duplication des pixels.</li>
+</ul>
+<p><strong>Matériel</strong></p>
+<ul>
+<li>Signaux R, G, B : sorties GPIO (ex. PA0, PA1, PA2) avec résistances pour DAC 3 bits.</li>
+<li>HSYNC : PA3</li>
+<li>VSYNC : PA4</li>
+</ul>
+<p><strong>Framebuffer</strong></p>
+<pre><code class="language-c">#define VGA_WIDTH 160
+#define VGA_HEIGHT 120
+uint8_t framebuffer[VGA_HEIGHT][VGA_WIDTH]; // chaque octet contient 3 bits couleur
+</code></pre>
+<p><strong>Configuration des timers</strong></p>
+<ul>
+<li>Timer fréquence ligne (~31.7 µs) : interruption toutes les 32 µs.</li>
+<li>Timer comptage lignes : incrémenter <code>vga_line</code> dans l’ISR et gérer VSYNC selon le numéro de ligne.</li>
+</ul>
+<pre><code class="language-c">volatile uint16_t vga_line = 0;
+volatile uint8_t vga_vsync = 0;
+
+void TIM2_IRQHandler(void) {
+    if (TIM2-&gt;SR &amp; TIM_SR_UIF) {
+        TIM2-&gt;SR &amp;= ~TIM_SR_UIF;
+
+        // Gestion HSYNC
+        if (vga_line &lt; VGA_HEIGHT) {
+            // Zone visible : HSYNC haut et gestion pixels
+        } else {
+            // Blanking : générer impulsions
+        }
+
+        // Gestion VSYNC (525 lignes)
+        vga_line++;
+        if (vga_line == 480) {
+            vga_vsync = 1; // début blanking vertical
+        } else if (vga_line == 490) {
+            GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 4); // impulsion VSYNC bas
+        } else if (vga_line == 492) {
+            GPIOA-&gt;ODR |= (1 &lt;&lt; 4);  // fin impulsion VSYNC
+        } else if (vga_line &gt;= 525) {
+            vga_line = 0;
+            vga_vsync = 0;
+        }
+
+        // Zone visible : envoyer ligne de pixels
+        if (vga_line &lt; VGA_HEIGHT) {
+            for (int x = 0; x &lt; VGA_WIDTH; x++) {
+                uint8_t color = framebuffer[vga_line][x];
+                GPIOA-&gt;ODR = (GPIOA-&gt;ODR &amp; ~0x07) | (color &amp; 0x07); // PA0-2
+                delay_cycles(20); // simuler durée pixel
+            }
+        }
+    }
+}
+</code></pre>
+<p>Ce code est très simplifié et ne respecte pas les timings exacts. Pour une implémentation réaliste, il faudrait utiliser un timer matériel pour générer les signaux HSYNC et VSYNC, et un DMA pour envoyer les pixels. On pourrait aussi utiliser un module DSI ou LTDC, mais le STM32F401 n’en a pas.</p>
+<hr />
+<p><br></p>
+<h3 id="integration-avec-freertos">**Intégration avec FreeRTOS</h3>
+<p>On peut créer une tâche qui met à jour le framebuffer (par exemple dessiner une forme) tandis que l’affichage est géré par des interruptions (pour le VGA) ou par une tâche périodique (pour le TFT).</p>
+<p><strong>Exemple pour le TFT : tâche d’affichage</strong></p>
+<pre><code class="language-c">void vTaskDisplay(void *pvParameters) {
+    int x = 0, y = 0, dx = 1, dy = 1;
+    uint16_t color = 0xF800; // rouge
+
+    for (;;) {
+        ILI9488_FillScreen(0x0000); // effacer
+        // Dessiner un rectangle mobile
+        for (int i = 0; i &lt; 50; i++) {
+            for (int j = 0; j &lt; 50; j++) {
+                ILI9488_DrawPixel(x+i, y+j, color);
+            }
+        }
+        x += dx;
+        y += dy;
+        if (x &gt;= 320-50) dx = -1;
+        if (x &lt;= 0) dx = 1;
+        if (y &gt;= 480-50) dy = -1;
+        if (y &lt;= 0) dy = 1;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+</code></pre>
+<p><strong>Exemple pour le VGA : mise à jour du framebuffer</strong></p>
+<p>La tâche dessine dans le framebuffer, l’ISR lit ce buffer.</p>
+<pre><code class="language-c">void vTaskDraw(void *pvParameters) {
+    int angle = 0;
+    while (1) {
+        // Dessiner une ligne qui tourne
+        for (int x = 0; x &lt; VGA_WIDTH; x++) {
+            int y = VGA_HEIGHT/2 + (int)(50 * sinf(angle + x * 0.1f));
+            if (y &gt;= 0 &amp;&amp; y &lt; VGA_HEIGHT) {
+                framebuffer[y][x] = 0x07; // blanc
+            }
+        }
+        angle++;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+</code></pre>
+<p><strong>Projet simple : Afficher un message et une forme</strong></p>
+<p>Sur TFT</p>
+<p>On peut afficher un texte (en utilisant une petite police bitmap) et un cercle. L’implémentation de la police dépasse le cadre, mais on peut utiliser une bibliothèque comme u8g2 ou Adafruit GFX adaptée.</p>
+<p>Sur VGA</p>
+<p>On peut afficher un damier ou une mire de couleurs.</p>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
+<ul>
+<li><a href="../../stm32f4/gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../stm32f4/timer/">Timer et Interruption</a></li>
+<li><a href="../../stm32f4/spi/">Communication Série SPI</a></li>
+<li><a href="../fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../stm32f4/dma/">Optimisation de Transfert des Données avec DMA</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
             </div>
         </div>
 
