@@ -424,8 +424,8 @@ La fonction <code>xQueueCreate()</code> alloue et initialise une file.</li>
 </ul>
 <pre><code class="language-c">QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength, UBaseType_t uxItemSize);
 </code></pre>
-<pre><code>- `uxQueueLength` : nombre maximal d'éléments que la file peut contenir.
-- `uxItemSize` : taille en octets de chaque élément.
+<pre><code>- uxQueueLength : nombre maximal d'éléments que la file peut contenir.
+- uxItemSize : taille en octets de chaque élément.
 - Retour : handle de la file si réussite, `NULL` sinon.
 </code></pre>
 <ul>
@@ -440,7 +440,7 @@ La fonction <code>xQueueCreate()</code> alloue et initialise une file.</li>
 </ul>
 <pre><code class="language-c">BaseType_t xQueueReceive(QueueHandle_t xQueue, void *pvBuffer, TickType_t xTicksToWait);
 </code></pre>
-<pre><code>Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
+<pre><code>- Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
 </code></pre>
 <p>Les deux fonctions retournent pdPASS en cas de succès, ou <code>errQUEUE_EMPTY</code>/<code>errQUEUE_FULL</code> selon le cas.</p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
