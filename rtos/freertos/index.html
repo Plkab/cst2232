@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/rtos/freertos/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Introduction aux Systèmes Temps Réels - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#introduction-aux-systemes-temps-reels" class="nav-link">Introduction aux Systèmes Temps Réels</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="introduction-aux-systemes-temps-reels">Introduction aux Systèmes Temps Réels</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../#Acceuil">Acceuil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction-a-freertos"><strong>Introduction Pratique à FreeRTOS</strong></h3>
+<p>FreeRTOS est un RTOS open source largement utilisé dans les systèmes embarqués, supportant plus de 40 microcontrôleurs. Il a été initialement développé par Richard Barry autour de 2003, puis maintenu par sa société Real Time Engineers Ltd. en étroite collaboration avec les principaux fabricants de semi-conducteurs pendant plus d'une décennie. En 2017, la gestion du projet FreeRTOS a été confiée à Amazon Web Services (AWS). </p>
+<p>Il se présente sous la forme d'une API qui nous permet de mettre en œuvre des applications temps réel sur microcontrôleur. Nous allons apprendre à utiliser ses fonctions pré-écrites pour structurer nos projets de manière efficace.</p>
+<p>FreeRTOS utilise un ordonnancement <strong>préemptif à priorités fixes</strong> par défaut. Cependant, pour les tâches de <strong>même priorité</strong>, plusieurs stratégies sont possibles :</p>
+<ul>
+<li><strong>Round-Robin avec time-slice</strong> : les tâches de même priorité s'exécutent à tour de rôle pendant une durée fixe (le <em>time slice</em>, généralement 1 tick).</li>
+<li><strong>Coopératif</strong> : les tâches de même priorité ne sont pas préemptées entre elles ; elles doivent explicitement céder la main (<code>taskYIELD()</code>) ou se bloquer volontairement.</li>
+</ul>
+<p>Cette flexibilité permet d'adapter le comportement du système aux besoins de l'application.</p>
+<p>On peut avoir sur le site web officiel le manuel de référence ecrit par <a href="https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf">Richard Barry</a> et l'API est disponible : <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">freertos.</a></p>
+<p>FreeRTOS est fourni sous forme d'un ensemble de fichiers sources C qui sont compilés avec votre code applicatif. La distribution comprend également un <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">dossier demo</a> contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.</p>
+<hr />
+<p><br></p>
+<h4 id="creation-de-taches-xtaskcreate"><strong>Création de Tâches (<code>xTaskCreate</code>)</strong></h4>
+<p>La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.</p>
+<p>Dans un programme classique (sans OS), tout le code se trouve dans la fonction main(). Dans FreeRTOS, le rôle de main() est simplement de créer les tâches nécessaires, puis de lancer l'ordonnanceur qui prend le contrôle.</p>
+<p>Une tâche est typiquement une fonction qui ne doit jamais se terminer, elle s'exécute en boucle infinie et possède sa propre pile mémoire. Sa structure type est une boucle infinie :</p>
+<pre><code class="language-c">void maTache(void * pvParameters) {
+    while(1) { // Une tâche est une boucle infinie
+        // Ton code ici (ex: lire un capteur)
+        Action();
+        vTaskDelay(pdMS_TO_TICKS(100)); // On laisse respirer le CPU 100ms
+    }
+}
+</code></pre>
+<p><strong>Création d'une tâche dans le main</strong></p>
+<p>La fonction <em><code>xTaskCreate()</code></em> est la porte d'entrée de FreeRTOS.</p>
+<pre><code class="language-c">xTaskCreate(
+    maTache,           // Nom de la fonction: Pointeur vers la fonction de la tâche
+    &quot;Nom_Tache&quot;,       // Nom de la tâche (pour le debug)
+    2048,              // Taille de la pile (en mots, souvent 32 bits)
+    NULL,              // Paramètres à passer à la tâche (optionnel)
+    2,                 // PRIORITÉ (plus le chiffre est élevé, plus la tâche est prioritaire)
+    NULL               // Handle pour manipuler la tâche plus tard
+);
+</code></pre>
+<p><strong>Le lancement (<code>vTaskStartScheduler</code>)</strong></p>
+<p>Après avoir créé les tâches, on appelle <code>vTaskStartScheduler()</code>. Cette fonction cède le contrôle du processeur à FreeRTOS. À partir de cet instant, le code situé après cette ligne dans main() ne sera plus jamais exécuté. Le système bascule alors de tâche en tâche selon les priorités définies.</p>
+<pre><code class="language-c">// Prototype de la tâche
+void maTache(void * pvParameters);
+
+void main(void) {
+    // Création : Fonction, Nom, Taille pile, Paramètre, Priorité, Handle
+    xTaskCreate(maTache, &quot;Tache1&quot;, 1024, NULL, 5, NULL);
+
+    // Lance l'ordonnanceur (le système prend le contrôle)
+    vTaskStartScheduler();
+
+    // Le code ici ne sera jamais atteint
+    while(1); // Sécurité
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h4 id="gestion-du-temps-vtaskdelay-et-vtaskdelayuntil"><strong>Gestion du Temps (<code>vTaskDelay</code>) et (<code>vTaskDelayUntil</code>)</strong></h4>
+<p>Contrairement à une simple boucle d'attente active (comme <code>delay()</code>) qui bloque tout le processeur, <code>vTaskDelay</code> place la tâche dans l'état "Blocked" pendant un nombre de ticks spécifié. Pendant ce temps, le CPU est libéré et peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.</p>
+<pre><code class="language-c">void vTaskMoteur(void * pvParameters) {
+    for(;;) { // Boucle infinie obligatoire
+        ControleVitesse();
+        // Attend 20ms de manière déterministe
+        vTaskDelay(pdMS_TO_TICKS(20)); // Bloque la tâche pendant 20ms
+    }
+}
+</code></pre>
+<p>Pour cette fonction nous avons une limitation, si le code de traitement prend 10ms, et que l'on utilise <em><code>vTaskDelay(90ms)</code></em>, la période réelle sera de 100ms + temps de traitement, provoquant une dérive temporelle.</p>
+<p>Prenons un autre exemple qui fait du temps réel périodique précis: </p>
+<pre><code class="language-c">void Task_Stabilisation(void *pvParameters) {
+
+     // Variable pour stocker l'instant du prochain réveil
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Période souhaitée : 20 ms (50 Hz)
+    const TickType_t xPeriod = pdMS_TO_TICKS(20);
+
+    for (;;) { // Boucle infinie de la tâche
+        // --- DEBUT DU TRAITEMENT ---
+        // 1. Lire les capteurs (ex: Accéléromètre)
+        // 2. Calculer l'algorithme (ex: PID de stabilisation)
+        // 3. Appliquer la correction aux moteurs
+
+        // --- SYNCHRONISATION ---
+        // On attend &quot;jusqu'à&quot; la prochaine échéance fixe
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);
+    }
+}
+</code></pre>
+<p>Cette fonction garantit que la tâche <em>Stabilisation()</em> s'exécutera exactement toutes les 20ms, sans dérive, même si le code de traitement varie (tant qu'il reste inférieur à la période)</p>
+<p><strong>Pourquoi utiliser vTaskDelayUntil plutôt que <code>vTaskDelay</code> ?</strong></p>
+<ul>
+<li>
+<p><strong><code>vTaskDelay</code></strong> : spécifie un délai relatif à partir de l'appel. Si le code à l'intérieur de la tâche prend du temps, la prochaine exécution sera décalée (dérive temporelle).</p>
+</li>
+<li>
+<p><strong><code>vTaskDelayUntil</code></strong> : spécifie un instant absolu de réveil. Il garantit que la tâche s'exécute à une fréquence fixe, sans dérive, quelle que soit la durée du traitement (tant qu'il reste inférieur à la période). Il permet d'éviter la dérive temporelle.</p>
+</li>
+</ul>
+<p><strong>Remarques importantes</strong></p>
+<ul>
+<li>Initialisation : <code>xLastWakeTime</code> doit être initialisée avec l'heure courante avant la première utilisation.</li>
+<li>Premier appel : <code>vTaskDelayUntil</code> attendra que <code>xLastWakeTime + xPeriod</code> soit atteint. La première exécution effective aura donc lieu après une période complète.</li>
+<li>Traitement plus long que la période : Si le code à l'intérieur de la boucle dépasse la période, le prochain réveil sera immédiat et vous perdrez le déterminisme. Il faut donc s'assurer que le pire temps d'exécution est inférieur à la période.</li>
+</ul>
+<hr />
+<p><br></p>
+<h4 id="Semaphores"><strong>Synchronisation par Sémaphores (xSemaphore)</strong></h4>
+<p>Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle.</p>
+<p><strong>Le Mutex (Le type de sémaphore pour les ressources partagées)</strong></p>
+<p>Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex (MUTual EXclusion) agit comme un jeton, une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.</p>
+<p>Déclaration et création :</p>
+<pre><code class="language-c">SemaphoreHandle_t xMutexUART; // Variable représentant le jeton
+
+void vTaskA(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xMutexUART, portMAX_DELAY) == pdPASS) {
+            // Accès exclusif à l'UART
+            printf(&quot;Tâche A écrit sur UART\n&quot;);
+            xSemaphoreGive(xMutexUART);
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+void vTaskB(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xMutexUART, portMAX_DELAY) == pdPASS) {
+            printf(&quot;Tâche B écrit sur UART\n&quot;);
+            xSemaphoreGive(xMutexUART);
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+void main() {
+    // Création du mutex
+    xMutexUART = xSemaphoreCreateMutex();
+
+    if(xMutexUART != NULL) {
+        // Création des tâches seulement si le mutex est prêt
+        xTaskCreate(vTaskA, &quot;Tache A&quot;, 1000, NULL, 1, NULL);
+        xTaskCreate(vTaskB, &quot;Tache B&quot;, 1000, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+}
+</code></pre>
+<p><strong>Utilisation dans les tâches: <code>xSemaphoreTake</code> et <code>xSemaphoreGive</code></strong></p>
+<ul>
+<li><code>xSemaphoreTake(xMutex, portMAX_DELAY)</code> : tente de prendre le jeton. Si le jeton est déjà pris, la tâche se bloque jusqu'à ce qu'il soit libéré (ou jusqu'à expiration du délai).</li>
+<li><code>xSemaphoreGive(xMutex)</code> : libère le jeton pour les autres tâches.</li>
+</ul>
+<pre><code class="language-c">void vTaskA(void * pvParameters) {
+    for(;;) {
+        // 1. Tenter de prendre le jeton (attendre max 100 ms)
+        if(xSemaphoreTake(xMutexUART, pdMS_TO_TICKS(100)) == pdPASS) {
+
+            // 2. Jeton obtenu → accès exclusif à l'UART
+            printf(&quot;Je suis la Tache A et je contrôle l'UART\n&quot;);
+
+            // 3. Important : rendre le jeton
+            xSemaphoreGive(xMutexUART);
+        } else {
+            // Échec : le jeton n'a pas pu être obtenu dans le délai imparti
+            // On peut prendre une action corrective ou signaler une erreur
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+</code></pre>
+<p><strong>On a trois types de Sémaphores à connaître :</strong></p>
+<ul>
+<li>
+<p><strong>Le Mutex</strong> (<code>xSemaphoreCreateMutex</code>) : Utilisé pour protéger une ressource partagée (Écran, I2C, Moteur). Il intègre un mécanisme d'héritage de priorité qui évite qu'une tâche de priorité moyenne ne bloque indéfiniment une tâche haute priorité.</p>
+</li>
+<li>
+<p><strong>Le Sémaphore Binaire</strong> (<code>xSemaphoreCreateBinary</code>) : utilisé pour la synchronisation simple. Par exemple, une interruption matérielle (appui sur un bouton) "donne" le sémaphore, et une tâche qui "attendait" se réveille instantanément.</p>
+</li>
+<li>
+<p><strong>Le Sémaphore à Comptage</strong> (<code>xSemaphoreCreateCounting</code>) : utilisé lorsqu'on dispose de plusieurs instances d'une ressource (par exemple un parking avec 5 places libres).</p>
+</li>
+</ul>
+<p><strong>Exemple de synchronisation avec une ISR :</strong></p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;semphr.h&quot;
+
+// Handle global pour le sémaphore
+SemaphoreHandle_t xSemaphoreBouton;
+
+// PROTOTYPES DE DÉMO (BARE METAL)
+void LowLevel_Init(void);         // Config GPIO &amp; EXTI via registres
+void LowLevel_ClearIT(void);      // Acquitter le flag dans le registre PR
+void LowLevel_ToggleLED(void);    // Inverser bit dans le registre ODR
+
+// 1. Routine d'interruption (Vecteur EXTI0)
+void EXTI0_IRQHandler(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // Action Bare Metal : Effacer le flag d'interruption (registre Pending)
+    LowLevel_ClearIT();
+
+    // Signal à la tâche : Débloque vTaskBouton
+    xSemaphoreGiveFromISR(xSemaphoreBouton, &amp;xHigherPriorityTaskWoken);
+
+    // Demande un changement de contexte si nécessaire
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+// 2. Tâche de gestion du bouton
+void vTaskBouton(void *pvParameters) {
+    for (;;) {
+        // Attend indéfiniment le signal de l'interruption
+        if (xSemaphoreTake(xSemaphoreBouton, portMAX_DELAY) == pdPASS) {
+            // Action Bare Metal : Basculer l'état de la LED
+            LowLevel_ToggleLED();
+        }
+    }
+}
+
+int main(void) {
+    // Initialisation matérielle (Horloges, GPIO, NVIC)
+    LowLevel_Init();
+
+    // Création du sémaphore binaire
+    xSemaphoreBouton = xSemaphoreCreateBinary();
+
+    if (xSemaphoreBouton != NULL) {
+        // Création de la tâche
+        xTaskCreate(vTaskBouton, &quot;BTN_TASK&quot;, 128, NULL, 2, NULL);
+
+        // Lancement du système
+        vTaskStartScheduler();
+    }
+
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h4 id="communication-par-files-de-messages-queues-xqueue"><strong>Communication par files de messages : Queues (xQueue)</strong></h4>
+<p>C'est la méthode propre pour échanger des données entre tâches de manière propre. Les données sont copiées dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.</p>
+<ul>
+<li><strong>Créer la file</strong> : <code>xQueueCreate(taille, taille_d'un_élément)</code>;</li>
+<li><strong>Poster un message</strong> : <code>xQueueSend(file, &amp;donnee, delai)</code>;</li>
+<li><strong>Lire un message</strong> : <code>xQueueReceive(file, &amp;reception, delai)</code>;</li>
+</ul>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;queue.h&quot;
+
+// 1. Handle global de la file
+QueueHandle_t xQueueCapteur;
+
+// Tâche Émettrice (Producteur)
+void vTacheEmettrice(void *pvParameters) {
+    uint32_t valeurADC = 0;
+
+    for (;;) {
+        valeurADC++; // Simulation d'une acquisition
+
+        // 3. Envoyer la donnée ADC (Copie par valeur dans la file)
+        // Paramètres : Handle, Adresse donnée, Temps d'attente max si file pleine
+        if (xQueueSend(xQueueCapteur, &amp;valeurADC, pdMS_TO_TICKS(10)) == pdPASS) {
+            // Envoi réussi
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50)); // Fréquence d'émission
+    }
+}
+
+// Tâche Réceptrice (Consommateur)
+void vTacheReceptrice(void *pvParameters) {
+    uint32_t donneeRecue;
+
+    for (;;) {
+        // 4. Recevoir la donnée (Bloquant jusqu'à réception ou timeout)
+        // Paramètres : Handle, Adresse stockage, Temps d'attente max
+        if (xQueueReceive(xQueueCapteur, &amp;donneeRecue, pdMS_TO_TICKS(100)) == pdPASS) {
+            // Traitement de la donnée reçue
+            printf(&quot;Valeur ADC reçue : %lu\n&quot;, donneeRecue);
+        } else {
+            // Timeout : aucune donnée reçue après 100ms
+        }
+    }
+}
+
+int main(void) {
+    // Initialisation du matériel (Générique)
+    Hardware_Init();
+
+    // 2. Création de la file : (Capacité, Taille d'un élément)
+    xQueueCapteur = xQueueCreate(5, sizeof(uint32_t));
+
+    if (xQueueCapteur != NULL) {
+        xTaskCreate(vTacheEmettrice, &quot;Emetteur&quot;, 128, NULL, 1, NULL);
+        xTaskCreate(vTacheReceptrice, &quot;Recepteur&quot;, 128, NULL, 1, NULL);
+
+        vTaskStartScheduler();
+    }
+
+    for(;;);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h4 id="trois-regles-dor-a-connaitre"><strong>Trois règles d'or a connaitre :</strong></h4>
+<ul>
+<li><strong>Priorité</strong> : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).</li>
+<li><strong>Boucle infinie</strong> : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par <em><code>vTaskDelete()</code></em>.</li>
+<li><strong>Section Critique</strong> : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser <code>taskENTER_CRITICAL()</code> et <code>taskEXIT_CRITICAL()</code> pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="liens-connexes">Liens connexes</h3>
+<ul>
+<li><a href="../../stm32f4/mcu_intro/">Présentation architecturale du Microcontrôleur STM32F4</a></li>
+<li><a href="../../ressources/demarrerKiel/">Création Projet sous Keil uVision</a></li>
+<li><a href="../../ressources/configRtosKiel/">Configuration FreeRTOS sous Kiel pour STM32F4</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
