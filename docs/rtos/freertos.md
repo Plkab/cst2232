@@ -27,48 +27,29 @@ Cette flexibilité permet d'adapter le comportement du système aux besoins de l
 
 On peut avoir sur le site web officiel le manuel de référence ecrit par [Richard Barry](https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf) et l'API est disponible : [freertos.](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS)
 
-FreeRTOS est fourni sous forme d'un ensemble de fichiers sources C qui sont compilés avec votre code applicatif. La distribution comprend également un [dossier demo](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS) contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.
 
 **Organisation des fichiers**
 
-```
+FreeRTOS est fourni sous forme d'un ensemble de fichiers sources C qui sont compilés avec votre code applicatif. La distribution comprend également un [dossier demo](https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS) contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.
+
+```text
 FreeRTOS/
 ├── Source/
+│   ├── include/          # Fichiers d’en‑tête publics
+│   ├── portable/         # Code spécifique aux compilateurs/architectures
+│   │   ├── MemMang/      # Gestionnaires de mémoire (heap_1.c à heap_5.c)
+│   │   └── RVDS/ARM_CM4F/  # Portage pour Cortex‑M4F (utilisé avec Keil)
 │   ├── croutine.c
 │   ├── event_groups.c
 │   ├── list.c
 │   ├── queue.c
 │   ├── stream_buffer.c
 │   ├── tasks.c
-│   ├── timers.c
-│   ├── include/ (fichiers d'en-tête)
-│   └── portable/
-│       ├── MikroC/
-│       │   ├── ARM_CM4F/
-│       │   │   ├── port.c
-│       │   │   └── portmacro.h
-│       │   └── ARM_CM3/
-│       │       ├── port.c
-│       │       └── portmacro.h
-│       ├── MemMang/
-│       │   ├── heap_1.c
-│       │   ├── heap_2.c
-│       │   ├── heap_3.c
-│       │   ├── heap_4.c
-│       │   └── heap_5.c
-│       └── Common/
-│           └── mpu_wrappers.c
-└── Demo/
-    └── STM32F407_MikroC/
-        └── LedBlinking/
-            ├── main.h
-            ├── main.c
-            ├── FreeRTOS_STM32F407_LedBlinking.mcpar
-            ├── FreeRTOS_STM32F407_LedBlinking.cfg
-            ├── FreeRTOS_STM32F407_LedBlinking.hex
-            ├── FreeRTOS_STM32F407_LedBlinking.bin
-            └── FreeRTOSConfig.h
+│   └── timers.c
+└── Demo/                 # Exemples de projets (optionnel)
 ```
+
+Le fichier de configuration FreeRTOSConfig.h est placé dans le dossier de votre projet. Il définit les paramètres du noyau (fréquence CPU, tick rate, inclusion des fonctions, etc.). Pour une description détaillée des macros de configuration, reportez‑vous à la [documentation](../../ressources/configRtosKiel.md).
 
 ---
 <br>
