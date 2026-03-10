@@ -15,7 +15,7 @@
 
 La communication série asynchrone (UART/USART) est l’un des moyens les plus simples et les plus répandus pour faire dialoguer un microcontrôleur avec un PC, un autre microcontrôleur, ou des périphériques (GPS, modules Bluetooth, etc.). Elle ne nécessite que deux fils (TX et RX) et une masse commune.
 
-Le STM32F4 intègre plusieurs **USART** (Universal Synchronous/Asynchronous Receiver Transmitter) capables de fonctionner en mode asynchrone (UART) ou synchrone. Dans ce chapitre, nous nous concentrerons sur le mode asynchrone, le plus utilisé.
+Le STM32F4 intègre plusieurs **USART** (Universal Synchronous/Asynchronous Receiver Transmitter) capables de fonctionner en mode asynchrone (UART) ou synchrone. Dans ce chapitre, nous nous concentrerons sur le mode asynchrone, le plus utilisé. Nous utiliserons l'`USART2` qui, sur la carte Black Pill, est connecté aux broches `PA2 (TX)` et `PA3 (RX)` et également relié au programmateur ST‑Link, ce qui permet une communication directe avec le PC via le port USB sans matériel supplémentaire.
 
 Les objectifs de ce chapitre sont :
 
@@ -28,6 +28,8 @@ Les objectifs de ce chapitre sont :
 ---
 <br>
 
+
+
 ### **Principe de l’UART**
 
 Une trame UART typique se compose de :
@@ -39,7 +41,11 @@ Une trame UART typique se compose de :
 
 Le débit est défini par le **baud rate** (ex: 9600, 115200 bauds). Les deux extrémités doivent être configurées exactement de la même manière.
 
-Sur le STM32F4, l’USART est configuré via des registres :
+**Le module USART du STM32F401**
+
+Le STM32F401 dispose de plusieurs USART. Nous utilisons USART2 car il est accessible via les broches PA2 (TX) et PA3 (RX) et connecté au ST‑Link, ce qui simplifie la communication avec le PC.
+
+Chaque USART est contrôlé par un ensemble de registres. Sur le STM32F4, l’USART est configuré via des registres :
 
 - `USART_BRR` : définit le baud rate à partir de l’horloge du périphérique.
 - `USART_CR1` : active la transmission, la réception, les interruptions, etc.
@@ -48,6 +54,62 @@ Sur le STM32F4, l’USART est configuré via des registres :
 
 ---
 <br>
+
+
+
+### **Génération du baud rate**
+
+Le débit est déterminé par la valeur chargée dans le registre **USART_BRR**. La formule dépend du mode d’oversampling (surchantillonnage) choisi.
+
+**Oversampling par 16 (OVER8 = 0 dans CR1)**
+
+C’est le mode par défaut et le plus courant : baud = fCK / (16 × USARTDIV)
+où **USARTDIV** est un nombre en virgule fixe codé dans **BRR** :
+
+- Les **bits 15-4** contiennent la **partie entière** (mantisse).
+- Les **bits 3-0** contiennent la **partie fractionnaire** (4 bits, chaque unité vaut 1/16).
+
+**Oversampling par 8 (OVER8 = 1)**
+
+baud = fCK / (8 × USARTDIV)
+
+La partie fractionnaire n’utilise alors que **3 bits (bits 2-0)**.
+Dans ce chapitre, nous utiliserons **l’oversampling par 16**.
+
+
+La fréquence **fCK** est l’horloge fournie à l’USART. Pour **USART2**, elle provient du **bus APB1**.
+
+Sur la **Black Pill**, nous configurons généralement le système pour fonctionner à **84 MHz**, et **APB1 est souvent à 42 MHz** (car divisé par 2). Cependant, si l’on souhaite utiliser **APB1 à 84 MHz**, il faut modifier le **prescaler dans RCC_CFGR**.
+
+Pour simplifier, nous prendrons comme hypothèse que **l’horloge APB1 est à 84 MHz**.
+
+Si vous utilisez la configuration par défaut de la **Black Pill (84 MHz, APB1 = 42 MHz)**, il faudra adapter les calculs.
+
+Exemple : calcul de BRR pour 115200 bauds
+
+Avec :
+fCK = 84 000 000 Hz
+oversampling = 16
+USARTDIV = 84 000 000 / (16 × 115 200)
+USARTDIV ≈ 45,5729
+
+- **Partie entière** : 45 → `0x02D`
+- **Partie fractionnaire** : `0,5729 × 16 ≈ 9,166 → 9 → 0x9`
+
+Donc : BRR = 0x02D9 (soit `0x2D9`).
+
+Exemple : calcul pour 9600 bauds
+
+USARTDIV = 84 000 000 / (16 × 9 600)
+USARTDIV ≈ 546,875
+
+- **Partie entière** : 546 → `0x222`
+- **Partie fractionnaire** : `0,875 × 16 = 14 → 0xE`
+
+Donc : BRR = 0x222E
+
+On peut utiliser ces **valeurs directement dans le code** pour configurer le registre **USART_BRR**.
+
 
 ### **Configuration simple (mode polling)**
 
@@ -67,7 +129,7 @@ void USART2_Init(uint32_t baud) {
     GPIOA->AFR[0] |= (7 << (2*4)) | (7 << (3*4));     // AF7 pour USART2
 
     // 3. Configurer l'USART : 8 bits, 1 stop, pas de parité, 115200 bauds
-    USART2->BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz
+    USART2->BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz    // 0x02D9;      // 45,57 → 45*16 + 9 = 0x2D9
     USART2->CR1 = USART_CR1_TE | USART_CR1_RE; // Activer TX et RX
     USART2->CR2 = 0;                  // 1 stop bit par défaut
     USART2->CR3 = 0;
@@ -75,6 +137,8 @@ void USART2_Init(uint32_t baud) {
 }
 
 // Émission d'un caractère (polling)
+/*On utilise le flag TXE (Transmit data register empty) du registre SR. Quand ce bit est à 1, le buffer de transmission est vide et on peut écrire un nouveau caractère dans DR.
+*/
 void USART2_SendChar(char c) {
     while (!(USART2->SR & USART_SR_TXE)); // Attendre que le buffer soit vide
     USART2->DR = c;
@@ -88,6 +152,8 @@ void USART2_SendString(char *str) {
 }
 
 // Réception d'un caractère (polling, bloquant)
+/* Le flag RXNE (Read data register not empty) indique qu’un caractère a été reçu et est disponible dans DR. On attend qu’il soit à 1, puis on lit.
+*/
 char USART2_GetChar(void) {
     while (!(USART2->SR & USART_SR_RXNE)); // Attendre qu'une donnée soit reçue
     return USART2->DR;
@@ -95,9 +161,110 @@ char USART2_GetChar(void) {
 ```
 Limitation : les fonctions d’émission/réception en polling bloquent le CPU jusqu’à ce que l’opération soit terminée. Dans un système temps réel, cela peut être problématique.
 
+
+**Exemple complet : écho**
+
+Ce programme attend un caractère, le renvoie immédiatement (écho) et le fait clignoter sur la LED selon son code ASCII.
+
+```c
+#include "stm32f4xx.h"
+
+void USART2_Init(uint32_t baud);
+void USART2_SendChar(char c);
+char USART2_GetChar(void);
+void delay_ms(int);
+
+int main(void) {
+    USART2_Init(115200);
+
+    // Configuration de PC13 en sortie (LED)
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC->MODER |= (1 << (13*2));
+    GPIOC->ODR &= ~(1 << 13); // éteinte
+
+    while (1) {
+        char ch = USART2_GetChar();
+        USART2_SendChar(ch);  // écho
+
+        // Faire clignoter la LED selon la valeur reçue
+        for (int i = 0; i < ch; i++) {
+            GPIOC->ODR ^= (1 << 13);
+            delay_ms(100);
+        }
+    }
+}
+
+void USART2_Init(uint32_t baud) {
+    // 1. Activer les horloges GPIOA et USART2
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // 2. Configurer PA2 et PA3 en alternate function AF7
+    GPIOA->MODER &= ~((3U << (2*2)) | (3U << (3*2)));
+    GPIOA->MODER |=  ((2U << (2*2)) | (2U << (3*2))); // 10 = Alternate function
+    GPIOA->AFR[0] |= (7 << (2*4)) | (7 << (3*4));     // AF7 pour USART2
+
+    // 3. Configurer l'USART : 8 bits, 1 stop, pas de parité, 115200 bauds
+    USART2->BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz    // 0x02D9;      // 45,57 → 45*16 + 9 = 0x2D9
+    USART2->CR1 = USART_CR1_TE | USART_CR1_RE; // Activer TX et RX
+    USART2->CR2 = 0;                  // 1 stop bit par défaut
+    USART2->CR3 = 0;
+    USART2->CR1 |= USART_CR1_UE;       // Activer l'USART
+}
+
+void USART2_SendChar(char c) {
+    while (!(USART2->SR & USART_SR_TXE));
+    USART2->DR = c;
+}
+
+char USART2_GetChar(void) {
+    while (!(USART2->SR & USART_SR_RXNE));
+    return USART2->DR;
+}
+
+void delay_ms(int n) {
+    for (int i = 0; i < n * 4000; i++) {}  // approximation
+}
+```
+
 ---
 <br>
 
+
+
+
+### **Redirection de printf() vers l’UART**
+
+Pour faciliter le débogage, on peut rediriger `printf()` vers l’USART. Sous Keil, il suffit de réimplémenter la fonction `fputc()` (ou `_write` selon la bibliothèque). En général, on utilise `fputc()` pour la console.
+
+```c
+#include <stdio.h>
+
+int fputc(int ch, FILE *f) {
+    USART2_SendChar(ch);
+    return ch;
+}
+```
+
+oubien
+
+```c
+#include <stdio.h>
+
+int _write(int file, char *ptr, int len) {
+    for (int i = 0; i < len; i++) {
+        USART2_SendChar(ptr[i]);
+    }
+    return len;
+}
+```
+
+Ainsi, un simple `printf("Valeur : %d\r\n", maVariable);` enverra la chaîne formatée sur le port série.
+
+Attention : pour que cela fonctionne, il faut inclure stdio.h et s’assurer que la bibliothèque standard est utilisée.
+
+---
+<br>
 
 
 
@@ -481,29 +648,6 @@ int main(void) {
 - Deux tâches productrices lisent des capteurs et envoient les données dans une file.
 - Une tâche consommatrice lit la file et affiche via UART, protégée par un mutex.
 - La file découple l'acquisition de l'affichage et permet de gérer des cadences différentes.
-
----
-<br>
-
-
-
-
-### **Utiliser printf() sur l'USART**
-
-Pour faciliter le débogage, on peut rediriger `printf()` vers l’USART. Sous Keil, il suffit de réimplémenter la fonction `_write` :
-
-```c
-#include <stdio.h>
-
-int _write(int file, char *ptr, int len) {
-    for (int i = 0; i < len; i++) {
-        USART2_SendChar(ptr[i]);
-    }
-    return len;
-}
-```
-
-Ainsi, un simple `printf("Valeur : %d\r\n", maVariable);` enverra la chaîne formatée sur le port série.
 
 ---
 <br>
