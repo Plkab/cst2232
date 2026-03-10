@@ -70,7 +70,7 @@
 <p><br>
 <br></p>
 <h3 id="gpio"><strong>GPIO</strong></h3>
-<p>Les <strong>GPIO</strong> (<em>General Purpose Input-Output</em>) sont des périphériques d'entrée-sortie numériques. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.</p>
+<p>Les <strong>GPIO</strong> (<em>General Purpose Input-Output</em>) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.</p>
 <p><strong>Registres principaux :</strong></p>
 <table>
 <thead>
@@ -101,6 +101,11 @@
 <td>Bit Set/Reset Register</td>
 <td>Permet de modifier l’état de manière <strong>atomique</strong> en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.</td>
 </tr>
+<tr>
+<td>AFR</td>
+<td></td>
+<td>Sélection de la fonction alternative (AF0 à AF15).</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -108,11 +113,12 @@
 <h3 id="configuration-dune-sortie-led-sur-pc13"><strong>Configuration d'une Sortie (LED sur PC13)</strong></h3>
 <p>Pour faire clignoter une LED, nous devons suivre trois étapes logiques dans les registres :</p>
 <ul>
-<li>Activer l’horloge du port (RCC) : Sans horloge, le périphérique est inactif. Exemple : RCC_AHB1ENR</li>
-<li>Configurer la broche en sortie via le registre MODER.</li>
-<li>Piloter l’état en écrivant dans BSRR ou ODR.</li>
+<li>Activer l’horloge du port (<code>RCC</code>) : Sans horloge, le périphérique est inactif. Avant d'utiliser un GPIO, il faut activer son horloge via le registre <code>RCC_AHB1ENR</code>.</li>
+<li>Configurer la broche en sortie via le registre <code>MODER</code>.</li>
+<li>Piloter l’état en écrivant dans <code>BSRR</code> ou <code>ODR</code>.</li>
 </ul>
-<p>Exemple Pratique : Faire clignoter la LED (PC13)</p>
+<p>Exemple Pratique : Faire clignoter la LED (PC13)
+La carte Black Pill intègre une LED connectée à PC13 (active à l'état bas).</p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 // Code Sans RTOS
@@ -123,7 +129,7 @@ void main(void) {
     GPIOC-&gt;MODER |= (1 &lt;&lt; (13 * 2));            // 2. PC13 en Sortie
 
     while(1) {
-        GPIOC-&gt;BSRR = (1 &lt;&lt; (13 + 16));         // LED ON (Reset bit 13)
+        GPIOC-&gt;BSRR = (1 &lt;&lt; (13 + 16));         // LED ON (Reset bit 13) → LED allumée (active bas)
         for(int i=0; i&lt;500000; i++);            // Attente logicielle (Bloque le CPU)
         GPIOC-&gt;BSRR = (1 &lt;&lt; 13);                // LED OFF (Set bit 13)
         for(int i=0; i&lt;500000; i++);
@@ -146,6 +152,13 @@ void main(void) {
     }
 }
 </code></pre>
+<p>Explications :</p>
+<ul>
+<li>L'horloge du port C est activée via RCC_AHB1ENR. Sans cela, le port ne répond pas.</li>
+<li>Le mode de la broche est configuré en sortie (MODER = 01).</li>
+<li>On utilise BSRR pour modifier l'état de manière atomique : écrire dans les bits 0‑15 met la broche correspondante à 1, écrire dans les bits 16‑31 la remet à 0.</li>
+<li>ODR est utilisé pour le toggle (lecture‑modification‑écriture, non atomique).</li>
+</ul>
 <p><strong>Problème des boucles <code>for</code> :</strong></p>
 <p>Pendant ces attentes, le processeur est totalement occupé à décrémenter un compteur. Si un événement externe survient (appui sur un bouton), il ne pourra pas y réagir avant la fin de la boucle. C'est pourquoi, dans un système temps réel, on préfère des mécanismes non bloquants comme les interruptions ou les délais gérés par un RTOS (par exemple vTaskDelay() sous FreeRTOS).</p>
 <hr />
@@ -249,8 +262,8 @@ Les registres suivants contrôlent le comportement des lignes EXTI :</p>
 </tbody>
 </table>
 <p>Pour activer une interruption, on utilise les fonctions CMSIS :</p>
-<pre><code class="language-c">NVIC_SetPriority(EXTI0_IRQn, priorité);
-NVIC_EnableIRQ(EXTI0_IRQn);
+<pre><code class="language-c">NVIC_SetPriority(EXTI0_IRQn, priorité); // NVIC_SetPriority(IRQn, priority) (priorité 0..15)
+NVIC_EnableIRQ(EXTI0_IRQn);     // NVIC_GetPriority(IRQn)
 </code></pre>
 <p>La priorité est un nombre entre 0 (la plus haute) et 15 (la plus basse) sur 4 bits.</p>
 <p><strong>4. Configuration d’une interruption externe (bare metal)</strong></p>

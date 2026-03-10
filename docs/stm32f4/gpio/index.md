@@ -15,15 +15,32 @@
 
 Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
 
-**Registres principaux :**
+**Registres principaux de configuration d'un port :**
+
+Chaque port GPIO est contrôlé par plusieurs registres 32 bits. L'adresse de base d'un port est donnée par des constantes comme `GPIOA_BASE (0x40020000)`. En CMSIS, on accède à ces registres via une structure `GPIO_TypeDef`.
+
+```c
+typedef struct {
+    volatile uint32_t MODER;    // Mode register (offset 0x00)
+    volatile uint32_t OTYPER;   // Output type register (0x04)
+    volatile uint32_t OSPEEDR;  // Output speed register (0x08)
+    volatile uint32_t PUPDR;    // Pull-up/pull-down register (0x0C)
+    volatile uint32_t IDR;      // Input data register (0x10)
+    volatile uint32_t ODR;      // Output data register (0x14)
+    volatile uint32_t BSRR;     // Bit set/reset register (0x18)
+    volatile uint32_t LCKR;     // Lock register (0x1C)
+    volatile uint32_t AFR[2];   // Alternate function registers (0x20-0x24)
+} GPIO_TypeDef;
+```
 
 |Registre	|Nom	|Description|
 |-----------|-------|-----------|
-|MODER	|Mode Register	|Configure la direction de chaque broche (00: Entrée, 01: Sortie, 10: Fonction alternative, 11: Analogique).|
-|IDR	|Input Data Register	|Permet de lire l'état logique présent sur les broches configurées en entrée.|
-|ODR	|Output |Data Register	|Permet d’écrire (ou de lire) l’état des broches configurées en sortie. Attention : une opération comme `ODR |= (1<<13)` n’est pas atomique (lecture-modification-écriture) et peut être interrompue.|
-|BSRR	|Bit Set/Reset Register	|Permet de modifier l’état de manière **atomique** en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.|
-| AFR| | Sélection de la fonction alternative (AF0 à AF15).|
+|`MODER`	|Mode Register	|Configure la direction de chaque broche (00: Entrée, 01: Sortie, 10: Fonction alternative, 11: Analogique).|
+|`IDR`	|Input Data Register	|Permet de lire l'état logique présent sur les broches configurées en entrée.|
+|`ODR`	|Output |Data Register	|Permet d’écrire (ou de lire) l’état des broches configurées en sortie. Attention : une opération comme `ODR |= (1<<13)` n’est pas atomique (lecture-modification-écriture) et peut être interrompue.|
+|`BSRR`	|Bit Set/Reset Register	|Permet de modifier l’état de manière **atomique** en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.|
+|`AFR`| Alternative Function Register| Sélection de la fonction alternative (AF0 à AF15).|
+|`PUPDR`|Pull-up/pull-down register|Pour activer le pull‑up sur PA0 (bouton)|
 
 ---
 <br>
@@ -80,10 +97,19 @@ void main(void) {
 
 Explications :
 
-- L'horloge du port C est activée via RCC_AHB1ENR. Sans cela, le port ne répond pas.
+- L'horloge du port C est activée via `RCC_AHB1ENR`. Sans cela, le port ne répond pas. 
 - Le mode de la broche est configuré en sortie (MODER = 01).
 - On utilise BSRR pour modifier l'état de manière atomique : écrire dans les bits 0‑15 met la broche correspondante à 1, écrire dans les bits 16‑31 la remet à 0.
 - ODR est utilisé pour le toggle (lecture‑modification‑écriture, non atomique).
+
+- Les périphériques GPIO sont alimentés par une horloge. Pour économiser l'énergie, cette horloge est désactivée par défaut après un reset. Il faut l'activer via le registre `RCC_AHB1ENR` (Reset and Clock Control – AHB1 Enable Register). Chaque port possède un bit d'activation.
+
+```c
+RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;   // active GPIOA
+RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;   // active GPIOC
+```
+
+Les constantes RCC_AHB1ENR_GPIOxEN sont définies dans le fichier d'en‑tête `stm32f4xx.h`.
 
 **Problème des boucles `for` :**
 

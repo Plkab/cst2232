@@ -87,9 +87,9 @@
 <p>Actuellement, les microcontrôleurs les plus populaires sont basés sur l'architecture <strong>32 bits ARM Cortex-M</strong>, un standard de l'industrie offrant un excellent rapport performance/consommation.</p>
 <hr />
 <p><br></p>
-<h3 id="stm32f401"><strong>STM32F401</strong></h3>
-<p>Le <strong>STM32F4</strong> est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur <strong>ARM Cortex-M4 32 bits</strong>, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (<strong>FPU, Floating Point Unit</strong>). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.</p>
-<p>Le manuel de référence pour le [STM32F401 (RM0368)] (https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf) détaille tous les registres.</p>
+<h3 id="architecture-du-microcontroleur-stm32f401"><strong>Architecture du microcontrôleur STM32F401</strong></h3>
+<p>Le <strong>STM32F401</strong> est une famille de microcontrôleurs fabriqués par STMicroelectronics. Il intègre un processeur <strong>ARM® Cortex-M4 32 bits</strong>, une architecture moderne capable d'effectuer des calculs DSP (Digital Signal Processing) grâce à son unité à virgule flottante (<strong>FPU, Floating Point Unit</strong>). Celle-ci permet de traiter des nombres décimaux (type float en C) en un seul cycle d'horloge, ce qui est essentiel pour les algorithmes de contrôle (PID, Filtres, FFT), elle accélère considérablement ces algorithmes.</p>
+<p>Le manuel de référence pour le <a href="https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf">STM32F401 (RM0368)</a> détaille tous les registres.</p>
 <p><strong>Caractéristiques principales</strong> :</p>
 <ul>
 <li><strong>Fréquence</strong> : généralement cadencé à 84 MHz, peut être overclocké via un multiplicateur de fréquence (PLL) jusqu'à 100 MHz. Cette puissance permet de faire tourner un noyau FreeRTOS avec plusieurs tâches concurrentes.</li>
@@ -108,19 +108,67 @@
 <p><br></p>
 <h3 id="organisation-memoire"><strong>Organisation Mémoire</strong></h3>
 <p>Le STM32F4 utilise une architecture de type <strong>Harvard</strong> (bus séparés pour les instructions et les données), mais organisée sur une carte mémoire unifiée de 4 Go (adressage 32 bits). Chaque élément (Flash, RAM, périphériques) possède une adresse fixe et unique dans cet espace mémoire. Cela permet au processeur, grâce aux bus séparés, de lire une instruction en Flash tout en accédant simultanément à une donnée en RAM, améliorant ainsi les performances.</p>
-<p>Chaque registre de configuration d'un périphérique est accessible via une adresse spécifique. Par exemple :</p>
+<p>Chaque registre de configuration d'un périphérique est accessible via une adresse spécifique. </p>
+<table>
+<thead>
+<tr>
+<th>Mémoire/périphérique</th>
+<th>Taille</th>
+<th>Plage d'adresses</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flash</td>
+<td>256 Ko</td>
+<td>0x0800 0000 – 0x0803 FFFF</td>
+<td>Flash principale (code)</td>
+</tr>
+<tr>
+<td>SRAM</td>
+<td>64 Ko</td>
+<td>0x2000 0000 – 0x2000 FFFF</td>
+<td>SRAM (variables, pile)</td>
+</tr>
+<tr>
+<td>Périphériques</td>
+<td>variable (Ici 512 Mo)</td>
+<td>0x4000 0000 – 0x5FFF FFFF</td>
+<td>Périphériques (GPIO, timers, etc.)</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>1 Mo</td>
+<td>0xE000 0000 – 0xE00F FFFF</td>
+<td>Cortex-M4 interne (NVIC, SysTick, etc.)</td>
+</tr>
+</tbody>
+</table>
 <ul>
-<li>GPIOA commence à l'adresse 0x40020000</li>
-<li>USART2 à 0x40004400</li>
-<li>TIM2 à 0x40000000</li>
+<li>La Flash contient le programme et d'éventuelles données constantes.</li>
+<li>La SRAM contient les variables, la pile et les tampons.</li>
+<li>Les registres des périphériques (GPIO, timers, ADC, etc.) sont accessibles dans la région des périphériques.</li>
 </ul>
 <p>Le reference manual (<a href="https://www.st.com/resource/en/reference_manual/rm0368-stm32f401xbc-and-stm32f401xde-advanced-armbased-32bit-mcus-stmicroelectronics.pdf">RM0368 pour le F401</a>) fournit des tableaux détaillés. En programmation bas niveau, on utilise des structures C pour représenter ces registres, comme le font les <a href="https://arm-software.github.io/CMSIS_6/latest/Core/modules.html">CMSIS</a> (Cortex Microcontroller Software Interface Standard).</p>
+<p>L'adresse de base de chaque port est donnée dans le manuel de référence. Par exemple :</p>
+<ul>
+<li>GPIOA_BASE = 0x4002 0000</li>
+<li>GPIOB_BASE = 0x4002 0400</li>
+<li>GPIOC_BASE = 0x4002 0800</li>
+</ul>
+<p>Pour accéder à ces registres en C, on utilise des structures et des pointeurs, comme défini dans les fichiers CMSIS (<code>stm32f4xx.h</code>). Par exemple, <code>GPIOA-&gt;MODER</code> permet d'accéder au registre <code>MODER</code> du port A.</p>
 <p>Exemple de structure pour GPIO :</p>
 <pre><code class="language-c">typedef struct {
-    volatile uint32_t MODER;   // Offset 0x00
-    volatile uint32_t OTYPER;  // Offset 0x04
-    volatile uint32_t OSPEEDR; // Offset 0x08
-    // ...
+    volatile uint32_t MODER;   // Offset 0x00   // Mode (0x00)
+    volatile uint32_t OTYPER;  // Offset 0x04   // Output type (0x04)
+    volatile uint32_t OSPEEDR; // Offset 0x08   // Output speed (0x08)
+    volatile uint32_t PUPDR;   // Pull-up/down (0x0C)
+    volatile uint32_t IDR;     // Input data (0x10)
+    volatile uint32_t ODR;     // Output data (0x14)
+    volatile uint32_t BSRR;    // Bit set/reset (0x18)
+    volatile uint32_t LCKR;    // Lock (0x1C)
+    volatile uint32_t AFR[2];  // Alternate function (0x20-0x24)
 } GPIO_TypeDef;
 
 #define GPIOA ((GPIO_TypeDef *) 0x40020000)
@@ -142,6 +190,37 @@
 <li><strong>APB (Advanced Peripheral Bus)</strong> : bus pour les périphériques plus lents (APB1 et APB2), avec des fréquences souvent divisées.</li>
 </ul>
 <p>Un bon équilibre entre performance et consommation passe par un choix judicieux des fréquences et l'activation sélective des horloges des périphériques via le registre RCC_AHB1ENR, RCC_APB1ENR, etc. Oublier d'activer l'horloge d'un périphérique est une erreur classique : le périphérique ne répondra pas.</p>
+<p>Registres clés du RCC :</p>
+<ul>
+<li><code>RCC_CR</code> : contrôle des oscillateurs (HSI, HSE, PLL)</li>
+<li><code>RCC_PLLCFGR</code> : configuration de la PLL</li>
+<li><code>RCC_CFGR</code> : sélection des sources d'horloge et prescalers</li>
+<li><code>RCC_AHB1ENR</code> : active l'horloge des périphériques AHB (GPIO, DMA, etc.)</li>
+<li><code>RCC_APB1ENR</code> / <code>RCC_APB2ENR</code> : active les horloges APB (USART, I2C, TIM, etc.)</li>
+</ul>
+<p>Exemple d'activation de GPIOA :</p>
+<pre><code class="language-c">RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+</code></pre>
+<p>Nous allons utiliser chaque fois cette fonction pour configurer l'horloge princiaple a 84MHz:</p>
+<pre><code class="language-c">void clockConfig84MHz(void){
+    RCC-&gt;CR |= RCC_CR_HSEON;
+    while (!(RCC-&gt;CR &amp; RCC_CR_HSERDY));
+
+    RCC-&gt;PLLCFGR = RCC_PLLCFGR_PLLSRC_HSE
+                | (4 &lt;&lt; 0)       // PLLM = 4
+                | (168 &lt;&lt; 6)     // PLLN = 168
+                | (0 &lt;&lt; 16)      // PLLP = 2
+                | (7 &lt;&lt; 24);     // PLLQ = 7
+    RCC-&gt;CR |= RCC_CR_PLLON;
+    while (!(RCC-&gt;CR &amp; RCC_CR_PLLRDY));
+
+    RCC-&gt;CFGR = RCC_CFGR_HPRE_DIV1
+                | RCC_CFGR_PPRE1_DIV2
+                | RCC_CFGR_PPRE2_DIV1
+                | RCC_CFGR_SW_PLL;
+    while ((RCC-&gt;CFGR &amp; RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
+}
+</code></pre>
 <hr />
 <p><br></p>
 <h3 id="le-gestionnaire-dinterruption-nvic-nested-vectored-interrupt-controller"><strong>Le Gestionnaire d'Interruption NVIC (Nested Vectored Interrupt Controller)</strong></h3>
@@ -172,12 +251,8 @@ DMA_Stream0-&gt;CR = DMA_SxCR_CHSEL_0 | ... ;    // Configuration
 </code></pre>
 <hr />
 <p><br></p>
-<h3 id="gestion-des-horloges-rcc_1"><strong>Gestion des horloges (RCC)</strong></h3>
-<p>Configuration des horloges système et périphériques.</p>
-<hr />
-<p><br></p>
 <h3 id="presentation-de-la-carte-de-developpement-utilisee"><strong>Présentation de la carte de développement utilisée</strong></h3>
-<p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), une carte peu coûteuse (<a href="https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/">environ 10$</a>) et très répandue dans le monde de l'embarqué.</p>
+<p>La carte utilisée dans ce cours est la Black Pill (STM32F401CCU6), un support de développement peu coûteux (<a href="https://www.faranux.com/product/stm32f401ccu6-stm32f4-black-pill-brd44/">environ 10$</a>) et très répandue dans le monde de l'embarqué.</p>
 <p><img align="center" alt="La carte Black Pill" src="board_STM32F401CCU6_WeAct_Black_Pill_V1.2-2.jpg" width="250," /></p>
 <p>Pour programmer et déboguer la carte, nous utiliserons un programmateur ST-LINK/V2 (<a href="https://www.faranux.com/product/st-link-v2-simulator-douwnload-programmer-com41/">environ 6$</a>). Il communique avec la carte via le protocole SWD (Serial Wire Debug) et permet de flasher le firmware ainsi que de déboguer en direct depuis l'ordinateur.</p>
 <p><img align="center," alt="L'Outil ST-LINK" src="st-link.jpg" width="250" /></p>
