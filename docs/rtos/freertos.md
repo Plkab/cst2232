@@ -432,8 +432,8 @@ La fonction `xQueueCreate()` alloue et initialise une file.
 ```c
 QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength, UBaseType_t uxItemSize);
 ```
-    - `uxQueueLength` : nombre maximal d'éléments que la file peut contenir.
-    - `uxItemSize` : taille en octets de chaque élément.
+    - uxQueueLength : nombre maximal d'éléments que la file peut contenir.
+    - uxItemSize : taille en octets de chaque élément.
     - Retour : handle de la file si réussite, `NULL` sinon.
 
 - **Poster un message** : `xQueueSend(file, &donnee, delai)`;
@@ -446,7 +446,7 @@ BaseType_t xQueueSend(QueueHandle_t xQueue, const void *pvItemToQueue, TickType_
 ```c
 BaseType_t xQueueReceive(QueueHandle_t xQueue, void *pvBuffer, TickType_t xTicksToWait);
 ```
-    Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
+    - Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
 
 Les deux fonctions retournent pdPASS en cas de succès, ou `errQUEUE_EMPTY`/`errQUEUE_FULL` selon le cas.
 
