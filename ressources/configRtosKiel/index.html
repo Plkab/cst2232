@@ -96,19 +96,20 @@
 <hr />
 <p><br></p>
 <h3 id="configuration-de-lenvironnement-keil"><strong>Configuration de l'environnement Keil</strong></h3>
+<p>Pour utiliser FreeRTOS en baremetal, nous devons intégrer les fichiers sources du noyau et les adapter à notre STM32F401.</p>
 <ul>
 <li>
 <p>Ajoute les fichiers au projet :</p>
 <ul>
 <li>Crée deux nouveaux groupes : FreeRTOS_CORE et FreeRTOS_PORT.</li>
 <li>
-<p>Dans FreeRTOS_CORE, ajoute tous les fichiers .c de FreeRTOS/Source/ (sauf ceux dans portable/).</p>
+<p>Dans FreeRTOS_CORE, ajoute tous les fichiers .c de <code>FreeRTOS/Source/</code> (sauf ceux dans portable/).</p>
 </li>
 <li>
 <p>Dans FreeRTOS_PORT, ajoute :</p>
 <ul>
-<li>FreeRTOS/Source/portable/MemMang/heap_4.c (le gestionnaire de mémoire recommandé).</li>
-<li>FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c (la couche de portage pour votre processeur avec FPU) .</li>
+<li><code>FreeRTOS/Source/portable/MemMang/heap_4.c</code> (le gestionnaire de mémoire recommandé).</li>
+<li><code>FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c</code> (la couche de portage pour votre processeur avec FPU) .</li>
 </ul>
 </li>
 </ul>
@@ -209,14 +210,24 @@
 <h3 id="modification-des-fichiers-systeme"><strong>Modification des fichiers système</strong></h3>
 <p>FreeRTOS doit etre intégre au gestion de temps et d'interruptions.</p>
 <ul>
-<li>Dans le startup_stm32f401xx.s : assure-toi que les handlers SVC_Handler, PendSV_Handler et SysTick_Handler sont bien présents dans la table des vecteurs. Ils seront redéfinis par FreeRTOS via les alias de FreeRTOSConfig.h.</li>
+<li>Dans le <code>startup_stm32f401xx.s</code> : assure-toi que les handlers <code>SVC_Handler</code>, <code>PendSV_Handler</code> et <code>SysTick_Handler</code> sont bien présents dans la table des vecteurs. Ils seront redéfinis par FreeRTOS via les alias de <code>FreeRTOSConfig.h</code>.</li>
 <li>Dans votre fichier principal (ex: main.c) :<ul>
-<li>Inclue "FreeRTOS.h" et "task.h".</li>
+<li>Inclue "<code>FreeRTOS.h</code>" et "<code>task.h</code>".</li>
 <li>Écrive les tâches.</li>
-<li>Lance le scheduler avec <em>vTaskStartScheduler()</em>.</li>
+<li>Lance le scheduler avec <em><code>vTaskStartScheduler()</code></em>.</li>
 </ul>
 </li>
 </ul>
+<h3 id="configuration-du-projet-keil-pour-freertos"><strong>Configuration du projet Keil pour FreeRTOS</strong></h3>
+<p>Pour utiliser FreeRTOS en baremetal, nous devons intégrer les fichiers sources du noyau et les adapter à notre STM32F401 :</p>
+<ul>
+<li>Ajouter au projet les fichiers <code>FreeRTOS/Source/*.c</code> (sauf ceux dans <code>portable/</code>).</li>
+<li>Ajouter le portage pour Cortex-M4F : <code>FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c</code>.</li>
+<li>Ajouter le gestionnaire de mémoire <code>heap_4.c</code> (ou autre) depuis <code>portable/MemMang/</code>.</li>
+<li>Configurer <code>FreeRTOSConfig.h</code> avec les paramètres adaptés (priorités, tick rate, etc.).</li>
+<li>Dans le code principal, inclure <code>FreeRTOS.h</code> et <code>task.h</code>.</li>
+</ul>
+<p><strong>Important</strong> : En baremetal, nous n'utilisons pas la HAL. Toutes les initialisations matérielles se feront par manipulation directe des registres.</p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
 #include &quot;task.h&quot;
 
@@ -259,7 +270,7 @@ void vTask2(void *pvParameters)
 <hr />
 <p><br></p>
 <h2 id="gestion-du-tick-systick_handler"><strong>Gestion du tick (SysTick_Handler)</strong> :</h2>
-<p>On doit écrire notre propre handler SysTick_Handler qui appelle la fonction de tick de FreeRTOS, et éventuellement notre propre incrémenteur de tick si on en a besoin.</p>
+<p>On doit écrire notre propre handler <code>SysTick_Handler</code> qui appelle la fonction de tick de FreeRTOS, et éventuellement notre propre incrémenteur de tick si on en a besoin.</p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
 #include &quot;task.h&quot;
 
@@ -276,20 +287,20 @@ void SysTick_Handler(void)
 <hr />
 <p><br></p>
 <h2 id="gestion-des-autres-interruptions"><strong>Gestion des autres interruptions :</strong></h2>
-<p>Si on utilise des périphériques avec interruptions, écrit les handlers normalement. Si une interruption doit réveiller une tâche, utilisez les fonctions FromISR de FreeRTOS (comme <em>xSemaphoreGiveFromISR()</em>) en respectant les priorités définies dans FreeRTOSConfig.h .</p>
+<p>Si on utilise des périphériques avec interruptions, écrit les handlers normalement. Si une interruption doit réveiller une tâche, utilisez les fonctions FromISR de FreeRTOS (comme <em><code>xSemaphoreGiveFromISR()</code></em>) en respectant les priorités définies dans <code>FreeRTOSConfig.h</code>.</p>
 <hr />
 <p><br></p>
 <h2 id="resolution-des-problemes-courants"><strong>Résolution des problèmes courants</strong></h2>
 <ul>
 <li><strong>Erreur "FreeRTOSConfig.h not found"</strong> : Vérifie tes chemins d'inclusion.</li>
-<li><strong>Erreurs de liens "multiple definition"</strong> : Commente ou supprime les handlers SVC_Handler, PendSV_Handler et SysTick_Handler de ton fichier startup_*.s ou de tout autre fichier où ils seraient définis. FreeRTOS fournit les siens via les alias dans FreeRTOSConfig.h .</li>
+<li><strong>Erreurs de liens "multiple definition"</strong> : Commente ou supprime les handlers <code>SVC_Handler</code>, <code>PendSV_Handler</code> et <code>SysTick_Handler</code> de ton fichier startup_*.s ou de tout autre fichier où ils seraient définis. FreeRTOS fournit les siens via les alias dans <code>FreeRTOSConfig.h</code>.</li>
 <li><strong>Le système ne démarre pas, ou une seule tâche s'exécute :</strong><ul>
-<li>Vérifiez que SysTick_Handler est correctement implémenté et appelle xPortSysTickHandler().</li>
-<li>Assures-toi que la fonction vApplicationIdleHook() n'est pas requise (si configUSE_IDLE_HOOK est à 0).</li>
+<li>Vérifiez que <code>SysTick_Handler</code> est correctement implémenté et appelle <code>xPortSysTickHandler()</code>.</li>
+<li>Assures-toi que la fonction <code>vApplicationIdleHook()</code> n'est pas requise (si <code>configUSE_IDLE_HOOK</code> est à 0).</li>
 <li>Vérifie que tu n'avais pas d'interruption de plus haute priorité qui bloque le tick .</li>
 </ul>
 </li>
-<li><strong>Problèmes de mémoire</strong> : Ajuste la taille du configTOTAL_HEAP_SIZE. Pour un F401 avec 64 Ko de RAM, commence avec 15-20 Ko et ajuste selon tes besoins.</li>
+<li><strong>Problèmes de mémoire</strong> : Ajuste la taille du <code>configTOTAL_HEAP_SIZE</code>. Pour un F401 avec 64 Ko de RAM, commence avec 15-20 Ko et ajuste selon tes besoins.</li>
 </ul></div>
             </div>
         </div>
