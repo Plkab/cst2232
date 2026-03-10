@@ -268,6 +268,50 @@ Attention : pour que cela fonctionne, il faut inclure stdio.h et s’assurer que
 
 
 
+### **Interruptions USART**
+
+L'USART2 peut générer une interruption sur réception (RXNE) et/ou sur émission (TXE). Le bit `RXNEIE` dans `USART_CR1` active l'interruption de réception.
+
+Exemple : réception par interruption (écho)
+
+```c
+#include "stm32f4xx.h"
+
+void USART2_IRQHandler(void) {
+    if (USART2->SR & USART_SR_RXNE) {
+        char c = USART2->DR;
+        USART2->DR = c;  // renvoie le caractère (écho)
+    }
+}
+
+void USART2_Init(uint32_t baud) {
+    // Activer horloges
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // PA2 TX, PA3 RX en AF7
+    GPIOA->MODER |= (2 << (2*2)) | (2 << (3*2));
+    GPIOA->AFR[0] |= (7 << (2*4)) | (7 << (3*4));
+
+    // 115200 bauds, 8 bits, 1 stop, pas de parité
+    USART2->BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz 
+    USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
+    NVIC_EnableIRQ(USART2_IRQn);
+}
+
+int main(void) {
+    USART2_Init(115200);
+    
+    while (1);
+}
+```
+
+---
+<br>
+
+
+
+
 ### **Utilisation avec FreeRTOS**
 
 Pour ne pas bloquer les tâches, on peut utiliser **les interruptions** et **les files de messages**.

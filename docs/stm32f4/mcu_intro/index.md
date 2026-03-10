@@ -180,7 +180,16 @@ Le NVIC est le gestionnaire d'interruptions du Cortex-M. Il permet de :
 - Définir les priorités (de 0 à 15, 0 étant la plus haute).
 - Gérer la préemption : une interruption de haute priorité peut interrompre le traitement d'une interruption de basse priorité.
 
-Pour un système temps réel, la gestion des priorités est cruciale. Les interruptions associées à des tâches critiques (arrêt d'urgence, timer de contrôle) doivent avoir une priorité élevée. Les fonctions FreeRTOS comme xSemaphoreGiveFromISR nécessitent que la priorité de l'interruption soit inférieure ou égale à la priorité maximale configurée pour le noyau (généralement configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY).
+Chaque source d'interruption possède un numéro d'IRQ (Interrupt Request). La table des vecteurs (adresses des ISR) est située en mémoire Flash, généralement à l'adresse `0x08000000` (après reset, elle est mappée en début de mémoire). Les premiers 16 vecteurs sont réservés aux exceptions système (Reset, NMI, HardFault, etc.). Les suivants sont pour les périphériques.
+
+Pour activer une interruption, il faut :
+
+- Configurer le périphérique pour qu'il génère une demande d'interruption.
+- Activer l'interruption dans le NVIC via le registre `ISER` (Interrupt Set Enable Register).
+- Écrire le handler (ISR) avec le nom exact attendu par le startup file (ex: USART2_IRQHandler).
+- Les registres NVIC sont accessibles via la structure `NVIC->` définie dans `stm32f4xx.h`.
+
+Pour un système temps réel, la gestion des priorités est cruciale. Les interruptions associées à des tâches critiques (arrêt d'urgence, timer de contrôle) doivent avoir une priorité élevée. Les fonctions FreeRTOS comme `xSemaphoreGiveFromISR` nécessitent que la priorité de l'interruption soit inférieure ou égale à la priorité maximale configurée pour le noyau (généralement `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`).
 
 ---
 <br>
