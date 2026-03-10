@@ -271,6 +271,41 @@ int _write(int file, char *ptr, int len) {
 <p>Attention : pour que cela fonctionne, il faut inclure stdio.h et s’assurer que la bibliothèque standard est utilisée.</p>
 <hr />
 <p><br></p>
+<h3 id="interruptions-usart"><strong>Interruptions USART</strong></h3>
+<p>L'USART2 peut générer une interruption sur réception (RXNE) et/ou sur émission (TXE). Le bit <code>RXNEIE</code> dans <code>USART_CR1</code> active l'interruption de réception.</p>
+<p>Exemple : réception par interruption (écho)</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void USART2_IRQHandler(void) {
+    if (USART2-&gt;SR &amp; USART_SR_RXNE) {
+        char c = USART2-&gt;DR;
+        USART2-&gt;DR = c;  // renvoie le caractère (écho)
+    }
+}
+
+void USART2_Init(uint32_t baud) {
+    // Activer horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // PA2 TX, PA3 RX en AF7
+    GPIOA-&gt;MODER |= (2 &lt;&lt; (2*2)) | (2 &lt;&lt; (3*2));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+
+    // 115200 bauds, 8 bits, 1 stop, pas de parité
+    USART2-&gt;BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz 
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
+    NVIC_EnableIRQ(USART2_IRQn);
+}
+
+int main(void) {
+    USART2_Init(115200);
+
+    while (1);
+}
+</code></pre>
+<hr />
+<p><br></p>
 <h3 id="utilisation-avec-freertos"><strong>Utilisation avec FreeRTOS</strong></h3>
 <p>Pour ne pas bloquer les tâches, on peut utiliser <strong>les interruptions</strong> et <strong>les files de messages</strong>.</p>
 <p><strong>Principe</strong></p>

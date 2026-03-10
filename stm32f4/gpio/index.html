@@ -245,6 +245,7 @@ Les registres suivants contrôlent le comportement des lignes EXTI :</p>
 </tr>
 </tbody>
 </table>
+<p>Les broches GPIO peuvent générer des interruptions sur front montant, descendant ou les deux. Le multiplexage est assuré par les registres <code>SYSCFG_EXTICR</code>.</p>
 <p><strong>2. Sélection de la broche GPIO : registres <code>SYSCFG_EXTICR</code></strong></p>
 <p>Pour connecter une ligne EXTI à une broche spécifique, on utilise les registres <code>SYSCFG_EXTICR[0..3]</code>. Chaque registre est divisé en quatre champs de 4 bits, chacun correspondant à une ligne EXTI. Par exemple :</p>
 <ul>
@@ -343,7 +344,8 @@ void EXTI_Init(void) {
     // SYSCFG_EXTICR1 contrôle les lignes EXTI0 à EXTI3.
     // Chaque groupe de 4 bits correspond à une ligne.
     // Pour EXTI0, les bits 0-3 de EXTICR1 doivent être 0000 pour GPIOA.
-    SYSCFG-&gt;EXTICR[0] &amp;= ~SYSCFG_EXTICR1_EXTI0;   // Efface les bits (par défaut 0 = PA)
+    SYSCFG-&gt;EXTICR[0] &amp;= ~SYSCFG_EXTICR1_EXTI0; // Efface les bits (par défaut 0 = PA)
+                                                // bits 0-3 = 0000 pour PA0
 
     // 4. Sélectionner le front descendant comme déclencheur
     EXTI-&gt;FTSR |= (1 &lt;&lt; 0);   // Front descendant sur ligne 0
