@@ -11,6 +11,7 @@
 <br>
 
 
+
 Voici un guide pas-à-pas pour intégrer manuellement FreeRTOS dans un projet Keil pour le STM32F401CCU6.
 
 ### **Téléchargement et organisation des sources**
@@ -24,6 +25,8 @@ Voici un guide pas-à-pas pour intégrer manuellement FreeRTOS dans un projet Ke
 
 ---
 <br>
+
+
 
 ### **Configuration de l'environnement Keil**
 
@@ -47,9 +50,11 @@ Pour utiliser FreeRTOS en baremetal, nous devons intégrer les fichiers sources 
 ---
 <br>
 
+
+
 ### **Le fichier de configuration FreeRTOSConfig.h**
 
-C'est le fichier le plus important. Il définit le comportement du RTOS. On peut partir d'un exemple fourni dans les démos FreeRTOS, par exemple dans FreeRTOS/Demo/CORTEX_M4F_STM32F407ZG-SK/.
+C'est le fichier le plus important. Il définit le comportement du RTOS. On peut partir d'un exemple fourni dans les démos FreeRTOS, par exemple dans FreeRTOS/Demo/CORTEX_M4F_STM32F401CCU6/.
 
 Crée ce fichier dans un dossier Config/ du projet avec le contenu adapté à F401. Voici une version épurée et commentée avec les paramètres essentiels :
 
@@ -129,6 +134,7 @@ Crée ce fichier dans un dossier Config/ du projet avec le contenu adapté à F4
 ```
 ---
 <br>
+
 
 ### **Modification des fichiers système**
 
