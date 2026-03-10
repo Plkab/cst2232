@@ -71,7 +71,20 @@
 <br></p>
 <h3 id="gpio"><strong>GPIO</strong></h3>
 <p>Les <strong>GPIO</strong> (<em>General Purpose Input-Output</em>) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.</p>
-<p><strong>Registres principaux :</strong></p>
+<p><strong>Registres principaux de configuration d'un port :</strong></p>
+<p>Chaque port GPIO est contrôlé par plusieurs registres 32 bits. L'adresse de base d'un port est donnée par des constantes comme <code>GPIOA_BASE (0x40020000)</code>. En CMSIS, on accède à ces registres via une structure <code>GPIO_TypeDef</code>.</p>
+<pre><code class="language-c">typedef struct {
+    volatile uint32_t MODER;    // Mode register (offset 0x00)
+    volatile uint32_t OTYPER;   // Output type register (0x04)
+    volatile uint32_t OSPEEDR;  // Output speed register (0x08)
+    volatile uint32_t PUPDR;    // Pull-up/pull-down register (0x0C)
+    volatile uint32_t IDR;      // Input data register (0x10)
+    volatile uint32_t ODR;      // Output data register (0x14)
+    volatile uint32_t BSRR;     // Bit set/reset register (0x18)
+    volatile uint32_t LCKR;     // Lock register (0x1C)
+    volatile uint32_t AFR[2];   // Alternate function registers (0x20-0x24)
+} GPIO_TypeDef;
+</code></pre>
 <table>
 <thead>
 <tr>
@@ -82,29 +95,34 @@
 </thead>
 <tbody>
 <tr>
-<td>MODER</td>
+<td><code>MODER</code></td>
 <td>Mode Register</td>
 <td>Configure la direction de chaque broche (00: Entrée, 01: Sortie, 10: Fonction alternative, 11: Analogique).</td>
 </tr>
 <tr>
-<td>IDR</td>
+<td><code>IDR</code></td>
 <td>Input Data Register</td>
 <td>Permet de lire l'état logique présent sur les broches configurées en entrée.</td>
 </tr>
 <tr>
-<td>ODR</td>
+<td><code>ODR</code></td>
 <td>Output</td>
 <td>Data Register</td>
 </tr>
 <tr>
-<td>BSRR</td>
+<td><code>BSRR</code></td>
 <td>Bit Set/Reset Register</td>
 <td>Permet de modifier l’état de manière <strong>atomique</strong> en une seule écriture. On peut positionner un bit à 1 (Set) ou à 0 (Reset) sans affecter les autres bits. C’est plus sûr en environnement multitâche ou avec interruptions.</td>
 </tr>
 <tr>
-<td>AFR</td>
-<td></td>
+<td><code>AFR</code></td>
+<td>Alternative Function Register</td>
 <td>Sélection de la fonction alternative (AF0 à AF15).</td>
+</tr>
+<tr>
+<td><code>PUPDR</code></td>
+<td>Pull-up/pull-down register</td>
+<td>Pour activer le pull‑up sur PA0 (bouton)</td>
 </tr>
 </tbody>
 </table>
@@ -154,11 +172,20 @@ void main(void) {
 </code></pre>
 <p>Explications :</p>
 <ul>
-<li>L'horloge du port C est activée via RCC_AHB1ENR. Sans cela, le port ne répond pas.</li>
+<li>L'horloge du port C est activée via <code>RCC_AHB1ENR</code>. Sans cela, le port ne répond pas. </li>
 <li>Le mode de la broche est configuré en sortie (MODER = 01).</li>
 <li>On utilise BSRR pour modifier l'état de manière atomique : écrire dans les bits 0‑15 met la broche correspondante à 1, écrire dans les bits 16‑31 la remet à 0.</li>
-<li>ODR est utilisé pour le toggle (lecture‑modification‑écriture, non atomique).</li>
+<li>
+<p>ODR est utilisé pour le toggle (lecture‑modification‑écriture, non atomique).</p>
+</li>
+<li>
+<p>Les périphériques GPIO sont alimentés par une horloge. Pour économiser l'énergie, cette horloge est désactivée par défaut après un reset. Il faut l'activer via le registre <code>RCC_AHB1ENR</code> (Reset and Clock Control – AHB1 Enable Register). Chaque port possède un bit d'activation.</p>
+</li>
 </ul>
+<pre><code class="language-c">RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;   // active GPIOA
+RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;   // active GPIOC
+</code></pre>
+<p>Les constantes RCC_AHB1ENR_GPIOxEN sont définies dans le fichier d'en‑tête <code>stm32f4xx.h</code>.</p>
 <p><strong>Problème des boucles <code>for</code> :</strong></p>
 <p>Pendant ces attentes, le processeur est totalement occupé à décrémenter un compteur. Si un événement externe survient (appui sur un bouton), il ne pourra pas y réagir avant la fin de la boucle. C'est pourquoi, dans un système temps réel, on préfère des mécanismes non bloquants comme les interruptions ou les délais gérés par un RTOS (par exemple vTaskDelay() sous FreeRTOS).</p>
 <hr />
