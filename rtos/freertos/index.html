@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/rtos/freertos/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Introduction aux Systèmes Temps Réels - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Le Multitache avec FreeRTOS - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#introduction-aux-systemes-temps-reels" class="nav-link">Introduction aux Systèmes Temps Réels</a>
+            <li class="nav-item" data-bs-level="1"><a href="#le-multitache-avec-freertos" class="nav-link">Le Multitache avec FreeRTOS</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,7 +63,7 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="introduction-aux-systemes-temps-reels">Introduction aux Systèmes Temps Réels</h1>
+<h1 id="le-multitache-avec-freertos">Le Multitache avec FreeRTOS</h1>
 <p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
 <p><a href="../#Acceuil">Acceuil</a></p>
@@ -80,6 +80,44 @@
 <p>Cette flexibilité permet d'adapter le comportement du système aux besoins de l'application.</p>
 <p>On peut avoir sur le site web officiel le manuel de référence ecrit par <a href="https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf">Richard Barry</a> et l'API est disponible : <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">freertos.</a></p>
 <p>FreeRTOS est fourni sous forme d'un ensemble de fichiers sources C qui sont compilés avec votre code applicatif. La distribution comprend également un <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">dossier demo</a> contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.</p>
+<p><strong>Organisation des fichiers</strong></p>
+<pre><code>FreeRTOS/
+├── Source/
+│   ├── croutine.c
+│   ├── event_groups.c
+│   ├── list.c
+│   ├── queue.c
+│   ├── stream_buffer.c
+│   ├── tasks.c
+│   ├── timers.c
+│   ├── include/ (fichiers d'en-tête)
+│   └── portable/
+│       ├── MikroC/
+│       │   ├── ARM_CM4F/
+│       │   │   ├── port.c
+│       │   │   └── portmacro.h
+│       │   └── ARM_CM3/
+│       │       ├── port.c
+│       │       └── portmacro.h
+│       ├── MemMang/
+│       │   ├── heap_1.c
+│       │   ├── heap_2.c
+│       │   ├── heap_3.c
+│       │   ├── heap_4.c
+│       │   └── heap_5.c
+│       └── Common/
+│           └── mpu_wrappers.c
+└── Demo/
+    └── STM32F407_MikroC/
+        └── LedBlinking/
+            ├── main.h
+            ├── main.c
+            ├── FreeRTOS_STM32F407_LedBlinking.mcpar
+            ├── FreeRTOS_STM32F407_LedBlinking.cfg
+            ├── FreeRTOS_STM32F407_LedBlinking.hex
+            ├── FreeRTOS_STM32F407_LedBlinking.bin
+            └── FreeRTOSConfig.h
+</code></pre>
 <hr />
 <p><br></p>
 <h4 id="creation-de-taches-xtaskcreate"><strong>Création de Tâches (<code>xTaskCreate</code>)</strong></h4>
@@ -381,6 +419,7 @@ int main(void) {
 <h3 id="liens-connexes">Liens connexes</h3>
 <ul>
 <li><a href="../../stm32f4/mcu_intro/">Présentation architecturale du Microcontrôleur STM32F4</a></li>
+<li><a href="rtos/index.md">Introduction aux Systèmes Temps Réels</a></li>
 <li><a href="../../ressources/demarrerKiel/">Création Projet sous Keil uVision</a></li>
 <li><a href="../../ressources/configRtosKiel/">Configuration FreeRTOS sous Kiel pour STM32F4</a></li>
 </ul></div>
