@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/timer/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Timers, interruptions matérielles et FreeRTOS - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Timers, Interruptions Matérielles et FreeRTOS - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#timers-interruptions-materielles-et-freertos" class="nav-link">Timers, interruptions matérielles et FreeRTOS</a>
+            <li class="nav-item" data-bs-level="1"><a href="#timers-interruptions-materielles-et-freertos" class="nav-link">Timers, Interruptions Matérielles et FreeRTOS</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,7 +63,7 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="timers-interruptions-materielles-et-freertos">Timers, interruptions matérielles et FreeRTOS</h1>
+<h1 id="timers-interruptions-materielles-et-freertos">Timers, Interruptions Matérielles et FreeRTOS</h1>
 <p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
 <p><a href="../../#Accueil">Accueil</a></p>
@@ -275,14 +275,43 @@ int main(void) {
 <hr />
 <p><br></p>
 <h3 id="les-timers-logiciels-software-timers"><strong>Les Timers Logiciels (Software Timers)</strong></h3>
-<p>Contrairement aux timers matériels, les <strong>Software Timers</strong> sont gérés entièrement par le noyau FreeRTOS. Ils permettent de déclencher des fonctions (callbacks) sans mobiliser de périphériques matériels supplémentaires. Ils utilisent le timer SysTick, le même que celui du noyau. Un seul timer matériel (le SysTick) peut ainsi gérer des dizaines de timers logiciels.</p>
+<p>Contrairement aux timers matériels, les <strong>Software Timers</strong> sont gérés entièrement par le noyau FreeRTOS. Ils permettent de déclencher des fonctions (callbacks) définie par l'utilisateur sans mobiliser de périphériques matériels supplémentaires. Ils utilisent le timer SysTick, le même que celui du noyau. Un seul timer matériel (le SysTick) peut ainsi gérer des dizaines de timers logiciels.</p>
 <p><strong>Attention</strong> : La fonction callback exécutée à l'expiration ne doit jamais contenir de code bloquant (pas de <code>vTaskDelay</code> ou de sémaphore bloquant).</p>
-<p>Pour utiliser ces timers, les constantes suivantes doivent être définies dans <code>FreeRTOSConfig.h</code> :</p>
+<p>Les timers logiciels sont optionnels dans FreeRTOS. Pour utiliser ces timers, les constantes suivantes doivent être définies dans <code>FreeRTOSConfig.h</code> :</p>
 <pre><code class="language-c">#define configUSE_TIMERS             1
 #define configTIMER_TASK_PRIORITY    (configMAX_PRIORITIES - 1)
 #define configTIMER_QUEUE_LENGTH     10
+#define configTIMER_TASK_STACK_DEPTH 
 </code></pre>
 <p><strong>Exemple Pratique : Timer "One-Shot" vs "Auto-Reload"</strong></p>
+<p>Deux types de timers sont disponibles :</p>
+<ul>
+<li>One-shot : le timer s'exécute une seule fois après un délai, puis s'arrête.</li>
+<li>Auto-reload : le timer se réinitialise automatiquement à chaque expiration, provoquant une exécution périodique de la fonction de rappel.</li>
+</ul>
+<p><strong>Création d'un timer</strong>
+La fonction <code>xTimerCreate()</code> crée un timer et retourne un handle permettant de le manipuler.</p>
+<pre><code class="language-c">TimerHandle_t xTimerCreate(
+    const char * const pcTimerName, // nom du timer (pour le débogage).
+    const TickType_t xTimerPeriodInTicks,   // période en ticks (utilisez pdMS_TO_TICKS(ms) pour convertir)
+    const UBaseType_t uxAutoReload,     // pdTRUE pour un auto-reload, pdFALSE pour one-shot.
+    void * const pvTimerID,     // identifiant utilisateur (peut être utilisé dans la callback pour distinguer plusieurs timers partageant la même fonction).
+    TimerCallbackFunction_t pxCallbackFunction  // pointeur vers la fonction de rappel (prototype : void vCallback(TimerHandle_t xTimer)).
+);
+</code></pre>
+<p>Retourne <code>NULL</code> si la mémoire est insuffisante, sinon un handle.</p>
+<p><strong>Démarrer, arrêter, réinitialiser un timer</strong></p>
+<p>Les fonctions suivantes envoient des commandes à la tâche de service via une file d'attente interne (timer command queue). Le paramètre <code>xTicksToWait</code> indique le temps d'attente maximal si la file est pleine.</p>
+<pre><code class="language-c">BaseType_t xTimerStart(TimerHandle_t xTimer, TickType_t xTicksToWait);
+BaseType_t xTimerStop(TimerHandle_t xTimer, TickType_t xTicksToWait);
+BaseType_t xTimerReset(TimerHandle_t xTimer, TickType_t xTicksToWait);
+BaseType_t xTimerDelete(TimerHandle_t xTimer, TickType_t xTicksToWait);
+</code></pre>
+<p>Toutes retournent pdPASS si la commande a été envoyée, pdFAIL sinon.</p>
+<p><strong>Changer la période</strong></p>
+<pre><code class="language-c">BaseType_t xTimerChangePeriod(TimerHandle_t xTimer, TickType_t xNewPeriod, TickType_t xTicksToWait);
+</code></pre>
+<p>Si le timer est actif, la nouvelle période s'applique immédiatement et le temps d'expiration est recalculé à partir de l'appel. S'il est inactif, il démarre avec la nouvelle période.</p>
 <pre><code class="language-c">TimerHandle_t xAutoTimer;
 
 // La fonction de rappel (Callback)
@@ -310,6 +339,64 @@ void main_rtos(void) {
 </code></pre>
 <p>Le choix du timer dépend de la précision requise. Le timer matériel (TIMx) offre une précision nanoseconde / microseconde idéale pour le contrôle moteur, la PWM et l'échantillonnage ADC malgré une haute complexité de mise en œuvre. Tandisque le timer logiciel (FreeRTOS), basé sur le tick système, est préférable pour des usages moins sensibles au temps réel comme les timeouts de communication, le debouncing et la gestion d'écran IHM, grâce à sa faible complexité. </p>
 <p>Plus d'informations sur ce sujet sont disponibles en consultant la documentation de l'API FreeRTOS et les fiches techniques du MCU.</p>
+<hr />
+<p><br></p>
+<h3 id="compteur-de-frequence-ou-devenements"><strong>Compteur de fréquence (ou d'événements)</strong></h3>
+<p>Ce projet utilise un timer auto-reload pour compter le nombre d'impulsions sur une broche (PA6) pendant une seconde. Le résultat est affiché via UART.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;timers.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+
+volatile uint32_t pulseCount = 0;
+TimerHandle_t xTimer;
+
+void GPIO_Init(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (6*2)); // PA6 en entrée
+    GPIOA-&gt;PUPDR &amp;= ~(3U &lt;&lt; (6*2)); // pas de pull-up/pull-down
+}
+
+void EXTI9_5_IRQHandler(void) {
+    if (EXTI-&gt;PR &amp; (1 &lt;&lt; 6)) {
+        EXTI-&gt;PR = (1 &lt;&lt; 6);
+        pulseCount++;
+    }
+}
+
+void EXTI_Init(void) {
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    SYSCFG-&gt;EXTICR[1] &amp;= ~SYSCFG_EXTICR2_EXTI6;
+    SYSCFG-&gt;EXTICR[1] |= SYSCFG_EXTICR2_EXTI6_PA; // PA6 sur EXTI6
+    EXTI-&gt;IMR |= (1 &lt;&lt; 6);
+    EXTI-&gt;RTSR |= (1 &lt;&lt; 6); // front montant
+    NVIC_SetPriority(EXTI9_5_IRQn, 5);
+    NVIC_EnableIRQ(EXTI9_5_IRQn);
+}
+
+void vTimerCallback(TimerHandle_t xTimer) {
+    static uint32_t lastCount = 0;
+    uint32_t freq = pulseCount - lastCount;
+    lastCount = pulseCount;
+    char buffer[32];
+    sprintf(buffer, &quot;Frequence : %lu Hz\r\n&quot;, freq);
+    USART2_SendString(buffer);
+}
+
+int main(void) {
+    GPIO_Init();
+    EXTI_Init();
+    USART2_Init(115200);
+
+    xTimer = xTimerCreate(&quot;Freq&quot;, pdMS_TO_TICKS(1000), pdTRUE, 0, vTimerCallback);
+    if (xTimer != NULL) {
+        xTimerStart(xTimer, 0);
+    }
+    vTaskStartScheduler();
+    while(1);
+}
+</code></pre>
 <hr />
 <p><br></p>
 <h3 id="reveil-periodique-precis-pour-acquisition-de-donnees"><strong>Réveil périodique précis pour acquisition de données</strong></h3>
@@ -427,8 +514,12 @@ int main(void) {
 <p><br></p>
 <h3 id="liens-connexes">Liens connexes</h3>
 <ul>
+<li><a href="../gpio/">GPIO et Interruptions</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/freertos/">Introduction pratique à freeRTOS</a></li>
 <li><a href="../adc/">Acquisition Analogique via ADC</a></li>
 <li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../stm32f4/mcu_intro/index.md">Présentation architecturale du Microcontrôleur STM32F4</a></li>
 </ul></div>
             </div>
         </div>

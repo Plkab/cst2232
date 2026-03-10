@@ -442,7 +442,7 @@ La fonction <code>xQueueCreate()</code> alloue et initialise une file.</li>
 </code></pre>
 <pre><code>- Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
 </code></pre>
-<p>Les deux fonctions retournent pdPASS en cas de succès, ou <code>errQUEUE_EMPTY</code>/<code>errQUEUE_FULL</code> selon le cas.</p>
+<p>Les deux fonctions retournent <code>pdPASS</code> en cas de succès, ou <code>errQUEUE_EMPTY</code>/<code>errQUEUE_FULL</code> selon le cas.</p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
 #include &quot;queue.h&quot;
 
@@ -509,7 +509,7 @@ int main(void) {
 </ul>
 <hr />
 <p><br></p>
-<h3 id="liens-connexes">Liens connexes</h3>
+<h3 id="liens-connexes"><strong>Liens connexes</strong></h3>
 <ul>
 <li><a href="../../stm32f4/mcu_intro/">Présentation architecturale du Microcontrôleur STM32F4</a></li>
 <li><a href="../">Introduction aux Systèmes Temps Réels</a></li>
