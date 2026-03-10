@@ -488,7 +488,7 @@ int main(void) {
 
 
 
-### *Utiliser printf() sur l'USART**
+### **Utiliser printf() sur l'USART**
 
 Pour faciliter le débogage, on peut rediriger `printf()` vers l’USART. Sous Keil, il suffit de réimplémenter la fonction `_write` :
 

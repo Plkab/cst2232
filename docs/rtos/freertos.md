@@ -448,7 +448,7 @@ BaseType_t xQueueReceive(QueueHandle_t xQueue, void *pvBuffer, TickType_t xTicks
 ```
     - Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
 
-Les deux fonctions retournent pdPASS en cas de succès, ou `errQUEUE_EMPTY`/`errQUEUE_FULL` selon le cas.
+Les deux fonctions retournent `pdPASS` en cas de succès, ou `errQUEUE_EMPTY`/`errQUEUE_FULL` selon le cas.
 
 ```c
 #include "FreeRTOS.h"
@@ -515,17 +515,17 @@ int main(void) {
 
 
 ### **Trois règles d'or a connaitre :**
-
+  
 - **Priorité** : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).
 - **Boucle infinie** : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par _`vTaskDelete()`_.
 - **Section Critique** : Pour des opérations ultra-sensibles (par exemple la modification d'une variable partagée entre une tâche et une ISR), on peut utiliser `taskENTER_CRITICAL()` et `taskEXIT_CRITICAL()` pour désactiver temporairement les interruptions et garantir l'exclusivité d'accès.
-
 
 ---
 <br>
   
 
-### Liens connexes
+
+### **Liens connexes**
 
 - [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
 - [Introduction aux Systèmes Temps Réels](../rtos/index.md)
