@@ -16,15 +16,17 @@ Le langage C embarqué est une extension du langage C adaptée aux contraintes d
 ---
 <br>
 
+
+
 ### **Les Variables et Types de données**
 
-Dans la programmation embarquée, la taille des variables est critique en raison des contraintes de mémoire. On a donc :
+Dans la programmation embarquée, la taille des variables est critique en raison des contraintes de mémoire. Voici les types de base :
 
-- **int (entier)** : souvent 32 bits (ex: 10, -5).
+- **int (entier)** : souvent 32 bits sur STM32 (ex: 10, -5).
 - **char (caractère)** : 8 bits (ex: 'A').
-- **float / double** : nombres à virgule.
+- **float / double** : nombres à virgule (attention à l'utilisation de la FPU).
 
-Les types standards (`int`, `short`, `long`) changent de taille selon le processeur (16 bits sur Arduino, 32 bits sur STM32). Pour éviter les bugs, on utilise les types à taille fixe (C99), regroupés dans la bibliothèque `<stdint.h>`. Cela garantit la portabilité dans l'embarqué :
+Les types standards (`int`, `short`, `long`) changent de taille selon le processeur (16 bits sur Arduino, 32 bits sur STM32). Pour éviter les bugs, on utilise les types à taille fixe (C99), définis dans la bibliothèque `<stdint.h>`. Cela garantit la portabilité dans l'embarqué :
 
 - **`uint8_t`** : 8 bits non signé (0 à 255). Pratique pour les registres 8 bits, les drapeaux (flags).
 - **`uint16_t`** : 16 bits non signé (0 à 65535). Utilisé pour les valeurs brutes d'un ADC 12 bits ou des timers.
@@ -35,7 +37,9 @@ Les types standards (`int`, `short`, `long`) changent de taille selon le process
 | `uint8_t`  | 8             | 0 à 255         | Registre 8 bits, état de LED   |
 | `int8_t`   | 8             | -128 à 127      | Température basse              |
 | `uint16_t` | 16            | 0 à 65 535      | Valeur ADC (12 bits)           |
+| `int16_t` | 16            | -32 768 à 32 767      | Valeur ADC (12 bits)           |
 | `uint32_t` | 32            | 0 à 4,2 milliards | Adresse registre STM32       |
+| `int32_t` | 32            | -2 147 483 648 à 2 147 483 647 | Adresse registre STM32       |
 
 Dans la déclaration des variables, on peut utiliser certains mots-clés :
 
@@ -45,7 +49,7 @@ Dans la déclaration des variables, on peut utiliser certains mots-clés :
 
 Quand on déclare une variable, on **réserve** un espace mémoire, un emplacement physique dans la RAM ou la Flash. Pour notre cas, la RAM est de 64 Ko, comparativement à plusieurs Go pour les PC.
 
-Nous pouvons également donner un surnom à un type existant en utilisant le mot-clé **`typedef`** :
+On peut donner un surnom à un type existant pour rendre le code plus lisible en utilisant le mot-clé **`typedef`** :
 
 ```c
 typedef uint32_t registre_t; // "registre_t" est maintenant un synonyme de uint32_t
@@ -71,7 +75,8 @@ struct Capteur {
 struct Capteur monCapteur;
 monCapteur.valeur = 2048;
 ```
-On peut créer des types personnalisés pour les états ou les configurations.
+
+On peut créer des types personnalisés pour les états ou les configurations avec **`typedef`**.
 
 ```c
 typedef uint32_t registre_t; // "registre_t" est maintenant un synonyme de uint32_t
@@ -87,7 +92,7 @@ typedef struct {
 Couleur_t maLED = {255, 0, 0}; // Plus besoin d'écrire "struct" devant
 ```
 
-C'est très utile pour mapper exactement la structure d'un registre matériel STM32 tel que décrit dans la datasheet.
+Les structures sont très utiles pour mapper les registres matériels du STM32 tels que décrit dans la datasheet.
 
 ```c
 typedef struct {
@@ -108,7 +113,7 @@ GPIOA->MODER |= (1 << 0); // Manipulation élégante et lisible !
 
 ### **L'Union**
 
-Une **union** permet de stocker des variables de types différents au même emplacement mémoire. La taille de l'union est celle de son plus grand élément.
+Une **union** permet de stocker des variables de types différents au **même emplacement mémoire**. La taille de l'union est celle de son plus grand élément.
 
 ```c
 union Paquet {
@@ -121,8 +126,12 @@ monRegistre.motComplet = 0x12345678;
 // monRegistre.octets[0] vaudra 0x78 (sur STM32 Little Endian)
 ```
 
+Les unions sont pratiques pour décomposer une donnée en octets, par exemple pour l'envoi série.
+
 ---
 <br>
+
+
 
 ### **Les Opérateurs Arithmétiques, de Comparaison et Logiques**
 
@@ -147,6 +156,67 @@ monRegistre.motComplet = 0x12345678;
 |>=	|Supérieur ou égal	|Vrai si la valeur est égale ou plus grande.|
 |<=	|Inférieur ou égal	|Vrai si la valeur est égale ou plus petite.|
 
+**Opérateurs bitwise**
+
+|Symbole	|Opération	Exemple (A=0x35, B=0x0F)	|Résultat|
+|-----------|---------------------------------------|--------|
+|&	|ET	|0x35 & 0x0F	|0x05|
+||	|OU	|0x04 | 0x68	|0x6C|
+|^	|OU exclusif	|0x54 ^ 0x78	|0x2C|
+|~	|NON (complément)	|~0x55	|0xAA|
+|>>	|décalage droite	|0x10 >> 3	|0x02|
+|<<	|décalage gauche	|0x10 << 3	|0x80|
+
+Exemple simple :
+
+```c
+unsigned char temp;
+temp = 0x35 & 0x0F;   // AND → 0x05
+temp = 0x04 | 0x68;   // OR  → 0x6C
+temp = 0x54 ^ 0x78;   // XOR → 0x2C
+temp = ~0x55;         // NOT → 0xAA
+
+// Mettre le bit 4 à 1
+var1 |= 0x10;            // masque 0x10 = (1 << 4)
+
+// Mettre le bit 4 à 0
+var1 &= ~0x10;           // 0x10 = 0001 0000, ~0x10 = 1110 1111
+
+// Tester le bit 5 (6e bit)
+if (var1 & 0x20) {       // 0x20 = (1 << 5)
+    // bit 5 = 1
+} else {
+    // bit 5 = 0
+}
+```
+
+Plutôt que d’écrire des constantes hexadécimales, on peut utiliser l’opérateur << pour construire un masque lisible :
+
+```c
+#define MASK_BIT3   (1 << 3)    // 0x08
+#define MASK_BIT61  (1 << 6) | (1 << 1)  // 0x42
+
+register |= MASK_BIT3;          // met le bit 3 à 1
+register &= ~MASK_BIT61;        // efface les bits 6 et 1
+register ^= (1 << 5);           // bascule le bit 5
+```
+
+Imaginons un registre où les bits 28 à 30 forment un champ de 3 bits. Pour lui affecter la valeur 5 :
+
+```c
+// Efface d'abord le champ (bits 30-28)
+register &= ~(7 << 28);
+
+// Puis écrit la nouvelle valeur
+register |= (5 << 28);
+```
+
+On peut combiner les deux en une seule ligne :
+
+```c
+register = (register & ~(7 << 28)) | (5 << 28);
+```
+
 **Opérateurs Logiques**
 
 En langage C, les **opérateurs logiques** servent à combiner plusieurs conditions entre elles (généralement dans un if, while ou for). Ils renvoient toujours un résultat booléen (Vrai ou Faux).
@@ -162,6 +232,8 @@ En langage C, **0** est considéré comme **Faux (FALSE)**. Et tout ce qui n'est
 
 ---
 <br>
+
+
 
 ### **Les Structures de Contrôle (Le Flux)**
 
@@ -241,6 +313,8 @@ N'oubliez jamais le break, sinon le programme exécute aussi le code du case sui
 ---
 <br>
 
+
+
 ### **Les Boucles (Répétitions)**
 
 Dans l'embarqué, le processeur ne doit jamais s'arrêter. Les boucles permettent de gérer cette continuité.
@@ -317,6 +391,8 @@ int main(void) {
 ---
 <br>
 
+
+
 ### **Manipulation de bits (Opérateurs Bitwise)**
 
 Dans la programmation _baremetal C_, on utilise largement la manipulation des bits Ce sont les outils les plus utilisés pour configurer les registres du microcontrôleur. Contrairement aux opérateurs logiques (&&, ||, !), ceux-ci agissent sur chaque bit individuellement.
@@ -352,9 +428,11 @@ Le OU Exclusif (XOR) permet d'inverser (TOGGLE) l'état d'un bit (ex: faire clig
 ---
 <br>
 
+
+
 ### **Les Pointeurs**
 
-**Un pointeur** est une variable qui contient l'adresse mémoire d'une autre variable. C'est l'outil le plus puissant du C pour manipuler directement le matériel.
+**Un pointeur** est une variable qui contient l'**adresse mémoire** d'une autre variable. C'est l'outil le plus puissant du C pour manipuler directement le matériel.
 
 - **& (Adresse de)** : Récupère l'emplacement mémoire d'une variable.
 - **(Contenu de)** : Accède à la valeur située à l'adresse stockée par le pointeur.
@@ -376,12 +454,19 @@ Toutes fonctions du matériel est mappé en mémoire. Pour configurer le STM32, 
 GPIOA_MODER |= (1 << 0); // On écrit directement dans le matériel
 ```
 
-on utilise l'opérateur Flèche `->` comme un raccourci partout en embarqué (ex: GPIOA->ODR).
+On utilise l'opérateur Flèche `->` comme un raccourci partout en embarqué (ex: GPIOA->ODR). Il simplifie l'accès aux membres d'une structure pointée :
 - `structure.membre` : Accès direct si vous avez la variable.
 - `pointeur->membre` : Accès si vous avez l'adresse de la structure.
 
+```c
+GPIO_Regs_t *gpio = (GPIO_Regs_t *) 0x40020000;
+gpio->MODER |= (1 << 0);
+```
+
 ---
 <br>
+
+
 
 ### **Les Fonctions**
 
@@ -392,15 +477,18 @@ int addition(int a, int b) {
     return a + b;
 }
 ```
+En embarqué, on utilise souvent des fonctions pour encapsuler l'accès au matériel.
 
 ---
 <br>
 
-### **Bibliotheque**
+
+
+### **Organisation en bibliothèques (header + source)**
 
 Lorsqu'on a plusieurs fonctions pour un objet (périphérique) quelconque, on les regroupe dans deux fichiers : le header (`.h`) et la source (`.c`).
 
-**Le fichier Header : `led.h` (L'interface)**
+**Le fichier Header : `led.h` (L'interface publique)**
 
 C'est le "menu" de la bibliothèque. Il contient les prototypes des fonctions et les définitions.
 
