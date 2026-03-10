@@ -235,5 +235,6 @@ Exemple typique : une tâche d'acquisition ADC lit des capteurs à haute fréque
 ### Liens connexes
 
 - [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
+- [Introduction pratique à FreeRTOS](rtos/freertos.md)
 - [Création Projet sous Keil uVision](../ressources/demarrerKiel.md)
 - [Configuration FreeRTOS sous Kiel pour STM32F4](../ressources/configRtosKiel.md)

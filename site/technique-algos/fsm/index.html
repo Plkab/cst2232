@@ -77,30 +77,112 @@
 <hr />
 <p><br></p>
 <h3 id="concepts-de-base-dune-fsm"><strong>Concepts de Base d'une FSM</strong></h3>
-<p>Une machine à états finis est définie par :</p>
+<p>Une machine à états finis est définie par cinq entités :</p>
 <ul>
-<li><strong>États</strong> : représentent les situations dans lesquelles le système peut se trouver (ex: <code>IDLE</code>, <code>WAITING</code>, <code>ACTIVE</code>).</li>
-<li><strong>Transitions</strong> : changements d'état déclenchés par des <strong>événements</strong> (ex: appui sur un bouton, expiration d'un timer, réception d'un message).
-<strong>Actions</strong> : ce que le système fait lorsqu'il entre dans un état, lorsqu'il en sort, ou pendant une transition.</li>
+<li><strong>États symboliques</strong> : situations dans lesquelles le système peut se trouver (ex: <code>IDLE</code>, <code>WAITING</code>, <code>ACTIVE</code>).</li>
+<li><strong>Signaux d'entrée</strong> : événements ou conditions qui déclenchent des transitions.</li>
+<li><strong>Signaux de sortie</strong> : actions produites par la machine.</li>
+<li><strong>Fonction de prochain état</strong> : détermine le prochain état en fonction de l'état courant et des entrées.</li>
+<li><strong>Fonction de sortie</strong> : détermine les sorties en fonction de l'état courant (et éventuellement des entrées).</li>
 </ul>
-<p>Il existe deux grands types de FSM :</p>
+<p>On distingue deux types de FSM selon la fonction de sortie :</p>
 <ul>
-<li><strong>Machine de Moore</strong> : les actions dépendent uniquement de l'état courant.</li>
-<li><strong>Machine de Mealy</strong> : les actions dépendent de l'état courant et de l'événement qui déclenche la transition.</li>
+<li><strong>Machine de Moore</strong> : les sorties dépendent <strong>uniquement de l'état courant</strong>. Elles sont stables pendant tout le temps où l'état est actif.</li>
+<li><strong>Machine de Mealy</strong> : les sorties dépendent <strong>de l'état courant et des entrées</strong>. Elles peuvent changer immédiatement en réponse à une entrée, même sans changement d'état.</li>
 </ul>
 <p>En pratique, on utilise souvent un mixte des deux.</p>
 <p><strong>Démarche de conception</strong></p>
 <ol>
 <li>
-<p><strong>Modélisation (Le Formalisme)</strong> : Avant de coder, l'ingénieur dessine un <strong>diagramme d'états</strong>. Chaque état représente un comportement stable (ex: <code>IDLE</code>, <code>MEASURING</code>, <code>ALARM</code>), et chaque flèche représente une transition déclenchée par un événement (une interruption GPIO ou un overflow de Timer).</p>
+<p><strong>Modélisation (formalisme)</strong> : avant de coder, l'ingénieur dessine un <strong>diagramme d'états</strong> ou un <strong>diagramme ASM</strong> (Algorithmic State Machine). Chaque état représente un comportement stable, et chaque flèche représente une transition déclenchée par un événement.</p>
 </li>
 <li>
-<p><strong>Robustesse</strong> : La FSM permet de définir exactement ce qui se passe si un événement imprévu survient. C'est la base des systèmes critiques (médical, aéronautique).</p>
+<p><strong>Robustesse</strong> : la FSM permet de définir exactement ce qui se passe si un événement imprévu survient. C'est la base des systèmes critiques (médical, aéronautique).</p>
 </li>
 <li>
-<p><strong>Implémentation Propre</strong> : En C, on utilise généralement une structure <code>switch(state)</code> à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes. </p>
+<p><strong>Implémentation propre</strong> : en C, on utilise généralement une structure <code>switch(state)</code> à l'intérieur d'une tâche FreeRTOS, ou un tableau de pointeurs de fonctions pour les systèmes plus vastes.</p>
 </li>
 </ol>
+<hr />
+<p><br></p>
+<h3 id="representation-graphique-dune-fsm"><strong>Représentation graphique d'une FSM</strong></h3>
+<h4 id="diagramme-detats"><strong>Diagramme d'états</strong></h4>
+<p>Un diagramme d'états se compose de <strong>nœuds</strong> (cercles) représentant les états et de <strong>flèches</strong> représentant les transitions. Chaque flèche est étiquetée avec la condition qui déclenche la transition (expression logique des entrées). Les sorties Moore sont inscrites à l'intérieur du cercle, les sorties Mealy sont placées sur les flèches à côté de la condition.</p>
+<p><strong>Exemple simple : un détecteur de front montant</strong></p>
+<p>Machine de Mealy (2 états) :</p>
+<p>Machine de Moore (3 états) :</p>
+<h4 id="diagramme-asm-algorithmic-state-machine"><strong>Diagramme ASM (Algorithmic State Machine)</strong></h4>
+<p>Un diagramme ASM est une représentation plus détaillée, proche d'un organigramme. Il est constitué de <strong>blocs ASM</strong>, chacun correspondant à un état. Un bloc ASM contient :</p>
+<ul>
+<li>Une <strong>boîte d'état</strong> (rectangle) avec le nom de l'état et les sorties Moore.</li>
+<li>Des <strong>boîtes de décision</strong> (losanges) pour tester les entrées.</li>
+<li>Des <strong>boîtes de sortie conditionnelle</strong> (ovales) pour les sorties Mealy.</li>
+</ul>
+<p>Les diagrammes ASM sont très utiles pour décrire des séquences complexes et se traduisent facilement en code. Voici un exemple de bloc ASM pour un état <code>S0</code> :</p>
+<hr />
+<p><br></p>
+<h3 id="fonctionnement-temporel-dune-fsm-synchrone"><strong>Fonctionnement temporel d'une FSM synchrone</strong></h3>
+<p>Dans une FSM synchrone (la plus courante en logique programmable), les transitions d'état sont cadencées par une horloge. Le comportement temporel est le suivant :</p>
+<ul>
+<li>Au front montant de l'horloge, le registre d'état charge le prochain état.</li>
+<li>Pendant la période d'horloge, la machine évalue les entrées et prépare le prochain état.</li>
+<li>Les sorties Moore sont stables pendant toute la période (elles ne changent qu'après le front d'horloge).</li>
+<li>Les sorties Mealy peuvent changer immédiatement en réponse à une entrée (dans le même cycle).</li>
+</ul>
+<p>Les principaux paramètres temporels sont :</p>
+<ul>
+<li><strong>Tcq</strong> : délai de sortie du registre d'état.</li>
+<li><strong>Tnext</strong> : délai de la logique combinatoire de prochain état.</li>
+<li><strong>Tsetup, Thold</strong> : temps de préparation et de maintien du registre.</li>
+</ul>
+<p>La période d'horloge minimale est : <code>Tmin = Tcq + Tnext(max) + Tsetup</code>.</p>
+<p>Ces notions sont cruciales pour la conception de systèmes temps réel où les délais de réponse doivent être maîtrisés.</p>
+<hr />
+<p><br></p>
+<h3 id="comparaison-entre-machine-de-moore-et-machine-de-mealy"><strong>Comparaison entre machine de Moore et machine de Mealy</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Critère</th>
+<th>Machine de Moore</th>
+<th>Machine de Mealy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nombre d'états</strong></td>
+<td>Plus d'états (les sorties sont liées aux états)</td>
+<td>Moins d'états (les sorties peuvent varier dans un même état)</td>
+</tr>
+<tr>
+<td><strong>Rapidité de réponse</strong></td>
+<td>Réponse au cycle suivant (sortie après front d'horloge)</td>
+<td>Réponse immédiate (dans le même cycle)</td>
+</tr>
+<tr>
+<td><strong>Largeur des impulsions</strong></td>
+<td>Largeur égale à une période d'horloge</td>
+<td>Largeur variable, peut être très courte</td>
+</tr>
+<tr>
+<td><strong>Immunité au bruit</strong></td>
+<td>Bonne (sorties stables)</td>
+<td>Sensible aux glitchs sur les entrées</td>
+</tr>
+</tbody>
+</table>
+<h4 id="exemple-detecteur-de-front-montant"><strong>Exemple : Détecteur de front montant</strong></h4>
+<p>On souhaite générer une impulsion courte à chaque fois que l'entrée <code>strobe</code> passe de 0 à 1.</p>
+<p><strong>Version Mealy (2 états)</strong></p>
+<p>État ZERO : si strobe = 1 → sortie = 1, aller à UN
+État UN : si strobe = 0 → aller à ZERO</p>
+<p>La sortie est active seulement pendant la transition, dans le même cycle.</p>
+<p><strong>Version Moore (3 états)</strong></p>
+<p>État ZERO : si strobe = 1 → aller à EDGE
+État EDGE : sortie = 1 ; si strobe = 1 → aller à UN, sinon ZERO
+État UN : si strobe = 0 → aller à ZERO</p>
+<p>La sortie est active pendant tout l'état EDGE (un cycle d'horloge).</p>
+<p>Le choix dépend de l'application : une sortie Mealy est plus rapide, une sortie Moore plus robuste.</p>
 <hr />
 <p><br></p>
 <h3 id="implementation-dune-fsm-en-c"><strong>Implémentation d'une FSM en C</strong></h3>
@@ -146,7 +228,7 @@ void FSM_Process(Event_t event) {
     State_t  currentState;
     Event_t  event;
     State_t  nextState;
-    void (*action)(void);
+    void (*action)(void);  // pointeur de fonction pour l'action
 } Transition_t;
 
 Transition_t transitionTable[] = {

@@ -33,7 +33,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
   
 - [Philosophie du cours](philosophie/index.md)
 - [Introduction aux Systèmes Temps Réels](rtos/index.md)
-- [Introduction pratique à freeRTOS](rtos/#introduction-a-freertos)
+- [Introduction pratique à FreeRTOS](rtos/freertos.md)
 - [Présentation architecturale du Microcontrôleur STM32F4](stm32f4/mcu_intro/index.md)
 
 ---
