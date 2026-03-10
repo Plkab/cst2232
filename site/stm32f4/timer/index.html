@@ -128,25 +128,24 @@
 <li><strong>Configurer et activer l'interruption dans le NVIC</strong> (priorité, activation).</li>
 <li><strong>Démarrer le timer</strong> en positionnant le bit <code>CEN</code> (Counter Enable) dans <code>CR1</code>.</li>
 </ol>
-<p><strong>Exemple : Chronomètre précis (polling)</strong></p>
+<p><strong>Exemple : Chronomètre précis (polling) : Génération d'un délai avec un timer</strong></p>
+<p>On peut aussi utiliser un timer pour générer un délai en attendant le flag UIF. L'avantage est de pouvoir utiliser des timers 32 bits pour de très longs délais.</p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
-void Timer2_Init(void) {
+// Attente active mais précise (polling)
+void delaySec(uint32_t sec) {
     // 1. Activer l'horloge du Timer 2 (sur APB1)
     RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
 
     // 2. Configurer PSC et ARR pour 1 seconde
-    //    f_timer = 84 MHz / 84000 = 1 kHz (1 ms par tick)
-    //    ARR = 999 -&gt; période de 1 s (1000 ticks)
-    TIM2-&gt;PSC = 84000 - 1;
-    TIM2-&gt;ARR = 1000 - 1;
+    //    f_timer = 84 MHz / 8400 = 10 kHz (0,100 ms par tick)
+    //    ARR = 9999 -&gt; période de 1 s (10000 ticks)
+    TIM2-&gt;PSC = 8400 - 1;
+    TIM2-&gt;ARR = 10000 * sec - 1;    // // 10 kHz * sec
 
     // 3. Lancer le timer
     TIM2-&gt;CR1 |= TIM_CR1_CEN;
-}
 
-// Attente active mais précise (polling)
-void wait_one_second(void) {
     TIM2-&gt;CNT = 0;                          // Reset compteur
     while(!(TIM2-&gt;SR &amp; TIM_SR_UIF));        // Attendre le flag Update
     TIM2-&gt;SR &amp;= ~TIM_SR_UIF;                 // Effacer le flag
@@ -156,9 +155,184 @@ void wait_one_second(void) {
 f_update = f_timer / (ARR + 1) = (f_ck / (PSC + 1)) / (ARR + 1).</p>
 <p>Dans l'exemple, avec f_ck = 84 MHz, PSC = 83999, ARR = 999, on obtient :
 f_update = 84e6 / 84000 / 1000 = 1 Hz.</p>
+<p>Exemple : Faire clignoter une LED sur PC13 à 1 Hz en utilisant TIM2 (32 bits) avec une horloge à 84 MHz.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+// Attente active mais précise (polling)
+void delaySec(uint32_t sec) {
+    // 1. Activer l'horloge du Timer 2 (sur APB1)
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // 2. Configurer PSC et ARR pour 1 seconde
+    //    f_timer = 84 MHz / 8400 = 10 kHz (0,100 ms par tick)
+    //    ARR = 9999 -&gt; période de 1 s (10000 ticks)
+    TIM2-&gt;PSC = 8400 - 1;
+    TIM2-&gt;ARR = 10000 * sec - 1;    // // 10 kHz * sec
+
+    // 3. Lancer le timer
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+
+    TIM2-&gt;CNT = 0;                          // Reset compteur
+    while(!(TIM2-&gt;SR &amp; TIM_SR_UIF));        // Attendre le flag Update
+    TIM2-&gt;SR &amp;= ~TIM_SR_UIF;                 // Effacer le flag
+}
+
+int main(void) {
+    // Configuration de la LED
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+    GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13);
+
+    while (1) {
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13); // bascule la LED
+        delaySec(1);
+    }
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="mode-comparaison-output-compare"><strong>Mode comparaison (output compare)</strong></h3>
+<p>Le mode comparaison permet de générer un signal sur une broche lorsqu'un événement de comparaison se produit. Le timer compare en permanence la valeur du compteur avec un ou plusieurs registres <code>CCRx</code>. En cas d'égalité, une action prédéfinie peut être effectuée sur la broche correspondante (mise à 1, mise à 0, basculement). Cela permet de générer des signaux périodiques sans intervention du processeur.</p>
+<p><strong>Configuration</strong></p>
+<p>Pour utiliser la comparaison, il faut :</p>
+<ul>
+<li>Configurer la broche en mode alternate function correspondant au timer (ex: PA5 pour TIM2_CH1).</li>
+<li>Activer l'horloge du timer.</li>
+<li>Régler <code>PSC</code> et <code>ARR</code> pour la période souhaitée.</li>
+<li>Configurer <code>CCMRx</code> pour le mode de sortie (par exemple, basculement).</li>
+<li>Positionner <code>CCRx</code> à la valeur de comparaison.</li>
+<li>Activer la sortie dans <code>CCER</code>.</li>
+<li>Lancer le compteur.</li>
+</ul>
+<p>Exemple : Générer un signal carré de 1 Hz sur PA5 (TIM2_CH1). On choisit PSC = 8399 (→ 10 kHz), ARR = 4999 (période de 5000 ticks, soit 0,5 s). En basculant la sortie à chaque fois que le compteur atteint CCR1, on obtiendra une période de 1 s. On fixe CCR1 = 0 pour que le basculement ait lieu à chaque début de cycle.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+int main(void) {
+    // Configuration de PA5 en alternate function AF1 pour TIM2_CH1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (5*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (5*2));   // alternate function
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (5*4));
+    GPIOA-&gt;AFR[0] |=  (1 &lt;&lt; (5*4));   // AF1
+
+    // Activation de TIM2
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // Configuration pour 1 Hz
+    TIM2-&gt;PSC = 8399;          // 84 MHz / 8400 = 10 kHz
+    TIM2-&gt;ARR = 4999;          // période 5000 ticks → 0,5 s
+    // Mode toggle sur match (OC1M = 011)
+    TIM2-&gt;CCMR1 |= (0x3 &lt;&lt; 4); // bits 4:2 = 011
+    TIM2-&gt;CCR1 = 0;             // compare à 0
+    TIM2-&gt;CCER |= TIM_CCER_CC1E; // activer la sortie sur CH1
+    TIM2-&gt;CNT = 0;
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;    // démarrer
+
+    while (1) {
+        // Rien à faire, le signal est généré automatiquement
+    }
+}
+</code></pre>
+<p>Remarque : Le mode toggle fait basculer la broche à chaque match. Avec <code>CCR1 = 0</code>, le match a lieu lorsque <code>CNT</code> passe de 0 à 1 (au début du cycle). Ainsi, la broche bascule tous les 5000 ticks, soit 2 fois par période, ce qui donne une fréquence de 1 Hz.</p>
+<hr />
+<p><br></p>
+<h3 id="mode-capture-input-capture"><strong>Mode capture (input capture)</strong></h3>
+<p>Le mode capture permet de mesurer la fréquence ou la largeur d'impulsion d'un signal externe. Lorsqu'un événement (front montant/descendant) se produit sur la broche d'entrée, la valeur courante du compteur est copiée dans le registre <code>CCRx</code>, et un flag est levé.</p>
+<p><strong>Configuration</strong></p>
+<p>Pour utiliser la capture, il faut :</p>
+<ul>
+<li>Configurer la broche en mode alternate function.</li>
+<li>Activer l'horloge du timer.</li>
+<li>Régler le prescaler du timer (pour ajuster la résolution).</li>
+<li>Configurer CCMRx pour sélectionner le mode capture (<code>CCxS = 01</code> ou <code>10</code> selon la source).</li>
+<li>Choisir le front déclencheur dans <code>CCER</code> (bits CCxP et CCxNP).</li>
+<li>Activer la capture dans <code>CCER</code> (CCxE = 1).</li>
+<li>Lancer le compteur.</li>
+</ul>
+<p>Exemple : Mesurer la fréquence d'un signal sur PA6 (TIM3_CH1). On utilise TIM3, 16 bits, avec une horloge de 10 kHz (PSC = 8399) pour obtenir une résolution de 0,1 ms. On capture les fronts montants. La période en millisecondes est donnée par la différence entre deux captures consécutives.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+volatile uint16_t lastCapture = 0;
+volatile uint16_t period = 0;
+volatile uint8_t captureDone = 0;
+
+void TIM3_IRQHandler(void) {
+    if (TIM3-&gt;SR &amp; TIM_SR_CC1IF) {
+        TIM3-&gt;SR &amp;= ~TIM_SR_CC1IF;
+        uint16_t capture = TIM3-&gt;CCR1;
+        period = capture - lastCapture;
+        lastCapture = capture;
+        captureDone = 1;
+    }
+}
+
+int main(void) {
+    // Configuration de PA6 en alternate function AF2 pour TIM3_CH1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (6*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (6*2));
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (6*4));
+    GPIOA-&gt;AFR[0] |=  (2 &lt;&lt; (6*4));   // AF2
+
+    // Activation de TIM3
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+    // Configuration : PSC = 8399 → 10 kHz
+    TIM3-&gt;PSC = 8399;
+    TIM3-&gt;ARR = 0xFFFF;        // valeur max (16 bits)
+    TIM3-&gt;CCMR1 = TIM_CCMR1_CC1S_0; // CC1 channel as input, IC1 mapped on TI1
+    TIM3-&gt;CCER |= TIM_CCER_CC1E;     // capture sur front montant (par défaut)
+    TIM3-&gt;DIER |= TIM_DIER_CC1IE;    // interruption sur capture
+    NVIC_EnableIRQ(TIM3_IRQn);
+    NVIC_SetPriority(TIM3_IRQn, 5);
+    TIM3-&gt;CR1 |= TIM_CR1_CEN;         // démarrer
+
+    while (1) {
+        if (captureDone) {
+            captureDone = 0;
+            // Calcul de la fréquence : f = 10 kHz / period (si period est en ticks)
+            // Attention au débordement du compteur 16 bits pour les périodes longues.
+        }
+    }
+}
+</code></pre>
+<p>Remarque : Il faut gérer les débordements du compteur 16 bits pour des périodes longues. On peut utiliser l'interruption de débordement (UIF) ou utiliser un timer 32 bits comme TIM2.</p>
+<hr />
+<p><br></p>
+<h3 id="compteur-devenements-external-clock"><strong>Compteur d'événements (external clock)</strong></h3>
+<p>Les timers peuvent également être cadencés par une source externe (broche ETR). Cela permet de compter le nombre d'impulsions sur une broche. Par exemple, pour compter des objets sur un tapis roulant.</p>
+<p>Exemple : Utiliser TIM2 avec l'entrée ETR sur PA0 (AF1). Chaque front montant sur PA0 incrémente le compteur.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+int main(void) {
+    // Configuration de PA0 en alternate function AF1 pour TIM2_ETR
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA-&gt;MODER &amp;= ~(3U &lt;&lt; (0*2));
+    GPIOA-&gt;MODER |=  (2U &lt;&lt; (0*2));
+    GPIOA-&gt;AFR[0] &amp;= ~(0xF &lt;&lt; (0*4));
+    GPIOA-&gt;AFR[0] |=  (1 &lt;&lt; (0*4));   // AF1
+
+    // Activation de TIM2
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // Configuration en mode esclave avec ETR comme source d'horloge
+    TIM2-&gt;SMCR = TIM_SMCR_ECE; // bit ECE = 1, external clock enable
+    // Optionnel : on peut aussi configurer un prescaler sur l'entrée ETR via ETPS
+    TIM2-&gt;CNT = 0;
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+
+    // Boucle principale : lecture du compteur
+    while (1) {
+        uint32_t count = TIM2-&gt;CNT;
+        // Afficher ou utiliser count...
+    }
+}
+</code></pre>
+<p>Remarque : Le mode ETR utilise le signal comme horloge du compteur. Si on veut compter des fronts, il faut configurer le prescaler ETR (bits ETPS) et la polarité (ETP) dans <code>SMCR</code>.</p>
 <hr />
 <p><br></p>
 <h3 id="interruption-du-timer"><strong>Interruption du Timer</strong></h3>
+<p>Le timer peut générer une interruption de mise à jour (UIF) lorsqu'il déborde. Le bit <code>UIE</code> dans <code>TIMx_DIER</code> active cette interruption.</p>
 <p>Au lieu de surveiller le registre <code>SR</code> (polling) comme precedement, on laisse le matériel prévenir le CPU, le Timer prévient le processeur dès que le temps est écoulé via une ISR (Interrupt Service Routine). C'est l'usage du <strong>NVIC</strong> combiné au Timer.</p>
 <ul>
 <li>On active l'interruption dans le timer : <code>TIM2-&gt;DIER |= TIM_DIER_UIE;</code>.</li>
@@ -173,6 +347,7 @@ f_update = 84e6 / 84000 / 1000 = 1 Hz.</p>
 <li>Avec ARR = 999 (1000 - 1), on obtient une fréquence d'update de 10 kHz / 1000 = 10 Hz, soit une période de 100 ms.</li>
 </ul>
 <p>Ou plus simplement, on peut choisir PSC = 8399 et ARR = 999.</p>
+<p>Exemple : clignotement LED avec TIM2 à 1 Hz</p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 void Timer2_Init(void) {
@@ -181,9 +356,10 @@ void Timer2_Init(void) {
 
     // 2. Configurer PSC et ARR pour 100 ms
     //    f_timer = 84 MHz / (8399+1) = 10 kHz
-    //    ARR = 999 -&gt; update toutes les 1000 ticks = 0.1 s
-    TIM2-&gt;PSC = 8399;       // Prescaler
-    TIM2-&gt;ARR = 999;        // Auto-reload
+    //    TIM2 à 1 Hz (84 MHz / 8400 / 10000 = 1 Hz)
+    //    ARR = 9999 -&gt; update toutes les 10000 ticks = 0.1 s
+    TIM2-&gt;PSC = 8400 - 1;       // Prescaler
+    TIM2-&gt;ARR = 10000 - 1;      // Auto-reload
 
     // 3. Activer l'interruption de mise à jour (update)
     TIM2-&gt;DIER |= TIM_DIER_UIE;
@@ -205,6 +381,17 @@ void TIM2_IRQHandler(void) {
         // Exemple : basculer une LED sur PC13
         GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);
     }
+}
+
+int main(void) {
+    // LED PC13
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+    GPIOC-&gt;ODR |= (1 &lt;&lt; 13);
+
+    Timer2_Init();
+
+    while (1);
 }
 </code></pre>
 <hr />
