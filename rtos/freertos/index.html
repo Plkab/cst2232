@@ -80,7 +80,7 @@
 <p>Cette flexibilité permet d'adapter le comportement du système aux besoins de l'application.</p>
 <p>On peut avoir sur le site web officiel le manuel de référence ecrit par <a href="https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf">Richard Barry</a> et l'API est disponible : <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">freertos.</a></p>
 <p><strong>Organisation des fichiers</strong></p>
-<p>FreeRTOS est fourni sous forme d'un ensemble de fichiers sources C qui sont compilés avec votre code applicatif. La distribution comprend également un <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">dossier demo</a> contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.</p>
+<p>FreeRTOS est fourni sous forme d'un ensemble de fichiers <code>.c</code> et <code>.h</code> qui sont compilés avec votre code applicatif. La distribution comprend également un <a href="https://www.freertos.org/Documentation/02-Kernel/01-About-the-FreeRTOS-kernel/03-Download-freeRTOS/01-DownloadFreeRTOS">dossier demo</a> contenant des exemples de programmes qui aident les débutants à développer leurs propres applications.</p>
 <pre><code class="language-text">FreeRTOS/
 ├── Source/
 │   ├── include/          # Fichiers d’en‑tête publics
@@ -99,7 +99,17 @@
 <p>Le fichier de configuration FreeRTOSConfig.h est placé dans le dossier de votre projet. Il définit les paramètres du noyau (fréquence CPU, tick rate, inclusion des fonctions, etc.). Pour une description détaillée des macros de configuration, reportez‑vous à la <a href="../../ressources/configRtosKiel.md">documentation</a>.</p>
 <hr />
 <p><br></p>
-<h4 id="creation-de-taches-xtaskcreate"><strong>Création de Tâches (<code>xTaskCreate</code>)</strong></h4>
+<h3 id="types-de-donnees-freertos"><strong>Types de données FreeRTOS</strong></h3>
+<p>Deux types de données sont fréquemment utilisés :</p>
+<ul>
+<li><code>TickType_t</code> : utilisé pour stocker le nombre de ticks. Sur un processeur 32 bits, c'est généralement un <code>uint32_t</code>. La macro <code>pdMS_TO_TICKS(ms)</code> convertit des millisecondes en ticks.</li>
+<li><code>BaseType_t</code> : type dépendant de l'architecture (32 bits sur STM32). Utilisé pour les valeurs de retour simples (<code>pdTRUE/pdFALSE</code>, <code>pdPASS/pdFAIL</code>).</li>
+</ul>
+<p>Conventions de nommage :
+- <code>v</code> : retourne un void (ex: <code>vTaskDelay</code>).
+- <code>x</code> : retourne un <code>BaseType_t</code> ou un type non standard (ex: <code>xTaskCreate</code>).
+- <code>pv</code> : retourne un pointeur vers void (ex: <code>pvTimerGetTimerID</code>).</p>
+<h4 id="gestion-des-taches"><strong>Gestion des Tâches</strong></h4>
 <p>La tâche est l'élément fondamental dans un RTOS. Chaque fonction que vous souhaitez exécuter de manière autonome devient une tâche, avec sa propre priorité définie par le développeur.</p>
 <p>Dans un programme classique (sans OS), tout le code se trouve dans la fonction main(). Dans FreeRTOS, le rôle de main() est simplement de créer les tâches nécessaires, puis de lancer l'ordonnanceur qui prend le contrôle.</p>
 <p>Une tâche est typiquement une fonction qui ne doit jamais se terminer, elle s'exécute en boucle infinie et possède sa propre pile mémoire. Sa structure type est une boucle infinie :</p>
@@ -111,8 +121,17 @@
     }
 }
 </code></pre>
-<p><strong>Création d'une tâche dans le main</strong></p>
-<p>La fonction <em><code>xTaskCreate()</code></em> est la porte d'entrée de FreeRTOS.</p>
+<p><strong>Création d'une tâche dans le main avec <code>xTaskCreate</code></strong></p>
+<p>La fonction <em><code>xTaskCreate()</code></em> est la porte d'entrée de FreeRTOS. Elle crée une nouvelle tâche et l'ajoute à l'ordonnanceur.</p>
+<pre><code class="language-c">BaseType_t xTaskCreate( 
+    TaskFunction_t pvTaskCode,  // Pointeur vers la fonction de la tâche
+    const char * const pcName,  // Nom descriptif (pour debug)
+    uint16_t usStackDepth,      // Taille de la pile (en mots, pas en octets !)
+    void *pvParameters,         // Paramètres passés à la tâche
+    UBaseType_t uxPriority,     // Priorité (0 est la plus basse)
+    TaskHandle_t *pxCreatedTask // Handle pour manipuler la tâche plus tard
+);
+</code></pre>
 <pre><code class="language-c">xTaskCreate(
     maTache,           // Nom de la fonction: Pointeur vers la fonction de la tâche
     &quot;Nom_Tache&quot;,       // Nom de la tâche (pour le debug)
@@ -140,8 +159,11 @@ void main(void) {
 </code></pre>
 <hr />
 <p><br></p>
-<h4 id="gestion-du-temps-vtaskdelay-et-vtaskdelayuntil"><strong>Gestion du Temps (<code>vTaskDelay</code>) et (<code>vTaskDelayUntil</code>)</strong></h4>
+<h3 id="gestion-du-temps-vtaskdelay-et-vtaskdelayuntil"><strong>Gestion du Temps (<code>vTaskDelay</code>) et (<code>vTaskDelayUntil</code>)</strong></h3>
 <p>Contrairement à une simple boucle d'attente active (comme <code>delay()</code>) qui bloque tout le processeur, <code>vTaskDelay</code> place la tâche dans l'état "Blocked" pendant un nombre de ticks spécifié. Pendant ce temps, le CPU est libéré et peut exécuter d'autres tâches prêtes, optimisant ainsi l'utilisation des ressources.</p>
+<ul>
+<li><code>vTaskDelay(xTicksToDelay)</code> → délai relatif.</li>
+</ul>
 <pre><code class="language-c">void vTaskMoteur(void * pvParameters) {
     for(;;) { // Boucle infinie obligatoire
         ControleVitesse();
@@ -151,7 +173,74 @@ void main(void) {
 }
 </code></pre>
 <p>Pour cette fonction nous avons une limitation, si le code de traitement prend 10ms, et que l'on utilise <em><code>vTaskDelay(90ms)</code></em>, la période réelle sera de 100ms + temps de traitement, provoquant une dérive temporelle.</p>
+<p>Exemple de Clignotement d'une LED (une seule tâche) toutes les secondes.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+// Fonction de la tâche
+void vTaskLed(void *pvParameters) {
+    (void)pvParameters;
+
+    // Configuration de PC13 en sortie
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+
+    for (;;) {
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);          // Toggle LED
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+int main(void) {
+    // Création de la tâche
+    xTaskCreate(vTaskLed, &quot;LED&quot;, 128, NULL, 1, NULL);
+
+    // Lancement de l'ordonnanceur
+    vTaskStartScheduler();
+
+    // Ne doit jamais arriver
+    while (1);
+}
+</code></pre>
+<p>Exemple : Deux LEDs avec des fréquences différentes
+Deux tâches : l'une clignote toutes les secondes (PC13), l'autre toutes les 200 ms (PA5 si disponible, ou on peut utiliser une LED externe).</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;stm32f4xx.h&quot;
+
+void vTaskLed1(void *pvParameters) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    GPIOC-&gt;MODER |= (1 &lt;&lt; (13*2));
+    for (;;) {
+        GPIOC-&gt;ODR ^= (1 &lt;&lt; 13);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+void vTaskLed2(void *pvParameters) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA-&gt;MODER |= (1 &lt;&lt; (5*2));   // PA5 en sortie
+    for (;;) {
+        GPIOA-&gt;ODR ^= (1 &lt;&lt; 5);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+int main(void) {
+    xTaskCreate(vTaskLed1, &quot;LED1&quot;, 128, NULL, 1, NULL);
+    xTaskCreate(vTaskLed2, &quot;LED2&quot;, 128, NULL, 1, NULL);
+
+    vTaskStartScheduler();
+
+    while(1);
+}
+</code></pre>
 <p>Prenons un autre exemple qui fait du temps réel périodique précis: </p>
+<ul>
+<li><code>vTaskDelayUntil(&amp;xLastWakeTime, xPeriod)</code> → délai absolu, périodicité fixe.</li>
+<li><code>xTaskGetTickCount()</code> → retourne le nombre de ticks depuis le démarrage du scheduler.</li>
+</ul>
 <pre><code class="language-c">void Task_Stabilisation(void *pvParameters) {
 
      // Variable pour stocker l'instant du prochain réveil
@@ -190,8 +279,8 @@ void main(void) {
 </ul>
 <hr />
 <p><br></p>
-<h4 id="Semaphores"><strong>Synchronisation par Sémaphores (xSemaphore)</strong></h4>
-<p>Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle.</p>
+<h3 id="Semaphores"><strong>Synchronisation par Sémaphores (xSemaphore)</strong></h3>
+<p>Les sémaphores sont indispensables pour protéger l'accès à des ressources partagées (par exemple un bus I2C, un périphérique UART, variable globale) ou pour synchroniser une tâche avec une interruption matérielle. Ces ressources ne peuvent être utilisées que par une seule tâche à la fois. </p>
 <p><strong>Le Mutex (Le type de sémaphore pour les ressources partagées)</strong></p>
 <p>Imaginons que deux tâches doivent écrire sur le même port série (UART). Si elles écrivent simultanément, les messages seront mélangés et illisibles. Un mutex (MUTual EXclusion) agit comme un jeton, une tâche doit obtenir ce jeton avant d'utiliser la ressource, et le rend ensuite.</p>
 <p>Déclaration et création :</p>
@@ -322,13 +411,38 @@ int main(void) {
 </code></pre>
 <hr />
 <p><br></p>
-<h4 id="communication-par-files-de-messages-queues-xqueue"><strong>Communication par files de messages : Queues (xQueue)</strong></h4>
+<h3 id="communication-par-files-de-messages-queues-xqueue"><strong>Communication par files de messages : Queues (xQueue)</strong></h3>
 <p>C'est la méthode propre pour échanger des données entre tâches de manière propre. Les données sont copiées dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire. Par exemple, une tâche "Capteur" lit une température et une tâche "Affichage" doit la montrer. Plutôt que d'utiliser une variable globale (risquée en environnement temps réel), on utilise une file (queue) – une boîte aux lettres sécurisée.</p>
+<p><strong>Principe des files d'attente</strong></p>
+<p>Une file d'attente est une structure de données de type FIFO <em>(First In, First Out</em>) qui permet d'envoyer des messages ou des données d'une tâche à une autre, ou entre une interruption et une tâche. Les données sont <strong>copiées</strong> dans la file (passage par valeur), ce qui évite les problèmes de partage mémoire.</p>
+<pre><code class="language-text">[ Entrée ] → [ 2 | 4 | 6 | 8 ] → [ Sortie ]
+</code></pre>
+<p>Les files peuvent contenir des éléments de taille fixe, définie à la création. On peut envoyer des entiers, des structures, ou même des pointeurs vers de gros buffers.</p>
 <ul>
-<li><strong>Créer la file</strong> : <code>xQueueCreate(taille, taille_d'un_élément)</code>;</li>
+<li><strong>Créer la file</strong> : <code>xQueueCreate(taille, taille_d'un_élément)</code>;
+La fonction <code>xQueueCreate()</code> alloue et initialise une file.</li>
+</ul>
+<pre><code class="language-c">QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength, UBaseType_t uxItemSize);
+</code></pre>
+<pre><code>- `uxQueueLength` : nombre maximal d'éléments que la file peut contenir.
+- `uxItemSize` : taille en octets de chaque élément.
+- Retour : handle de la file si réussite, `NULL` sinon.
+</code></pre>
+<ul>
 <li><strong>Poster un message</strong> : <code>xQueueSend(file, &amp;donnee, delai)</code>;</li>
+</ul>
+<pre><code class="language-c">BaseType_t xQueueSend(QueueHandle_t xQueue, const void *pvItemToQueue, TickType_t xTicksToWait);
+</code></pre>
+<pre><code>Place un élément à la fin de la file. Si la file est pleine, la tâche peut attendre (paramètre xTicksToWait).
+</code></pre>
+<ul>
 <li><strong>Lire un message</strong> : <code>xQueueReceive(file, &amp;reception, delai)</code>;</li>
 </ul>
+<pre><code class="language-c">BaseType_t xQueueReceive(QueueHandle_t xQueue, void *pvBuffer, TickType_t xTicksToWait);
+</code></pre>
+<pre><code>Lit et retire l'élément en tête de file. Si la file est vide, la tâche attend.
+</code></pre>
+<p>Les deux fonctions retournent pdPASS en cas de succès, ou <code>errQUEUE_EMPTY</code>/<code>errQUEUE_FULL</code> selon le cas.</p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
 #include &quot;queue.h&quot;
 
@@ -387,7 +501,7 @@ int main(void) {
 </code></pre>
 <hr />
 <p><br></p>
-<h4 id="trois-regles-dor-a-connaitre"><strong>Trois règles d'or a connaitre :</strong></h4>
+<h3 id="trois-regles-dor-a-connaitre"><strong>Trois règles d'or a connaitre :</strong></h3>
 <ul>
 <li><strong>Priorité</strong> : Dans FreeRTOS, plus le chiffre associé à une tâche est élevé, plus sa priorité est haute (attention, certains OS font l'inverse).</li>
 <li><strong>Boucle infinie</strong> : Une tâche ne doit jamais se terminer ni sortir de sa fonction sans être explicitement supprimée par <em><code>vTaskDelete()</code></em>.</li>

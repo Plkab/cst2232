@@ -155,6 +155,10 @@ char USART2_GetChar(void) {
 <p><strong>Configuration avec interruption de réception</strong></p>
 <pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
 #include &quot;queue.h&quot;
+#include &quot;task.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
 
 QueueHandle_t xRxQueue;
 
@@ -171,8 +175,16 @@ void USART2_IRQHandler(void) {
 }
 
 void USART2_Init_Interrupt(uint32_t baud) {
-    // Réutiliser l'initialisation précédente
-    USART2_Init(baud);
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // PA2 TX, PA3 RX en AF7
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (2*2)) | (3U &lt;&lt; (3*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (2*2)) | (2U &lt;&lt; (3*2)));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
 
     // Activer l'interruption sur réception
     USART2-&gt;CR1 |= USART_CR1_RXNEIE;
@@ -180,6 +192,11 @@ void USART2_Init_Interrupt(uint32_t baud) {
     // Configurer la priorité et activer dans le NVIC
     NVIC_SetPriority(USART2_IRQn, 5);
     NVIC_EnableIRQ(USART2_IRQn);
+}
+
+void USART2_SendChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+    USART2-&gt;DR = c;
 }
 
 // Tâche de traitement de la réception (écho simple)
@@ -227,6 +244,7 @@ void USART2_SendStringAsync(char *str) {
 #include &quot;task.h&quot;
 #include &quot;queue.h&quot;
 #include &quot;string.h&quot;
+#include &lt;stdio.h&gt;
 #include &quot;stm32f4xx.h&quot;
 
 // Définition des handles de queue
@@ -317,6 +335,170 @@ int main(void) {
 </ul>
 <hr />
 <p><br></p>
+<h3 id="projet-protection-dun-affichage-uart"><strong>Projet : Protection d'un affichage UART</strong></h3>
+<p>Deux tâches souhaitent écrire sur le même UART. Un mutex protège l'accès.</p>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+
+SemaphoreHandle_t xUARTMutex;
+
+void USART2_Init(void);
+void USART2_SendString(char *str);
+
+void vTask1(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xUARTMutex, portMAX_DELAY) == pdTRUE) {
+            USART2_SendString(&quot;Tache 1 : message\r\n&quot;);
+            xSemaphoreGive(xUARTMutex);
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+void vTask2(void *pvParameters) {
+    for (;;) {
+        if (xSemaphoreTake(xUARTMutex, portMAX_DELAY) == pdTRUE) {
+            USART2_SendString(&quot;Tache 2 : autre message\r\n&quot;);
+            xSemaphoreGive(xUARTMutex);
+        }
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+}
+
+int main(void) {
+    USART2_Init(115200);
+    xUARTMutex = xSemaphoreCreateMutex();
+
+    if (xUARTMutex != NULL) {
+        xTaskCreate(vTask1, &quot;Task1&quot;, 128, NULL, 1, NULL);
+        xTaskCreate(vTask2, &quot;Task2&quot;, 128, NULL, 1, NULL);
+        vTaskStartScheduler();
+    }
+    while(1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="projet-acquisition-de-deux-capteurs-avec-affichage-uart"><strong>Projet : Acquisition de deux capteurs avec affichage UART</strong></h3>
+<p>Deux tâches lisent périodiquement des valeurs analogiques (simulées) et envoient les résultats sur l'UART. Un mutex protège l'UART. De plus, une file est utilisée pour transmettre les données à une tâche d'affichage unique (découplage).</p>
+<p>Matériel :</p>
+<ul>
+<li>Black Pill</li>
+<li>Deux potentiomètres sur PA0 et PA1 (simulant des capteurs)</li>
+<li>UART2 pour l'affichage sur PC</li>
+</ul>
+<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;semphr.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+
+// Handles
+SemaphoreHandle_t xUARTMutex;
+QueueHandle_t xDataQueue;
+
+// Structure de données
+typedef struct {
+    uint8_t capteur_id;
+    uint16_t valeur;
+} Mesure_t;
+
+// Fonctions matérielles
+void ADC_Init(void) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2)) | (3U &lt;&lt; (1*2)); // PA0, PA1 analogiques
+    ADC1-&gt;CR2 = 0;
+    ADC1-&gt;SQR3 = 0; // canal 0 (à changer dynamiquement)
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;
+}
+
+uint16_t ADC_Read(uint8_t channel) {
+    ADC1-&gt;SQR3 = channel;
+    ADC1-&gt;CR2 |= ADC_CR2_SWSTART;
+    while (!(ADC1-&gt;SR &amp; ADC_SR_EOC));
+    return (uint16_t)ADC1-&gt;DR;
+}
+
+void USART2_Init(uint32_t baud) {
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+    GPIOA-&gt;MODER |= (2 &lt;&lt; (2*2)) | (2 &lt;&lt; (3*2));
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+    USART2-&gt;BRR = 84000000 / baud;
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_UE;
+}
+
+void USART2_SendString(char *str) {
+    while (*str) {
+        while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+        USART2-&gt;DR = *str++;
+    }
+}
+
+// Tâches
+void vTaskCapteur1(void *pvParameters) {
+    Mesure_t mesure;
+    mesure.capteur_id = 1;
+    for (;;) {
+        mesure.valeur = ADC_Read(0);
+        xQueueSend(xDataQueue, &amp;mesure, 0);
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+void vTaskCapteur2(void *pvParameters) {
+    Mesure_t mesure;
+    mesure.capteur_id = 2;
+    for (;;) {
+        mesure.valeur = ADC_Read(1);
+        xQueueSend(xDataQueue, &amp;mesure, 0);
+        vTaskDelay(pdMS_TO_TICKS(300));
+    }
+}
+
+void vTaskAffichage(void *pvParameters) {
+    Mesure_t mesure;
+    char buffer[32];
+    for (;;) {
+        if (xQueueReceive(xDataQueue, &amp;mesure, portMAX_DELAY) == pdPASS) {
+            if (xSemaphoreTake(xUARTMutex, portMAX_DELAY) == pdTRUE) {
+                sprintf(buffer, &quot;Capteur %d : %u\r\n&quot;, mesure.capteur_id, mesure.valeur);
+                USART2_SendString(buffer);
+                xSemaphoreGive(xUARTMutex);
+            }
+        }
+    }
+}
+
+int main(void) {
+    ADC_Init();
+    USART2_Init(115200);
+
+    xUARTMutex = xSemaphoreCreateMutex();
+    xDataQueue = xQueueCreate(10, sizeof(Mesure_t));
+
+    if (xUARTMutex != NULL &amp;&amp; xDataQueue != NULL) {
+        xTaskCreate(vTaskCapteur1, &quot;Capteur1&quot;, 128, NULL, 1, NULL);
+        xTaskCreate(vTaskCapteur2, &quot;Capteur2&quot;, 128, NULL, 1, NULL);
+        xTaskCreate(vTaskAffichage, &quot;Affichage&quot;, 256, NULL, 2, NULL);
+        vTaskStartScheduler();
+    }
+    while(1);
+}
+</code></pre>
+<ul>
+<li>Deux tâches productrices lisent des capteurs et envoient les données dans une file.</li>
+<li>Une tâche consommatrice lit la file et affiche via UART, protégée par un mutex.</li>
+<li>La file découple l'acquisition de l'affichage et permet de gérer des cadences différentes.</li>
+</ul>
+<hr />
+<p><br></p>
 <h3 id="utiliser-printf-sur-lusart"><em>Utiliser printf() sur l'USART</em>*</h3>
 <p>Pour faciliter le débogage, on peut rediriger <code>printf()</code> vers l’USART. Sous Keil, il suffit de réimplémenter la fonction <code>_write</code> :</p>
 <pre><code class="language-c">#include &lt;stdio.h&gt;
@@ -336,7 +518,7 @@ int _write(int file, char *ptr, int len) {
 <li><a href="../gpio/">GPIO et Interruptions</a></li>
 <li><a href="../timer/">Timer et Interruption</a></li>
 <li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
-<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+<li><a href="../../rtos/freertos/">Introduction pratique à freeRTOS</a></li>
 </ul></div>
             </div>
         </div>
