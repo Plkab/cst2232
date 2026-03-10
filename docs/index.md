@@ -108,6 +108,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 
 - [Création Projet sous Keil uVision](ressources/demarrerKiel.md)
 - [Configuration FreeRTOS sous Kiel pour STM32F4](ressources/configRtosKiel.md)
+- [Liste des composants du cours CST2232](ressources/listeComposants.md)
 - [Introduction au Langage C embarqué](ressources/langageC.md)
 - [Codes source Github](https://github.com/Plkab/code-demo-cours)
 <br>
