@@ -71,12 +71,7 @@
 <br></p>
 <h3 id="introduction-au-bus-i2c"><strong>Introduction au bus I2C</strong></h3>
 <p>Le <strong>bus I2C (Inter-Integrated Circuit)</strong> est un protocole de communication série <strong>synchrone</strong> très répandu pour connecter des périphériques à <strong>faible vitesse</strong> (capteurs, mémoires EEPROM, écrans OLED, etc.) à un microcontrôleur.</p>
-<p>Il ne nécessite que <strong>deux fils</strong> :</p>
-<ul>
-<li><strong>SCL</strong> : ligne d’horloge  </li>
-<li><strong>SDA</strong> : ligne de données  </li>
-</ul>
-<p>Le protocole permet de connecter <strong>plusieurs périphériques esclaves sur le même bus</strong>, chacun possédant une <strong>adresse unique</strong>.</p>
+<p>Il ne nécessite que <strong>deux fils</strong> <strong>SCL</strong> ligne d’horloge et <strong>SDA</strong> ligne de données. Le protocole permet de connecter <strong>plusieurs périphériques esclaves sur le même bus</strong>, chacun possédant une <strong>adresse unique</strong>.</p>
 <p>Le <strong>STM32F401</strong> intègre plusieurs interfaces <strong>I2C matérielles</strong>, ce qui facilite la communication avec des capteurs et modules externes.</p>
 <p>Dans ce chapitre, nous apprendrons à :</p>
 <ul>
@@ -93,11 +88,41 @@
 <p>Les deux lignes du bus (SDA et SCL) sont tirées au <strong>niveau logique</strong> haut par des <strong>résistances de tirage (pull-up)</strong>. Les dispositifs connectés au bus utilisent des sorties <strong>open-drain</strong>, ce qui signifie qu'ils peuvent tirer la <strong>ligne à 0</strong>, mais jamais la forcer à 1. C'est ce qui permet d'éviter les courts-circuits lorsque plusieurs périphériques tentent de communiquer simultanément.</p>
 <p>Toutes les communications sont <strong>initiées par le maître</strong>.</p>
 <p><strong>Trame élémentaire I2C</strong></p>
-<p>Une communication I2C se déroule selon une séquence bien définie.</p>
-<ol>
-<li><strong>Condition START</strong></li>
-</ol>
+<p>Une communication I2C se déroule selon une séquence bien définie. Chaque bit de données est transféré pendant un cycle d'horloge. La règle fondamentale est : la ligne SDA ne doit changer d'état que lorsque SCL est à l'état bas. La seule exception concerne les conditions START et STOP.</p>
+<p>Une trame I2C se compose d'un START, d'un octet d'adresse (7 bits d'adresse + 1 bit R/W), d'un ou plusieurs octets de données, et d'un STOP. Chaque octet (adresse ou donnée) est suivi d'un bit d'acquittement (ACK) généré par le récepteur.</p>
+<p>Octet d'adresse :</p>
+<ul>
+<li>Bits 7-1 : adresse de l'esclave (7 bits).</li>
+<li>Bit 0 (R/W) : 0 = écriture, 1 = lecture.</li>
+</ul>
+<p>L'esclave reconnaît son adresse en tirant SDA à 0 pendant le 9e cycle d'horloge (ACK). S'il ne répond pas (NACK), le maître peut générer un STOP ou un RESTART.</p>
+<p>Octets de données : transmis de la même manière, avec ACK après chaque octet (sauf le dernier en lecture, où le maître envoie un NACK pour signaler la fin).</p>
+<p><strong>Écriture simple (maître → esclave)</strong></p>
+<ul>
+<li>START</li>
+<li>Envoi de l'adresse esclave + bit 0 (écriture) → ACK</li>
+<li>Envoi du registre (ou adresse mémoire) → ACK</li>
+<li>Envoi de la donnée → ACK</li>
+<li>STOP</li>
+</ul>
+<p><strong>Lecture simple (esclave → maître)</strong></p>
+<ul>
+<li>START</li>
+<li>Envoi de l'adresse esclave + bit 0 (écriture) → ACK</li>
+<li>Envoi du registre à lire → ACK</li>
+<li>RESTART</li>
+<li>Envoi de l'adresse esclave + bit 1 (lecture) → ACK</li>
+<li>Lecture de la donnée (le maître envoie un NACK après le dernier octet)</li>
+<li>
+<p>STOP</p>
+</li>
+<li>
+<p><strong>Condition START</strong></p>
+</li>
+</ul>
 <p>La communication commence lorsque <strong>SDA passe de 1 à 0</strong> alors que <strong>SCL est à 1</strong>. Cela indique aux périphériques qu'une nouvelle transaction commence. Cela indique aux périphériques qu'une <strong>nouvelle transaction</strong> commence.</p>
+<p>Ces conditions sont toujours générées par le maître. Entre un START et un STOP, le bus est considéré comme occupé.</p>
+<p>Une condition RESTART (ou répétée) permet d'initier une nouvelle transaction sans relâcher le bus (utile pour changer le sens de transfert).</p>
 <ol>
 <li><strong>Envoi de l’adresse</strong></li>
 </ol>
@@ -122,9 +147,12 @@ En <strong>lecture :</strong> Esclave → Maître</p>
 <li><strong>Condition STOP</strong></li>
 </ol>
 <p>La communication se termine lorsque SDA passe de 0 à 1 alors que SCL est à 1. Cela libère le bus pour une autre communication.</p>
+<p><strong>Accès séquentiel (burst)</strong></p>
+<p>La plupart des périphériques I2C incrémentent automatiquement l'adresse du registre après chaque accès, permettant des lectures/écritures multi‑octets sans avoir à renvoyer l'adresse à chaque fois.</p>
 <hr />
 <p><br></p>
 <h3 id="registres-importants-de-li2c-sur-stm32f4"><strong>Registres importants de l’I2C sur STM32F4</strong></h3>
+<p>Le STM32F401 intègre trois contrôleurs I2C. Leurs adresses de base sont :</p>
 <table>
 <thead>
 <tr>
@@ -168,12 +196,32 @@ En <strong>lecture :</strong> Esclave → Maître</p>
 </tbody>
 </table>
 <p><strong>Vitesses standard du bus I2C</strong></p>
-<p>Les vitesses les plus utilisées sont :</p>
+<p>Le bus <strong>I2C</strong> supporte deux modes : <strong>Standard (100 kHz)</strong> et <strong>Fast (400 kHz)</strong>. La vitesse est déterminée par :</p>
 <ul>
-<li><strong>Standard mode : 100 kHz</strong></li>
-<li><strong>Fast mode : 400 kHz</strong></li>
-<li><strong>Fast mode plus : 1 MHz</strong> (selon les périphériques)</li>
+<li>La fréquence de l'<strong>APB</strong> (généralement 42 MHz ou 84 MHz selon la configuration du système).</li>
+<li>Le registre <strong>I2C_CCR</strong> (Clock Control Register).</li>
+<li>Le registre <strong>I2C_TRISE</strong> (Maximum Rise Time).</li>
 </ul>
+<p><strong>Exemple pour 100 kHz avec APB1 = 42 MHz :</strong></p>
+<ol>
+<li>Dans <strong>I2C_CR2</strong>, programmer <code>FREQ</code> avec la valeur de l'APB en MHz (42 → <code>0x2A</code>).</li>
+<li>En mode <strong>Standard</strong> ($F/S = 0$ dans <code>I2C_CCR</code>), la période de l'horloge est :<br />
+    $T_{SCL} = 2 \times CCR \times T_{PCLK}$</li>
+<li>Pour obtenir 100 kHz ($T_{SCL} = 10 \mu s$), on calcule :<br />
+    $CCR = \frac{T_{SCL}}{2 \times T_{PCLK}} = \frac{10 \mu s}{2 \times 23,8 ns} \approx 210$<br />
+    Soit <strong>CCR = 210</strong> (<code>0xD2</code>).</li>
+<li><strong>I2C_TRISE</strong> doit être programmé avec le temps de montée maximum (1000 ns) divisé par $T_{PCLK} + 1$ :<br />
+    $TRISE = \frac{1000 ns}{23,8 ns} + 1 \approx 42 + 1 = 43$</li>
+</ol>
+<p><strong>Exemple pour 100 kHz avec APB1 = 84 MHz :</strong></p>
+<ul>
+<li>$T_{PCLK} = 11,9 ns$</li>
+<li><strong>CCR</strong> = $10 \mu s / (2 \times 11,9 ns) \approx 420$ → <code>0x1A4</code></li>
+<li><strong>TRISE</strong> = $1000 ns / 11,9 ns + 1 \approx 84 + 1 = 85$</li>
+</ul>
+<blockquote>
+<p><strong>Note :</strong> Le calcul exact dépend de la configuration de vos horloges. Les exemples ci-dessus sont donnés à titre indicatif. Adaptez les valeurs à votre système.</p>
+</blockquote>
 <p>Le bus I2C est particulièrement adapté pour :</p>
 <ul>
 <li>les capteurs (température, pression, humidité) ;</li>

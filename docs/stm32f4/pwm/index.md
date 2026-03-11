@@ -13,7 +13,7 @@
 
 ### **Introduction**
 
-La modulation de largeur d’impulsion (**PWM** – *Pulse Width Modulation*) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique. En faisant varier le rapport cyclique (*duty cycle*) d’un signal périodique, on peut par exemple :
+La modulation de largeur d’impulsion (**PWM** – *Pulse Width Modulation*) est une technique largement utilisée en électronique pour contrôler la puissance délivrée à une charge analogique à l’aide d’un signal numérique, notamment les moteurs à courant continu (DC). En faisant varier le rapport cyclique (*duty cycle*) d’un signal périodique, on peut par exemple :
 
 - régler la luminosité d’une LED ;
 - commander la vitesse d’un moteur à courant continu ;
@@ -25,18 +25,33 @@ Le STM32F401 dispose de plusieurs timers capables de générer des signaux PWM s
 ---
 <br>
 
+
+
 ### **Principe de la PWM**
 
-Un signal **PWM (Pulse Width Modulation)** est caractérisé par :
+Un signal **PWM** (Pulse Width Modulation) est caractérisé par sa période $T$ (ou sa fréquence $f = 1/T$) et son rapport cyclique $\alpha = t_{on} / T$. La valeur moyenne du signal est proportionnelle à $\alpha$.
 
-- une **période** \(T\) (ou une **fréquence** \(f = 1/T\)) ;
-- un **rapport cyclique**
+Dans un microcontrôleur, la PWM est générée par un **timer**. Le compteur (**CNT**) s’incrémente à chaque coup d’horloge jusqu’à la valeur de reload (**ARR**). La sortie est commutée lorsque la valeur du compteur atteint une valeur de comparaison stockée dans le registre **CCR**. 
 
-\[
-\alpha = \frac{t_{on}}{T}
-\]
+Le mode **PWM1** (le plus courant) fonctionne ainsi :
+*   Tant que **CNT < CCR**, la sortie est active (par exemple à 1) ;
+*   Quand **CNT ≥ CCR**, la sortie devient inactive (0) ;
+*   À **CNT = ARR**, le compteur est remis à zéro et le cycle recommence.
 
-(souvent exprimé en pourcentage).
+Formules clés :
+
+La fréquence de la PWM est donnée par :
+$$f_{PWM} = \frac{f_{timer}}{ARR + 1}$$
+
+Avec la fréquence du timer définie par :
+$$f_{timer} = \frac{f_{ck}}{PSC + 1}$$
+
+Où :
+*   $f_{ck}$ : Fréquence de l’horloge source du timer.
+*   **PSC** : Valeur du prédiviseur (Prescaler).
+*   **ARR** : Valeur de l'auto-reload (période).
+*   **CCR** : Valeur de comparaison (définit le rapport cyclique).
+
 
 La **valeur moyenne du signal** est proportionnelle au rapport cyclique.  
 Par exemple, pour une LED, la luminosité perçue varie avec la valeur moyenne de la tension appliquée.
@@ -99,6 +114,8 @@ Plus la valeur de `ARR` est grande, plus la **résolution de la PWM est fine**, 
 
 ### **Registres impliqués dans la génération de PWM**
 
+Le STM32F401 possède plusieurs timers : TIM1, TIM2, TIM3, TIM4, TIM5, TIM9, etc. Les timers généralistes (TIM2, TIM3, TIM4, TIM5) peuvent être utilisés en PWM. TIM2 est un timer 32 bits, les autres sont 16 bits. Les registres importants sont 
+
 | Registre | Rôle |
 |--------|------|
 | `TIMx_CR1` | Contrôle du timer (activation, sens de comptage, alignement) |
@@ -116,12 +133,25 @@ Plus la valeur de `ARR` est grande, plus la **résolution de la PWM est fine**, 
 
 ### **Configuration simple d’une PWM sur PA5 (TIM2_CH1)**
 
+Pour une PWM simple, on utilise généralement le mode PWM1 avec comptage ascendant (edge‑aligned). La configuration se fait en plusieurs étapes :
+
+- Activer l'horloge du timer (via RCC_APB1ENR ou RCC_APB2ENR).
+- Configurer la broche en mode alternate function pour la sortie du timer.
+- Régler le prescaler et la période (ARR).
+- Configurer le mode PWM dans CCMRx (bits OCxM = 110 pour PWM1, et OCxPE = 1 pour préchargement).
+- Activer la sortie dans CCER (bit CCxE).
+- Démarrer le timer (bit CEN dans CR1).
+
+
+
 L’exemple suivant génère un signal **PWM à 1 kHz** sur la broche **PA5**  
 (qui peut être utilisée comme **TIM2_CH1** sur certains boîtiers).
 
 Sur la carte **Black Pill**, PA5 est souvent connectée à la **LED utilisateur**, mais il est conseillé de **vérifier le brochage dans le datasheet**.
 
-Le **rapport cyclique est fixé à 50 %**.
+Exemple : PWM sur PA5 avec TIM2_CH1
+
+PA5 peut être utilisée comme TIM2_CH1 (AF1). Nous allons générer une PWM à 1 kHz avec un rapport cyclique de 50 %.
 
 ```c
 #include "stm32f4xx.h"
@@ -157,7 +187,17 @@ void PWM_Init(void){
     // 5. Activer le timer
     TIM2->CR1 |= TIM_CR1_CEN;
 }
+
+int main(void) {
+    PWM_Init();
+
+    while (1) {
+        // La PWM est générée automatiquement
+    }
+}
 ```
+
+Le calcul de la période avec ARR = 999 donne une fréquence de 1 kHz si f_timer = 1 MHz. La résolution du rapport cyclique est de 1000 niveaux.
 
 **Modification du rapport cyclique**
 
@@ -166,6 +206,7 @@ Pour modifier le **rapport cyclique pendant l'exécution**, il suffit d’écrir
 ```c
 TIM2->CCR1 = nouvelle_valeur;
 ```
+La valeur doit être comprise entre 0 et ARR.
 
 Exemple :
 

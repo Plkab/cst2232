@@ -243,9 +243,259 @@ Les **valeurs de consigne** peuvent provenir d’une **interface homme-machine**
 - un **bouton** ou une interface série
 - une **application externe** (PC, smartphone, etc.)
 
+---
+<br>
+
+
+
+
+
+### **Contrôle d’un moteur DC**
+
+**Pont en H (L298N)**
+
+Un moteur DC peut tourner dans les deux sens en inversant la polarity de l’alimentation. Un **pont en H** est un circuit constitué de quatre interrupteurs (transistors ou relais) qui permet de contrôler le sens et la vitesse. Le circuit intégré **L298N** est un double pont en H capable de piloter deux moteurs DC ou un moteur pas‑à‑pas.
+
+**Brochage typique du L298N pour un moteur :**
+
+*   **IN1, IN2** : commandes de sens (logique)
+*   **ENA** : enable PWM (permet de moduler la vitesse)
+*   **OUT1, OUT2** : vers le moteur
+*   **VS** : alimentation moteur (jusqu’à 12 V)
+*   **VSS** : alimentation logique (5 V)
+
+**Table de vérité (sens) :**
+
+
+| IN1 | IN2 | ENA | Moteur |
+| :--- | :--- | :--- | :--- |
+| 0 | 0 | 1 | Frein (roue bloquée) |
+| 0 | 1 | 1 | Tourne dans un sens |
+| 1 | 0 | 1 | Tourne dans l’autre sens |
+| 1 | 1 | 1 | Frein |
+| x | x | 0 | Arrêt (roue libre) |
+
+La broche **ENA** peut recevoir un signal PWM pour moduler la vitesse. Les broches **IN1** et **IN2** sont des sorties logiques (0 ou 1).
+
+**Connexion à la Black Pill**
+
+On utilisera par exemple :
+*   **PA5** pour la PWM (TIM2_CH1) connectée à **ENA**
+*   **PA6** et **PA7** pour les commandes de sens (**IN1, IN2**)
+*   Alimentation moteur séparée (attention à ne pas dépasser les courants supportés par le L298N et à utiliser une alimentation externe).
+
+**Schéma de câblage :**
+
+```text
+Black Pill      L298N
+   PA5  ----->  ENA
+   PA6  ----->  IN1
+   PA7  ----->  IN2
+   GND  ----->  GND commun (alimentation logique)
+```
+
+```c
+#include "stm32f4xx.h"
+
+void PWM_Init(void) {
+    // même code que précédemment pour PA5 en PWM
+}
+
+void GPIO_Init(void) {
+    // PA6, PA7 en sortie
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA->MODER |= (1 << (6*2)) | (1 << (7*2));
+    GPIOA->OTYPER &= ~((1 << 6) | (1 << 7)); // push-pull
+    // initialiser à 0 (moteur arrêté)
+    GPIOA->ODR &= ~((1 << 6) | (1 << 7));
+}
+
+void Motor_SetSpeed(int8_t speed) {
+    // speed compris entre -100 et +100 (signe = sens)
+    uint16_t duty;
+    if (speed == 0) {
+        // arrêt : les deux IN à 0, ENA = 0
+        GPIOA->ODR &= ~((1 << 6) | (1 << 7));
+        TIM2->CCR1 = 0;
+    } else if (speed > 0) {
+        // sens 1 : IN1=1, IN2=0
+        GPIOA->ODR |= (1 << 6);
+        GPIOA->ODR &= ~(1 << 7);
+        duty = (uint16_t)((uint32_t)speed * TIM2->ARR / 100);
+        TIM2->CCR1 = duty;
+    } else { // speed < 0
+        // sens inverse : IN1=0, IN2=1
+        GPIOA->ODR &= ~(1 << 6);
+        GPIOA->ODR |= (1 << 7);
+        duty = (uint16_t)((uint32_t)(-speed) * TIM2->ARR / 100);
+        TIM2->CCR1 = duty;
+    }
+}
+
+int main(void) {
+    PWM_Init();
+    GPIO_Init();
+
+    while (1) {
+        // exemple : faire tourner à 50 % dans un sens pendant 2 s, puis à 75 % dans l'autre
+        Motor_SetSpeed(50);
+        for (int i = 0; i < 2000000; i++); // attente simple
+        Motor_SetSpeed(-75);
+        for (int i = 0; i < 2000000; i++);
+        Motor_SetSpeed(0);
+        for (int i = 0; i < 1000000; i++);
+    }
+}
+
+```
 
 ---
 <br>
+
+
+
+### **Projet intégrateur : contrôle de vitesse par potentiomètre**
+
+Nous allons lire la valeur d’un potentiomètre sur PA0 (ADC), la convertir en rapport cyclique, et commander le moteur en conséquence. La vitesse sera affichée sur UART.
+
+**Matériel**
+
+- Potentiomètre 10 kΩ connecté entre 3,3 V et GND, avec le curseur sur PA0.
+- Moteur DC (par exemple 6 V) avec driver L298N.
+- Alimentation externe pour le moteur.
+
+```c
+#include "stm32f4xx.h"
+#include <stdio.h>
+
+void USART2_Init(void);
+void USART2_SendChar(char c);
+int fputc(int ch, FILE *f);
+void ADC_Init(void);
+uint16_t ADC_Read(void);
+void PWM_Init(void);
+void GPIO_Init(void);
+void Motor_SetSpeed(int8_t speed);
+
+int main(void) {
+    uint16_t adc_val;
+    int8_t speed;
+
+    USART2_Init();
+    ADC_Init();
+    PWM_Init();
+    GPIO_Init();
+
+    printf("Controle de moteur DC par potentiometre\r\n");
+
+    while (1) {
+        adc_val = ADC_Read();                 // 0..4095
+        // Convertir en vitesse -100..+100 avec seuil mort
+        if (adc_val < 1840) {                  // zone morte basse
+            speed = (int8_t)((adc_val - 2048) / 18); // environ -100 à -1
+            if (speed > -5) speed = -5;
+        } else if (adc_val > 2256) {            // zone morte haute
+            speed = (int8_t)((adc_val - 2048) / 18); // environ 1 à 100
+            if (speed < 5) speed = 5;
+        } else {
+            speed = 0;                         // zone morte centrale
+        }
+
+        Motor_SetSpeed(speed);
+        printf("ADC = %4u, speed = %4d\r\n", adc_val, speed);
+        for (int i = 0; i < 500000; i++); // délai simple
+    }
+}
+
+void ADC_Init(void) {
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA->MODER |= (3U << (0*2));   // PA0 analogique
+    ADC1->CR1 = 0;
+    ADC1->SMPR2 = (7 << 0);          // temps d'échantillonnage max
+    ADC1->SQR3 = 0;                   // canal 0
+    ADC1->CR2 |= ADC_CR2_ADON;
+}
+
+uint16_t ADC_Read(void) {
+    ADC1->CR2 |= ADC_CR2_SWSTART;
+    while (!(ADC1->SR & ADC_SR_EOC));
+    return ADC1->DR;
+}
+
+void PWM_Init(void) {
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    GPIOA->MODER &= ~(3U << (5*2));
+    GPIOA->MODER |=  (2U << (5*2));
+    GPIOA->AFR[0] &= ~(0xF << (5*4));
+    GPIOA->AFR[0] |=  (1 << (5*4));
+
+    TIM2->PSC = 84 - 1;          // 1 MHz
+    TIM2->ARR = 1000 - 1;        // 1 kHz
+    TIM2->CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1PE;
+    TIM2->CCER |= TIM_CCER_CC1E;
+    TIM2->CR1 |= TIM_CR1_CEN;
+}
+
+void GPIO_Init(void) {
+    // PA6, PA7 en sortie pour IN1, IN2
+    GPIOA->MODER |= (1 << (6*2)) | (1 << (7*2));
+    GPIOA->OTYPER &= ~((1 << 6) | (1 << 7));
+    GPIOA->ODR &= ~((1 << 6) | (1 << 7));
+}
+
+void Motor_SetSpeed(int8_t speed) {
+    uint16_t duty;
+    if (speed == 0) {
+        GPIOA->ODR &= ~((1 << 6) | (1 << 7));
+        TIM2->CCR1 = 0;
+    } else if (speed > 0) {
+        GPIOA->ODR |= (1 << 6);
+        GPIOA->ODR &= ~(1 << 7);
+        duty = (uint16_t)((uint32_t)speed * TIM2->ARR / 100);
+        TIM2->CCR1 = duty;
+    } else {
+        GPIOA->ODR &= ~(1 << 6);
+        GPIOA->ODR |= (1 << 7);
+        duty = (uint16_t)((uint32_t)(-speed) * TIM2->ARR / 100);
+        TIM2->CCR1 = duty;
+    }
+}
+
+void USART2_Init(void) {
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    GPIOA->MODER |= (2 << (2*2)) | (2 << (3*2));
+    GPIOA->AFR[0] |= (7 << (2*4)) | (7 << (3*4));
+
+    USART2->BRR = 84000000 / 115200;
+    USART2->CR1 = USART_CR1_TE | USART_CR1_UE;
+}
+
+void USART2_SendChar(char c) {
+    while (!(USART2->SR & USART_SR_TXE));
+    USART2->DR = c;
+}
+
+int fputc(int ch, FILE *f) {
+    USART2_SendChar(ch);
+    return ch;
+}
+```
+
+Explication :
+
+1. La valeur ADC est lue sur PA0. On définit une zone morte autour de 2048 (milieu de l’échelle) pour éviter des fluctuations à vitesse nulle.
+2. La vitesse est convertie en signe et valeur absolue pour la commande du pont en H.
+3. La PWM est générée sur PA5 (TIM2_CH1).
+4. L’UART2 affiche les valeurs pour surveillance.
+
+---
+<br>
+
 
 
 ### **Projet : Régulation de vitesse d’un moteur DC** {#projet-pid-moteur}
