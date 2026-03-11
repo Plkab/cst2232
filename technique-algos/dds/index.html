@@ -71,12 +71,357 @@
 <br></p>
 <h3 id="introduction"><strong>Introduction</strong></h3>
 <p>La <strong>synthèse numérique directe (DDS)</strong> est une technique de génération de signaux analogiques (sinus, triangle, carré, etc.) à partir d’une horloge de référence et d’une table d’onde. Elle permet de produire des fréquences très précises et facilement ajustables avec une grande résolution. On la trouve dans les générateurs de signaux, les synthétiseurs de fréquence, les instruments de mesure, etc.</p>
-<p>Le STM32F401 ne dispose pas de convertisseur numérique-analogique (DAC) interne. Pour générer un signal analogique, nous utiliserons un <strong>DAC externe</strong> via le bus SPI. Le <strong>MCP4822</strong> de Microchip est un DAC double canal 12 bits avec interface SPI, très simple d’utilisation. Dans ce chapitre, nous allons :</p>
+<p>Le STM32F401 ne dispose pas de convertisseur numérique-analogique (DAC) interne. Pour générer un signal analogique (sinus, rampe, tension variable), nous utiliserons un <strong>DAC externe</strong> communiquant via le bus SPI. Le <strong>MCP4822</strong> de Microchip est un DAC double canal 12 bits avec interface SPI, très simple d’utilisation. Il permet de générer des tensions analogiques de 0 à Vref (référence interne 2,048 V ou externe jusqu'à 5 V).</p>
+<p>Dans ce chapitre, nous allons :</p>
 <ul>
 <li>Comprendre le principe de la DDS.</li>
 <li>Configurer le MCP4822 pour recevoir des données via SPI.</li>
 <li>Implémenter un générateur de signaux sinusoïdaux avec contrôle de fréquence.</li>
 <li>Intégrer le tout dans une tâche FreeRTOS pour une génération en temps réel.</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="le-dac-mcp4822"><strong>Le DAC MCP4822</strong></h3>
+<p><strong>Caractéristiques générales</strong></p>
+<ul>
+<li><strong>Double canal</strong> (A et B) indépendants  </li>
+<li><strong>Résolution 12 bits</strong> (0 à 4095)  </li>
+<li><strong>Tension de référence interne</strong> : 2,048 V (précision ±2 %)  </li>
+<li>Possibilité d'utiliser une <strong>référence externe</strong> (jusqu'à 5 V)  </li>
+<li><strong>Sortie rail-to-rail</strong>  </li>
+<li><strong>Interface SPI</strong> (mode 0,0 – CPOL = 0, CPHA = 0)  </li>
+<li><strong>Tension d'alimentation</strong> : 2,7 V à 5,5 V  </li>
+<li>Sur la <strong>Black Pill</strong>, on utilise généralement <strong>3,3 V</strong>  </li>
+<li><strong>Faible consommation</strong></li>
+</ul>
+<p><strong>Brochage</strong></p>
+<table>
+<thead>
+<tr>
+<th>Broche</th>
+<th>Nom</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>VDD</td>
+<td>Alimentation (2,7-5,5 V)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CS</td>
+<td>Chip Select (actif bas)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SCK</td>
+<td>Horloge SPI</td>
+</tr>
+<tr>
+<td>4</td>
+<td>SDI</td>
+<td>Data In (MOSI)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>VOUTA</td>
+<td>Sortie analogique canal A</td>
+</tr>
+<tr>
+<td>6</td>
+<td>VOUTB</td>
+<td>Sortie analogique canal B</td>
+</tr>
+<tr>
+<td>7</td>
+<td>VREF</td>
+<td>Tension de référence (si référence externe)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>GND</td>
+<td>Masse</td>
+</tr>
+</tbody>
+</table>
+<p>Sur la <strong>Black Pill</strong>, on connectera :</p>
+<ul>
+<li><strong>VDD → 3,3 V</strong>  </li>
+<li><strong>GND → GND</strong>  </li>
+<li><strong>CS → PA4</strong> (GPIO utilisé pour la sélection logicielle)  </li>
+<li><strong>SCK → PA5</strong> (SPI1_SCK)  </li>
+<li><strong>SDI → PA7</strong> (SPI1_MOSI)  </li>
+<li><strong>VOUTA / VOUTB →</strong> oscilloscope ou circuit cible  </li>
+</ul>
+<p>La broche <strong>VREF</strong> peut être laissée <strong>flottante</strong> pour utiliser la <strong>référence interne (2,048 V)</strong>.</p>
+<p>Si l’on souhaite une <strong>pleine échelle différente</strong>, on peut appliquer une <strong>tension de référence externe</strong> (maximum <strong>5 V</strong>).</p>
+<p><strong>Principe de fonctionnement</strong></p>
+<p>Le <strong>MCP4822</strong> reçoit une <strong>trame SPI de 16 bits</strong>.</p>
+<p>Structure de la trame :</p>
+<ul>
+<li><strong>Bit 15</strong> : sélection du canal  </li>
+<li><code>0</code> = canal <strong>A</strong>  </li>
+<li>
+<p><code>1</code> = canal <strong>B</strong></p>
+</li>
+<li>
+<p><strong>Bit 14</strong> : gain  </p>
+</li>
+<li><code>0</code> = gain <strong>1</strong> (Vref)  </li>
+<li><code>1</code> = gain <strong>2</strong> (2 × Vref)</li>
+</ul>
+<p>On met souvent ce bit à <strong>1</strong> pour utiliser la pleine échelle <strong>4,096 V</strong> avec la référence interne.</p>
+<ul>
+<li><strong>Bit 13</strong> : shutdown  </li>
+<li><code>1</code> = sortie active  </li>
+<li>
+<p><code>0</code> = sortie haute impédance</p>
+</li>
+<li>
+<p><strong>Bits 12-1</strong> : valeur numérique <strong>12 bits</strong></p>
+</li>
+</ul>
+<p>Les données sont <strong>justifiées à gauche</strong> :</p>
+<ul>
+<li>bits <strong>12-1 de la trame</strong></li>
+<li>
+<p>correspondent aux bits <strong>11-0 de la donnée</strong></p>
+</li>
+<li>
+<p><strong>Bit 0</strong> : ignoré (toujours <code>0</code>)</p>
+</li>
+</ul>
+<p><strong>Construction du mot SPI</strong></p>
+<p>En pratique, on construit un mot <strong>uint16_t</strong> avec :</p>
+<ul>
+<li>les <strong>bits de contrôle</strong></li>
+<li>la <strong>valeur décalée de 4 bits vers la gauche</strong></li>
+</ul>
+<p>car les <strong>bits 12-1 de la trame correspondent aux bits 15-4 du mot</strong>.</p>
+<p>Formule :</p>
+<pre><code class="language-c">word = (canal &lt;&lt; 15) | (gain &lt;&lt; 14) | (shutdown &lt;&lt; 13) | ((value &amp; 0xFFF) &lt;&lt; 4)
+</code></pre>
+<p>Exemple Configuration :</p>
+<ul>
+<li>canal <strong>A</strong></li>
+<li><strong>gain = 2</strong> (bit14 = 1)</li>
+<li><strong>shutdown = 1</strong></li>
+<li>valeur <strong>2048</strong> (mi-échelle)</li>
+</ul>
+<p>Calcul :</p>
+<pre><code class="language-c">word = (0&lt;&lt;15) | (1&lt;&lt;14) | (1&lt;&lt;13) | (2048&lt;&lt;4)
+</code></pre>
+<p>2048 &lt;&lt; 4 = 32768 = 0x8000</p>
+<pre><code class="language-c">word = 0x6000 | 0x8000
+</code></pre>
+<pre><code class="language-c">word = 0xE000
+</code></pre>
+<p>Le mot SPI transmis est donc : 0xE000</p>
+<p><strong>Tension de sortie</strong></p>
+<p>Avec la <strong>référence interne 2,048 V</strong> :</p>
+<ul>
+<li><strong>gain = 1</strong> → pleine échelle = <strong>2,048 V</strong></li>
+<li><strong>gain = 2</strong> → pleine échelle = <strong>4,096 V</strong></li>
+</ul>
+<p>Si l’alimentation est <strong>3,3 V</strong>, la sortie ne pourra pas dépasser <strong>3,3 V</strong>.</p>
+<p>Dans beaucoup d'applications avec la <strong>Black Pill</strong>, on utilise <strong>gain = 1</strong> pour rester dans les limites d'alimentation.</p>
+<p><strong>Relation numérique → tension</strong></p>
+<p>La tension de sortie est donnée par :</p>
+<pre><code class="language-markdown">\[
+V_{out} =
+V_{ref} \times gain \times \frac{D}{4096}
+\]
+
+avec :
+
+- \(D\) : valeur numérique (**0 à 4095**)
+- \(V_{ref}\) : tension de référence
+- **gain** : facteur d'amplification interne
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="configuration-du-spi-sur-stm32f401"><strong>Configuration du SPI sur STM32F401</strong></h3>
+<p>Le module <strong>SPI1</strong> du <strong>STM32F401</strong> sera utilisé en <strong>mode maître</strong>, avec une fréquence d'horloge adaptée (par exemple <strong>1 MHz</strong>).</p>
+<p>Les broches utilisées sont :</p>
+<ul>
+<li><strong>PA5</strong> → SCK  </li>
+<li><strong>PA7</strong> → MOSI  </li>
+<li><strong>PA4</strong> → CS (géré en GPIO)</li>
+</ul>
+<p><strong>Initialisation du SPI1</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void SPI1_Init(void) {
+    // 1. Activer les horloges GPIOA et SPI1
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+    // 2. Configurer PA5 (SCK) et PA7 (MOSI) en alternate function AF5
+    GPIOA-&gt;MODER &amp;= ~((3U &lt;&lt; (5*2)) | (3U &lt;&lt; (7*2)));
+    GPIOA-&gt;MODER |=  ((2U &lt;&lt; (5*2)) | (2U &lt;&lt; (7*2))); // 10 = Alternate function
+
+    GPIOA-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (5*4)) | (0xF &lt;&lt; (7*4)));
+    GPIOA-&gt;AFR[0] |=  ((5 &lt;&lt; (5*4)) | (5 &lt;&lt; (7*4)));  // AF5 pour SPI1
+
+    // 3. Configurer PA4 en sortie GPIO pour CS
+    GPIOA-&gt;MODER |= (1U &lt;&lt; (4*2));   // sortie
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4);          // CS = 1 par défaut (inactif)
+
+    // 4. Configuration SPI1 : maître, 8 bits, CPOL=0, CPHA=0
+    // fPCLK / 16 (≈ 1 MHz si APB2 = 84 MHz)
+
+    SPI1-&gt;CR1 = SPI_CR1_MSTR | SPI_CR1_BR_2 | SPI_CR1_BR_1; // BR = 011 -&gt; division par 16
+    SPI1-&gt;CR1 |= SPI_CR1_SSM | SPI_CR1_SSI;                 // gestion logicielle du CS
+    SPI1-&gt;CR1 |= SPI_CR1_SPE;                               // activation SPI
+}
+</code></pre>
+<p>Explication</p>
+<p>Les bits BR_2 et BR_1 donnent : 𝐵𝑅 = 011 soit une division par 16.
+Avec APB2 = 84 MHz, la fréquence SPI est :</p>
+<p><code>fSCK​ = 84MHz​/16=5.25MHz</code></p>
+<p>Cette fréquence est acceptable pour le MCP4822, qui supporte jusqu’à 20 MHz.</p>
+<p>On peut cependant choisir une division plus grande si l'on souhaite ralentir la communication.</p>
+<p>Le mode SSM (Software Slave Management) avec SSI permet de désactiver la gestion matérielle du CS.
+La broche PA4 sera donc pilotée manuellement par logiciel.</p>
+<p><strong>Fonction d'émission 16 bits</strong></p>
+<p>Le MCP4822 attend une trame de 16 bits.</p>
+<p>Deux solutions existent :</p>
+<ul>
+<li>configurer le SPI en mode 16 bits</li>
+<li>rester en mode 8 bits et envoyer deux octets successifs</li>
+</ul>
+<p>Nous choisissons ici le mode 8 bits, plus simple et compatible.</p>
+<pre><code class="language-c">void SPI1_Write16(uint16_t data) {
+
+    while (!(SPI1-&gt;SR &amp; SPI_SR_TXE));   // attendre buffer vide
+    SPI1-&gt;DR = (data &gt;&gt; 8) &amp; 0xFF;      // envoi octet poids fort
+
+    while (!(SPI1-&gt;SR &amp; SPI_SR_TXE));   // attendre buffer vide
+    SPI1-&gt;DR = data &amp; 0xFF;             // envoi octet poids faible
+
+    while (SPI1-&gt;SR &amp; SPI_SR_BSY);      // attendre fin transmission
+}
+</code></pre>
+<p>Remarque</p>
+<p>On peut aussi configurer le SPI en mode 16 bits (bit DFF dans CR1) et envoyer directement un uint16_t.</p>
+<p>Le MCP4822 accepte les trames 16 bits, mais l'approche 8 bits est plus universelle et compatible avec davantage de périphériques SPI.</p>
+<hr />
+<p><br></p>
+<h3 id="fonction-decriture-sur-le-dac"><strong>Fonction d'écriture sur le DAC</strong></h3>
+<pre><code class="language-c">void MCP4822_Write(uint8_t channel, uint16_t value) {
+
+    // Construire la trame
+    uint16_t word = 0;
+
+    word |= (channel &lt;&lt; 15);        // canal 0 ou 1
+    word |= (1 &lt;&lt; 14);              // gain = 2
+    word |= (1 &lt;&lt; 13);              // shutdown = 1 (sortie active)
+    word |= ((value &amp; 0xFFF) &lt;&lt; 4); // valeur 12 bits
+
+    // Activer CS
+    GPIOA-&gt;ODR &amp;= ~(1 &lt;&lt; 4);
+
+    // Envoyer la trame SPI
+    SPI1_Write16(word);
+
+    // Désactiver CS
+    GPIOA-&gt;ODR |= (1 &lt;&lt; 4);
+}
+</code></pre>
+<p>Remarque sur le gain</p>
+<p>Avec la référence interne du MCP4822 : 𝑉𝑟𝑒𝑓=2.048
+Si : gain = 2 la pleine échelle devient : 𝑉𝑜𝑢𝑡,𝑚𝑎𝑥=4.096
+ 
+Cependant, si le circuit est alimenté en 3.3 V, la sortie ne pourra pas dépasser : 𝑉𝐷𝐷=3.3V</p>
+<p>Dans beaucoup d'applications avec la Black Pill, on choisit donc : gain = 1 ce qui donne une pleine échelle : 𝑉𝑜𝑢𝑡,𝑚𝑎𝑥=2.048
+ Le choix dépend donc de la plage de tension souhaitée.</p>
+<hr />
+<p><br></p>
+<h3 id="generation-de-signaux-analogiques"><strong>Génération de signaux analogiques</strong></h3>
+<p><strong>Rampe (sawtooth)</strong></p>
+<p>Le programme suivant génère une rampe de 0 à 4095 sur le canal A.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void SPI1_Init(void);
+void MCP4822_Write(uint8_t channel, uint16_t value);
+void delayUs(uint32_t us);
+
+int main(void) {
+    uint16_t i = 0;
+    SPI1_Init();
+
+    while (1) {
+        MCP4822_Write(0, i);   // canal A
+        i++;
+        delayUs(10);            // ajuste la fréquence de la rampe
+    }
+}
+</code></pre>
+<p>Remarque : La fonction delayUs peut être réalisée avec une boucle approximative, ou mieux avec un timer (SysTick). On donne ici une version simple :</p>
+<pre><code class="language-c">void delayUs(uint32_t us) {
+    for (uint32_t i = 0; i &lt; us * 16; i++) {} // approximation grossière
+}
+</code></pre>
+<p><strong>Sinusoïde</strong></p>
+<p>On utilise une table pré‑calculée de valeurs (par exemple 256 points). On génère la table à l'aide de mathématiques.</p>
+<pre><code class="language-c">#include &lt;math.h&gt;
+
+#define TABLE_SIZE 256
+uint16_t sineTable[TABLE_SIZE];
+
+void buildSineTable(void) {
+    for (int i = 0; i &lt; TABLE_SIZE; i++) {
+        double angle = 2 * M_PI * i / TABLE_SIZE;
+        // Valeur centrée entre 0 et 4095 (offset 2048, amplitude 2048)
+        sineTable[i] = (uint16_t)(2048 + 2047 * sin(angle));
+    }
+}
+</code></pre>
+<p>Dans la boucle principale, on envoie les valeurs successivement avec un délai pour régler la fréquence.</p>
+<pre><code class="language-c">int main(void) {
+    int i = 0;
+    SPI1_Init();
+    buildSineTable();
+
+    while (1) {
+        MCP4822_Write(0, sineTable[i]);
+        i++;
+        if (i &gt;= TABLE_SIZE) i = 0;
+        delayUs(50); // ajuste la fréquence
+    }
+}
+</code></pre>
+<p><strong>Contrôle de la fréquence</strong></p>
+<p>La fréquence du signal est donnée par f = 1 / (période × nombre de points). On peut utiliser un timer pour générer un déclenchement précis à la place de la boucle d'attente.</p>
+<p><strong>Utilisation des deux canaux</strong></p>
+<p>Pour utiliser le canal B, il suffit de passer channel = 1 dans MCP4822_Write. On peut générer deux signaux indépendants.</p>
+<p>Exemple : rampe sur A et sinusoïde sur B.</p>
+<pre><code class="language-c">int main(void) {
+    uint16_t ramp = 0;
+    int sineIdx = 0;
+    SPI1_Init();
+    buildSineTable();
+
+    while (1) {
+        MCP4822_Write(0, ramp);
+        MCP4822_Write(1, sineTable[sineIdx]);
+
+        ramp++;
+        sineIdx++;
+        if (sineIdx &gt;= TABLE_SIZE) sineIdx = 0;
+
+        delayUs(20);
+    }
+}
+</code></pre>
+<p>Remarque : Les deux écritures se succèdent ; le CS est activé/désactivé pour chaque transaction. Le temps total pour les deux écritures doit être inférieur à la période d'échantillonnage pour ne pas déformer les signaux.</p>
+<p><strong>Améliorations</strong></p>
+<ul>
+<li>Utilisation d'un timer pour le déclenchement : on peut configurer un timer (par exemple TIM2) pour générer une interruption périodique, et dans l'ISR mettre à jour la valeur du DAC. Cela libère le CPU.</li>
+<li>DMA : pour des formes d'onde complexes, on peut utiliser le DMA pour envoyer les données du tableau vers le SPI sans intervention du CPU.</li>
+<li>Filtrage : la sortie du DAC peut nécessiter un filtre passe‑bas pour lisser le signal (surtout pour les formes d'onde échantillonnées).</li>
 </ul>
 <hr />
 <p><br></p>
