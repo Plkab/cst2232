@@ -261,71 +261,117 @@ On peut également ajouter une interruption de fin de transfert pour prévenir l
 
 ### **DMA avec l’ADC**
 
-L’ADC peut être déclenché par un timer (mode régulier) et générer des requêtes DMA à chaque fin de conversion. On peut ainsi remplir un buffer avec les échantillons sans intervention CPU.
+Pour des acquisitions à haute fréquence, l'interruption peut saturer le CPU si elle survient trop souvent. Le DMA (Direct Memory Access) permet de transférer les données de l'ADC vers la mémoire sans intervention du processeur. On peut même utiliser un double buffer pour un traitement en parallèle.
 
-**Exemple : ADC1 convertit en continu sur PA0, transfert DMA vers un buffer de 100 échantillons en mode circulaire continu**
+L'ADC génère une requête DMA à chaque fin de conversion. Le DMA transfère alors la valeur dans un buffer mémoire. On peut configurer le DMA en mode circulaire pour remplir un buffer en continu.
+
+**Configuration du DMA**
+
+Le STM32F401 possède deux contrôleurs DMA avec plusieurs streams. Pour l'ADC1, on utilise généralement le stream 0 du DMA2 (vérifiez dans le manuel).
+
+```c
+#define ADC_BUFFER_SIZE 256
+uint16_t adc_buffer[ADC_BUFFER_SIZE];
+```
+
+**Configuration du stream DMA :**
+
+```c
+DMA2_Stream0->PAR = (uint32_t)&ADC1->DR;       // adresse périphérique
+DMA2_Stream0->M0AR = (uint32_t)adc_buffer;     // adresse mémoire
+DMA2_Stream0->NDTR = ADC_BUFFER_SIZE;          // nombre de transferts
+DMA2_Stream0->CR = DMA_SxCR_CHSEL_0 |          // canal 0 pour ADC1
+                   DMA_SxCR_MINC |              // incrément mémoire
+                   DMA_SxCR_TCIE |               // interruption fin de transfert
+                   DMA_SxCR_CIRC |                // mode circulaire
+                   DMA_SxCR_EN;                    // activation
+```
+
+- CHSEL_0 : sélectionne le canal 0 (pour ADC1). Consultez le manuel pour connaître le canal exact.
+- MINC : incrémente l'adresse mémoire après chaque transfert.
+- TCIE : active l'interruption en fin de transfert (optionnel).
+- CIRC : mode circulaire : après avoir atteint la taille, l'adresse mémoire revient au début.
+- EN : active le stream.
+
+
+**Exemple avec déclenchement par timer et DMA**
+
+On combine le déclenchement par timer et le DMA pour une acquisition automatique.
 
 ```c
 #include "stm32f4xx.h"
 
-#define ADC_BUFFER_SIZE 100
-volatile uint16_t adcBuffer[ADC_BUFFER_SIZE];
+#define ADC_BUFFER_SIZE 256
+uint16_t adc_buffer[ADC_BUFFER_SIZE];
+volatile uint8_t buffer_ready = 0;
 
-void ADC1_DMA_Init(void) {
-    // 1. Activer horloges GPIOA, ADC1, DMA2
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-    RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
-
-    // 2. Configurer PA0 en analogique
-    GPIOA->MODER |= (3U << (0*2));
-
-    // 3. Configurer ADC1
-    ADC1->CR2 = ADC_CR2_ADON;                  // Activer ADC
-    ADC1->SQR3 = 0;                              // Canal 0 en première position
-    ADC1->SMPR2 = (7 << 0);                      // Temps d'échantillonnage max
-    ADC1->CR2 |= ADC_CR2_DMA;                    // Activer requête DMA
-    ADC1->CR2 |= ADC_CR2_DDS;                    // DMA requests continues (pour mode circulaire)
-    ADC1->CR2 |= ADC_CR2_CONT;                    // Mode continu
-    ADC1->CR2 |= ADC_CR2_ADON;                    // Réveiller (doit être fait après config)
-
-    // 4. Configurer DMA2 Stream0 (canal 0 pour ADC1)
-    DMA2_Stream0->CR &= ~DMA_SxCR_EN;
-    DMA2_Stream0->PAR = (uint32_t)&ADC1->DR;
-    DMA2_Stream0->M0AR = (uint32_t)adcBuffer;
-    DMA2_Stream0->NDTR = ADC_BUFFER_SIZE;
-
-    DMA2_Stream0->CR = DMA_SxCR_CHSEL_0 |          // Canal 0
-                       DMA_SxCR_PL_1 |              // Priorité haute
-                       DMA_SxCR_MSIZE_0 |           // Mémoire 16 bits
-                       DMA_SxCR_PSIZE_0 |           // Périph 16 bits
-                       DMA_SxCR_MINC |              // Incrément mémoire
-                       DMA_SxCR_CIRC |              // Mode circulaire
-                       DMA_SxCR_DIR_1;               // Périph → mémoire (DIR=1 pour DMA2)
-
-    DMA2_Stream0->CR |= DMA_SxCR_EN;
+void DMA2_Stream0_IRQHandler(void) {
+    if (DMA2->LISR & DMA_LISR_TCIF0) {
+        DMA2->LIFCR |= DMA_LIFCR_CTCIF0;   // acquitter
+        buffer_ready = 1;                    // signaler que le buffer est plein
+    }
 }
 
-// Fonction pour récupérer le dernier échantillon
-uint16_t ADC_GetLastValue(void) {
-    // En mode circulaire, on peut lire adcBuffer[?] ou utiliser un index
-    // Simple approche : on lit le registre DR directement (mais c'est ce que DMA fait)
-    return ADC1->DR;  // attention, cela peut interférer avec DMA?
-    // Mieux : on garde un index calculé via NDTR (plus complexe)
+int main(void) {
+    // Horloges
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_DMA2EN;
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // PA0 analogique
+    GPIOA->MODER |= (3U << (0*2));
+
+    // Timer 2 pour déclenchement à 1 kHz
+    TIM2->PSC = 8400 - 1;
+    TIM2->ARR = 10 - 1;
+    TIM2->CR2 |= TIM_CR2_MMS_1; // Update event as TRGO
+    TIM2->CR1 |= TIM_CR1_CEN;
+
+    // Configuration ADC déclenché par TIM2_TRGO
+    ADC1->CR1 = 0;
+    ADC1->SMPR2 = (7 << 0);
+    ADC1->SQR3 = 0;
+    ADC1->CR2 = (1 << 28) | (3 << 24) | ADC_CR2_DMA | ADC_CR2_DDS | ADC_CR2_ADON;
+
+    // Configuration DMA
+    DMA2_Stream0->PAR = (uint32_t)&ADC1->DR;
+    DMA2_Stream0->M0AR = (uint32_t)adc_buffer;
+    DMA2_Stream0->NDTR = ADC_BUFFER_SIZE;
+    DMA2_Stream0->CR = DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_TCIE | DMA_SxCR_CIRC | DMA_SxCR_EN;
+
+    NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+    NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
+
+    while (1) {
+        if (buffer_ready) {
+            buffer_ready = 0;
+            // Traiter le buffer (256 échantillons)
+        }
+    }
 }
 ```
 
 **Double buffer avec interruptions**
 
-Pour utiliser un double buffer, on peut soit configurer deux buffers avec M0AR et M1AR (mode double buffer du DMA), soit utiliser un seul buffer circulaire et les interruptions de demi‑transfert. Le double buffer matériel est plus élégant :
+Le mode circulaire est pratique mais si on veut traiter les données pendant que le DMA remplit l'autre moitié, on peut utiliser deux buffers et une interruption de demi‑transfert (HTIF). Le DMA peut être configuré pour générer une interruption à mi‑parcours (D`MA_SxCR_HTIE`). On alterne alors entre deux buffers.
+
+Pour utiliser un double buffer, on peut soit configurer deux buffers avec `M0AR` et `M1AR` (mode double buffer du DMA), soit utiliser un seul buffer circulaire et les interruptions de demi‑transfert. Le double buffer matériel est plus élégant :
 
 ```c
+uint16_t adc_buffer0[128];
+uint16_t adc_buffer1[128];
+uint8_t active_buffer = 0;
+// Dans l'ISR, on vérifie le flag de demi‑transfert et de transfert complet
+// pour basculer le buffer actif.
+//.....
 DMA2_Stream0->M0AR = (uint32_t)buffer1;
 DMA2_Stream0->M1AR = (uint32_t)buffer2;
 DMA2_Stream0->CR |= DMA_SxCR_DBM;   // Double buffer mode
 ```
 
 Les flags `HTIF` et `TCIF` indiquent respectivement que le premier ou le second buffer est plein.
+
+Cette technique est très utilisée en traitement du signal temps réel (par exemple pour la FFT).
 
 ---
 <br>

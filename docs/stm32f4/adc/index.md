@@ -306,27 +306,151 @@ int fputc(int ch, FILE *f) {
 
 ### **Utilisation avec interruption**
 
-On configure l’ADC pour générer une interruption en fin de conversion. L’ISR peut alors réveiller une tâche ou stocker la valeur.
+L'ADC peut générer une interruption à la fin de chaque conversion. Cela permet au CPU d'effectuer d'autres tâches pendant la conversion et de traiter le résultat dès qu'il est disponible.
 
 **Configuration avec interruption**
 
+Les étapes sont similaires à la configuration de base, mais on ajoute :
+
+- L'activation de l'interruption de fin de conversion (EOC) dans ADC_CR1 (bit EOCIE).
+- La configuration et l'activation de l'interruption dans le NVIC.
+
+**Exemple : conversion unique sur PA0 avec interruption**
+
 ```c
+#include "stm32f4xx.h"
+
+volatile uint16_t adc_result = 0;
+volatile uint8_t conversion_done = 0;
+
 void ADC_Init_IT(void) {
-    // Même initialisation que précédemment, mais on ajoute :
-    ADC1->CR1 |= ADC_CR1_EOCIE;                  // Activer interruption fin de conversion
-    NVIC_SetPriority(ADC_IRQn, 5);
+    // Activer les horloges
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    // PA0 en mode analogique
+    GPIOA->MODER |= (3U << (0*2));
+
+    // Configuration de l'ADC
+    ADC1->CR1 = ADC_CR1_EOCIE;       // activation interruption EOC
+    ADC1->SMPR2 = (7 << 0);           // temps d'échantillonnage max
+    ADC1->SQR3 = 0;                    // canal 0 en premier
+    ADC1->CR2 |= ADC_CR2_ADON;         // activation ADC
+
+    // NVIC
     NVIC_EnableIRQ(ADC_IRQn);
+    NVIC_SetPriority(ADC_IRQn, 2);
 }
-```
 
-ISR de l’ADC
-
-```c
 void ADC_IRQHandler(void) {
     if (ADC1->SR & ADC_SR_EOC) {
         uint16_t value = ADC1->DR;               // Lecture (efface le flag)
         // Stocker la valeur dans un buffer ou envoyer à une tâche
         // (par exemple via xQueueSendFromISR)
+
+        conversion_done = 1;
+    }
+}
+
+int main(void) {
+    ADC_Init_IT();
+
+    while (1) {
+        // Démarrer une conversion (logiciel)
+        ADC1->CR2 |= ADC_CR2_SWSTART;
+
+        // Attendre la fin de conversion (optionnel, on pourrait faire autre chose)
+        // Ici on attend simplement que le flag soit positionné
+        while (!conversion_done);
+        conversion_done = 0;
+
+        // Utiliser adc_result...
+    }
+}
+```
+
+L'ISR doit être courte : elle lit simplement la valeur et la stocke dans une variable globale volatile.
+
+La variable conversion_done peut être utilisée pour synchroniser la tâche principale (polling léger) ou on peut utiliser un sémaphore en environnement RTOS.
+
+---
+<br>
+
+
+
+### **ADC déclenché par timer**
+
+Pour un échantillonnage périodique précis, on utilise un timer pour lancer automatiquement les conversions. Cela évite la latence due au logiciel et garantit une cadence fixe.
+
+Le timer génère un événement (par exemple une mise à jour ou une comparaison) qui est connecté à l'entrée de déclenchement externe de l'ADC. L'ADC démarre une conversion sur chaque front de ce signal.
+
+**Configuration du timer (TRGO)**
+
+On utilise le signal **TRGO** (Trigger Output) du timer. On configure le timer en mode "master" pour que son événement de mise à jour soit envoyé sur TRGO.
+
+```c
+// Configuration du timer pour générer un événement toutes les 1 ms
+TIM2->PSC = 8400 - 1;   // 84 MHz / 8400 = 10 kHz
+TIM2->ARR = 10 - 1;      // 10 kHz / 10 = 1 kHz (période 1 ms)
+TIM2->CR2 |= TIM_CR2_MMS_1; // MMS = 010 : événement de mise à jour sur TRGO
+TIM2->CR1 |= TIM_CR1_CEN;   // démarrage timer
+```
+
+**Configuration de l'ADC pour le déclenchement externe**
+
+Dans ADC_CR2, on doit :
+
+- Choisir la source du déclencheur via les bits `EXTSEL[3:0]`.
+- Activer le déclenchement externe avec `EXTEN[1:0]` (par exemple, front montant).
+
+```c
+ADC1->CR2 |= (1 << 28);    // EXTEN = 01 (front montant)
+ADC1->CR2 |= (3 << 24);    // EXTSEL = 3 (TIM2_TRGO)
+```
+
+Vérification : la valeur exacte de `EXTSEL` pour TIM2_TRGO dépend du microcontrôleur. Consultez le manuel de référence (RM0368) – pour TIM2_TRGO, c'est souvent `0111` (7) ou `0011` (3). L'exemple utilise 3 (bits 24-27 = 0011) ; testez les deux si nécessaire.
+
+
+**Exemple avec lecture par interruption**
+
+```c
+#include "stm32f4xx.h"
+
+volatile uint16_t adc_value;
+
+void ADC_IRQHandler(void) {
+    if (ADC1->SR & ADC_SR_EOC) {
+        adc_value = ADC1->DR;
+    }
+}
+
+int main(void) {
+    // Horloges
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // PA0 analogique
+    GPIOA->MODER |= (3U << (0*2));
+
+    // Timer 2 pour déclenchement (1 ms)
+    TIM2->PSC = 8400 - 1;
+    TIM2->ARR = 10 - 1;
+    TIM2->CR2 |= TIM_CR2_MMS_1; // Update event as TRGO
+    TIM2->CR1 |= TIM_CR1_CEN;
+
+    // ADC
+    ADC1->CR1 = ADC_CR1_EOCIE;          // interruption
+    ADC1->SMPR2 = (7 << 0);
+    ADC1->SQR3 = 0;
+    ADC1->CR2 = (1 << 28) | (3 << 24) | ADC_CR2_ADON;
+
+    NVIC_EnableIRQ(ADC_IRQn);
+    NVIC_SetPriority(ADC_IRQn, 2);
+
+    while (1) {
+        // Le CPU peut faire autre chose
+        // adc_value est mis à jour automatiquement toutes les 1 ms
     }
 }
 ```
