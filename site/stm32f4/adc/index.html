@@ -344,21 +344,127 @@ int fputc(int ch, FILE *f) {
 <hr />
 <p><br></p>
 <h3 id="utilisation-avec-interruption"><strong>Utilisation avec interruption</strong></h3>
-<p>On configure l’ADC pour générer une interruption en fin de conversion. L’ISR peut alors réveiller une tâche ou stocker la valeur.</p>
+<p>L'ADC peut générer une interruption à la fin de chaque conversion. Cela permet au CPU d'effectuer d'autres tâches pendant la conversion et de traiter le résultat dès qu'il est disponible.</p>
 <p><strong>Configuration avec interruption</strong></p>
-<pre><code class="language-c">void ADC_Init_IT(void) {
-    // Même initialisation que précédemment, mais on ajoute :
-    ADC1-&gt;CR1 |= ADC_CR1_EOCIE;                  // Activer interruption fin de conversion
-    NVIC_SetPriority(ADC_IRQn, 5);
+<p>Les étapes sont similaires à la configuration de base, mais on ajoute :</p>
+<ul>
+<li>L'activation de l'interruption de fin de conversion (EOC) dans ADC_CR1 (bit EOCIE).</li>
+<li>La configuration et l'activation de l'interruption dans le NVIC.</li>
+</ul>
+<p><strong>Exemple : conversion unique sur PA0 avec interruption</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+volatile uint16_t adc_result = 0;
+volatile uint8_t conversion_done = 0;
+
+void ADC_Init_IT(void) {
+    // Activer les horloges
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    // PA0 en mode analogique
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2));
+
+    // Configuration de l'ADC
+    ADC1-&gt;CR1 = ADC_CR1_EOCIE;       // activation interruption EOC
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);           // temps d'échantillonnage max
+    ADC1-&gt;SQR3 = 0;                    // canal 0 en premier
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;         // activation ADC
+
+    // NVIC
     NVIC_EnableIRQ(ADC_IRQn);
+    NVIC_SetPriority(ADC_IRQn, 2);
 }
-</code></pre>
-<p>ISR de l’ADC</p>
-<pre><code class="language-c">void ADC_IRQHandler(void) {
+
+void ADC_IRQHandler(void) {
     if (ADC1-&gt;SR &amp; ADC_SR_EOC) {
         uint16_t value = ADC1-&gt;DR;               // Lecture (efface le flag)
         // Stocker la valeur dans un buffer ou envoyer à une tâche
         // (par exemple via xQueueSendFromISR)
+
+        conversion_done = 1;
+    }
+}
+
+int main(void) {
+    ADC_Init_IT();
+
+    while (1) {
+        // Démarrer une conversion (logiciel)
+        ADC1-&gt;CR2 |= ADC_CR2_SWSTART;
+
+        // Attendre la fin de conversion (optionnel, on pourrait faire autre chose)
+        // Ici on attend simplement que le flag soit positionné
+        while (!conversion_done);
+        conversion_done = 0;
+
+        // Utiliser adc_result...
+    }
+}
+</code></pre>
+<p>L'ISR doit être courte : elle lit simplement la valeur et la stocke dans une variable globale volatile.</p>
+<p>La variable conversion_done peut être utilisée pour synchroniser la tâche principale (polling léger) ou on peut utiliser un sémaphore en environnement RTOS.</p>
+<hr />
+<p><br></p>
+<h3 id="adc-declenche-par-timer"><strong>ADC déclenché par timer</strong></h3>
+<p>Pour un échantillonnage périodique précis, on utilise un timer pour lancer automatiquement les conversions. Cela évite la latence due au logiciel et garantit une cadence fixe.</p>
+<p>Le timer génère un événement (par exemple une mise à jour ou une comparaison) qui est connecté à l'entrée de déclenchement externe de l'ADC. L'ADC démarre une conversion sur chaque front de ce signal.</p>
+<p><strong>Configuration du timer (TRGO)</strong></p>
+<p>On utilise le signal <strong>TRGO</strong> (Trigger Output) du timer. On configure le timer en mode "master" pour que son événement de mise à jour soit envoyé sur TRGO.</p>
+<pre><code class="language-c">// Configuration du timer pour générer un événement toutes les 1 ms
+TIM2-&gt;PSC = 8400 - 1;   // 84 MHz / 8400 = 10 kHz
+TIM2-&gt;ARR = 10 - 1;      // 10 kHz / 10 = 1 kHz (période 1 ms)
+TIM2-&gt;CR2 |= TIM_CR2_MMS_1; // MMS = 010 : événement de mise à jour sur TRGO
+TIM2-&gt;CR1 |= TIM_CR1_CEN;   // démarrage timer
+</code></pre>
+<p><strong>Configuration de l'ADC pour le déclenchement externe</strong></p>
+<p>Dans ADC_CR2, on doit :</p>
+<ul>
+<li>Choisir la source du déclencheur via les bits <code>EXTSEL[3:0]</code>.</li>
+<li>Activer le déclenchement externe avec <code>EXTEN[1:0]</code> (par exemple, front montant).</li>
+</ul>
+<pre><code class="language-c">ADC1-&gt;CR2 |= (1 &lt;&lt; 28);    // EXTEN = 01 (front montant)
+ADC1-&gt;CR2 |= (3 &lt;&lt; 24);    // EXTSEL = 3 (TIM2_TRGO)
+</code></pre>
+<p>Vérification : la valeur exacte de <code>EXTSEL</code> pour TIM2_TRGO dépend du microcontrôleur. Consultez le manuel de référence (RM0368) – pour TIM2_TRGO, c'est souvent <code>0111</code> (7) ou <code>0011</code> (3). L'exemple utilise 3 (bits 24-27 = 0011) ; testez les deux si nécessaire.</p>
+<p><strong>Exemple avec lecture par interruption</strong></p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+volatile uint16_t adc_value;
+
+void ADC_IRQHandler(void) {
+    if (ADC1-&gt;SR &amp; ADC_SR_EOC) {
+        adc_value = ADC1-&gt;DR;
+    }
+}
+
+int main(void) {
+    // Horloges
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+    // PA0 analogique
+    GPIOA-&gt;MODER |= (3U &lt;&lt; (0*2));
+
+    // Timer 2 pour déclenchement (1 ms)
+    TIM2-&gt;PSC = 8400 - 1;
+    TIM2-&gt;ARR = 10 - 1;
+    TIM2-&gt;CR2 |= TIM_CR2_MMS_1; // Update event as TRGO
+    TIM2-&gt;CR1 |= TIM_CR1_CEN;
+
+    // ADC
+    ADC1-&gt;CR1 = ADC_CR1_EOCIE;          // interruption
+    ADC1-&gt;SMPR2 = (7 &lt;&lt; 0);
+    ADC1-&gt;SQR3 = 0;
+    ADC1-&gt;CR2 = (1 &lt;&lt; 28) | (3 &lt;&lt; 24) | ADC_CR2_ADON;
+
+    NVIC_EnableIRQ(ADC_IRQn);
+    NVIC_SetPriority(ADC_IRQn, 2);
+
+    while (1) {
+        // Le CPU peut faire autre chose
+        // adc_value est mis à jour automatiquement toutes les 1 ms
     }
 }
 </code></pre>

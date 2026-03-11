@@ -15,12 +15,7 @@
 
 Le **bus I2C (Inter-Integrated Circuit)** est un protocole de communication série **synchrone** très répandu pour connecter des périphériques à **faible vitesse** (capteurs, mémoires EEPROM, écrans OLED, etc.) à un microcontrôleur.
 
-Il ne nécessite que **deux fils** :
-
-- **SCL** : ligne d’horloge  
-- **SDA** : ligne de données  
-
-Le protocole permet de connecter **plusieurs périphériques esclaves sur le même bus**, chacun possédant une **adresse unique**.
+Il ne nécessite que **deux fils** **SCL** ligne d’horloge et **SDA** ligne de données. Le protocole permet de connecter **plusieurs périphériques esclaves sur le même bus**, chacun possédant une **adresse unique**.
 
 Le **STM32F401** intègre plusieurs interfaces **I2C matérielles**, ce qui facilite la communication avec des capteurs et modules externes.
 
@@ -47,11 +42,44 @@ Toutes les communications sont **initiées par le maître**.
 
 **Trame élémentaire I2C**
 
-Une communication I2C se déroule selon une séquence bien définie.
+Une communication I2C se déroule selon une séquence bien définie. Chaque bit de données est transféré pendant un cycle d'horloge. La règle fondamentale est : la ligne SDA ne doit changer d'état que lorsque SCL est à l'état bas. La seule exception concerne les conditions START et STOP.
+
+Une trame I2C se compose d'un START, d'un octet d'adresse (7 bits d'adresse + 1 bit R/W), d'un ou plusieurs octets de données, et d'un STOP. Chaque octet (adresse ou donnée) est suivi d'un bit d'acquittement (ACK) généré par le récepteur.
+
+Octet d'adresse :
+
+- Bits 7-1 : adresse de l'esclave (7 bits).
+- Bit 0 (R/W) : 0 = écriture, 1 = lecture.
+
+L'esclave reconnaît son adresse en tirant SDA à 0 pendant le 9e cycle d'horloge (ACK). S'il ne répond pas (NACK), le maître peut générer un STOP ou un RESTART.
+
+Octets de données : transmis de la même manière, avec ACK après chaque octet (sauf le dernier en lecture, où le maître envoie un NACK pour signaler la fin).
+
+**Écriture simple (maître → esclave)**
+
+- START
+- Envoi de l'adresse esclave + bit 0 (écriture) → ACK
+- Envoi du registre (ou adresse mémoire) → ACK
+- Envoi de la donnée → ACK
+- STOP
+
+**Lecture simple (esclave → maître)**
+
+- START
+- Envoi de l'adresse esclave + bit 0 (écriture) → ACK
+- Envoi du registre à lire → ACK
+- RESTART
+- Envoi de l'adresse esclave + bit 1 (lecture) → ACK
+- Lecture de la donnée (le maître envoie un NACK après le dernier octet)
+- STOP
 
 1. **Condition START**
 
 La communication commence lorsque **SDA passe de 1 à 0** alors que **SCL est à 1**. Cela indique aux périphériques qu'une nouvelle transaction commence. Cela indique aux périphériques qu'une **nouvelle transaction** commence.
+
+Ces conditions sont toujours générées par le maître. Entre un START et un STOP, le bus est considéré comme occupé.
+
+Une condition RESTART (ou répétée) permet d'initier une nouvelle transaction sans relâcher le bus (utile pour changer le sens de transfert).
 
 2. **Envoi de l’adresse**
 
@@ -75,11 +103,18 @@ En **lecture :** Esclave → Maître
 
 La communication se termine lorsque SDA passe de 0 à 1 alors que SCL est à 1. Cela libère le bus pour une autre communication.
 
+**Accès séquentiel (burst)**
+
+La plupart des périphériques I2C incrémentent automatiquement l'adresse du registre après chaque accès, permettant des lectures/écritures multi‑octets sans avoir à renvoyer l'adresse à chaque fois.
+
+
 ---
 <br>
 
 
 ### **Registres importants de l’I2C sur STM32F4**
+
+Le STM32F401 intègre trois contrôleurs I2C. Leurs adresses de base sont :
 
 | Registre | Rôle |
 |---------|------|
@@ -94,11 +129,31 @@ La communication se termine lorsque SDA passe de 0 à 1 alors que SCL est à 1. 
 
 **Vitesses standard du bus I2C**
 
-Les vitesses les plus utilisées sont :
+Le bus **I2C** supporte deux modes : **Standard (100 kHz)** et **Fast (400 kHz)**. La vitesse est déterminée par :
 
-- **Standard mode : 100 kHz**
-- **Fast mode : 400 kHz**
-- **Fast mode plus : 1 MHz** (selon les périphériques)
+*   La fréquence de l'**APB** (généralement 42 MHz ou 84 MHz selon la configuration du système).
+*   Le registre **I2C_CCR** (Clock Control Register).
+*   Le registre **I2C_TRISE** (Maximum Rise Time).
+
+**Exemple pour 100 kHz avec APB1 = 42 MHz :**
+
+1.  Dans **I2C_CR2**, programmer `FREQ` avec la valeur de l'APB en MHz (42 → `0x2A`).
+2.  En mode **Standard** ($F/S = 0$ dans `I2C_CCR`), la période de l'horloge est :  
+    $T_{SCL} = 2 \times CCR \times T_{PCLK}$
+3.  Pour obtenir 100 kHz ($T_{SCL} = 10 \mu s$), on calcule :  
+    $CCR = \frac{T_{SCL}}{2 \times T_{PCLK}} = \frac{10 \mu s}{2 \times 23,8 ns} \approx 210$  
+    Soit **CCR = 210** (`0xD2`).
+4.  **I2C_TRISE** doit être programmé avec le temps de montée maximum (1000 ns) divisé par $T_{PCLK} + 1$ :  
+    $TRISE = \frac{1000 ns}{23,8 ns} + 1 \approx 42 + 1 = 43$
+
+**Exemple pour 100 kHz avec APB1 = 84 MHz :**
+
+*   $T_{PCLK} = 11,9 ns$
+*   **CCR** = $10 \mu s / (2 \times 11,9 ns) \approx 420$ → `0x1A4`
+*   **TRISE** = $1000 ns / 11,9 ns + 1 \approx 84 + 1 = 85$
+
+> **Note :** Le calcul exact dépend de la configuration de vos horloges. Les exemples ci-dessus sont donnés à titre indicatif. Adaptez les valeurs à votre système.
+
 
 Le bus I2C est particulièrement adapté pour :
 
