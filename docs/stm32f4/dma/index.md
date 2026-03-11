@@ -15,6 +15,8 @@
 
 Le **DMA (Direct Memory Access)** est un périphérique matériel qui permet de transférer des données entre deux zones mémoire (mémoire ↔ mémoire, périphérique ↔ mémoire, etc.) **sans intervention du processeur**. Pendant qu’une opération DMA est en cours, le CPU peut continuer à exécuter d’autres instructions ou rester en mode basse consommation, ce qui améliore considérablement les performances et la réactivité du système.
 
+Dans un système classique, le CPU est impliqué dans chaque transfert de données entre mémoire et périphérique. Avec le DMA, un contrôleur dédié prend en charge ces transferts. Le CPU configure le DMA : adresse source, adresse destination, taille des données, et nombre de transferts. Une fois lancé, le DMA effectue les transferts en cycle de bus volé (lorsque le CPU n'utilise pas le bus) et génère une interruption à la fin.
+
 Dans un système temps réel, le DMA est particulièrement utile pour :
 
 - Acquérir des données à haute fréquence (ADC) sans surcharger le CPU.
@@ -44,10 +46,19 @@ Les registres principaux d’un stream sont :
 - `PAR` (Peripheral Address Register) : adresse du périphérique.
 - `M0AR` / `M1AR` (Memory Address Register) : adresse(s) mémoire (pour double buffer).
 
+Des registres globaux permettent de gérer les interruptions :
+
+- DMA_HISR / DMA_LISR : statut des interruptions (haut/bas)
+- DMA_HIFCR / DMA_LIFCR : effacement des flags
+
 ---
 <br>
 
+
+
 ### **Configuration générale d’un transfert DMA**
+
+Les étapes typiques pour configurer un transfert DMA sont :
 
 1. **Activer l’horloge** du contrôleur DMA (`RCC_AHB1ENR`).
 2. Désactiver le stream en mettant le bit `EN` du registre `CR` à 0.
@@ -67,7 +78,11 @@ Les registres principaux d’un stream sont :
 ---
 <br>
 
+
+
 ### **DMA avec l’USART**
+
+Nous allons configurer le DMA pour envoyer une chaîne de caractères via USART2. La transmission se fera automatiquement, libérant le CPU. À la fin du transfert, une interruption DMA signalera la fin.
 
 L’USART peut générer une requête DMA à chaque fois qu’un caractère est reçu (RXNE) ou que le buffer de transmission est vide (TXE). On configure le DMA pour transférer automatiquement les données.
 
@@ -260,6 +275,8 @@ On peut également ajouter une interruption de fin de transfert pour prévenir l
 
 
 ### **DMA avec l’ADC**
+
+Nous allons utiliser l'ADC1 pour échantillonner un signal analogique sur PA0, déclenché par un timer (TIM2_CH2). Les résultats sont transférés par DMA vers un buffer mémoire. Quand le buffer est plein, une interruption DMA signale la disponibilité des données.
 
 Pour des acquisitions à haute fréquence, l'interruption peut saturer le CPU si elle survient trop souvent. Le DMA (Direct Memory Access) permet de transférer les données de l'ADC vers la mémoire sans intervention du processeur. On peut même utiliser un double buffer pour un traitement en parallèle.
 
