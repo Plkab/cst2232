@@ -24,7 +24,7 @@ Le timer possède un compteur qui s'incrémente à chaque impulsion d'une horlog
 - **Auto-Reload Register (ARR)** : définit la valeur maximale du compteur. Quand le compteur `CNT` atteint `ARR`, un événement de mise à jour (update) est généré, et `CNT` est remis à zéro (en mode *upcounting*). C'est le **débordement**.
 - **Compteur (CNT)** : valeur actuelle du compteur (s'incrémente à chaque coup d'horloge).
 
-#### Registres principaux
+**Registres principaux**
 
 | Registre   | Nom                    | Fonction                                                         |
 |------------|------------------------|------------------------------------------------------------------|

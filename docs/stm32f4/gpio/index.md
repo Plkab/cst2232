@@ -670,10 +670,8 @@ int main(void) {
 
 ### Liens connexe
 
-- [GPIO et Interruptions](../gpio/index.md)
 - [Timer et Interruption](../timer/index.md)
 - [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
 - [Introduction pratique à freeRTOS](../../rtos/freertos.md)
 - [Acquisition Analogique via ADC](../adc/index.md)
-- [Machine d’État Fini (FSM)](../../technique-algos/fsm/index.md)
-- [Présentation architecturale du Microcontrôleur STM32F4](../stm32f4/mcu_intro/index.md)
+- [Présentation architecturale du Microcontrôleur STM32F4](../mcu_intro/index.md)
