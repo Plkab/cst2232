@@ -144,5 +144,5 @@ C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\<version>\Device\Include\
 
 ### Liens Connexe
 
-- [Installation de Kiel MDK](https://nicerland.com/eduFiles/STM32F4/Tutorials/Keil_v5_STMicro_install_F446.pdf
-- https://nicerland.com/eduFiles/STM32F4/Tutorials/Keil_v5_STM32F446_project.pdf)
+- [Installation de Kiel MDK](https://nicerland.com/eduFiles/STM32F4/Tutorials/Keil_v5_STMicro_install_F446.pdf)
+- [Quelques projets sous Kiel](https://nicerland.com/eduFiles/STM32F4/Tutorials/Keil_v5_STM32F446_project.pdf)
