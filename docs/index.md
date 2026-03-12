@@ -80,7 +80,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](technique-algos/estimation/#projet-estimation-angle)
 - [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)
 - [Lecture GPS et affichge sur GUI Python](projects/gps/index.md) : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.
-- [Système de Contrôle de LED (Anti-rebond & Queue)](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
+- [Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos-multimode) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
 
 ---
 <br>
