@@ -254,4 +254,4 @@ Si on utilise des périphériques avec interruptions, écrit les handlers normal
 ### Liens Connexe
 
 
-- https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf
+- [Demmarrer avec FreeRTOS sous Kiel](https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf)
