@@ -8,7 +8,7 @@
         <meta name="author" content="Ir Paul S. Kabidu">
         <link rel="canonical" href="https://Plkab.github.io/cst2232/stm32f4/gpio/">
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>GPIO et Interruptions - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <title>Interfaces d'Entrée/Sortie GPIO et Interruptions - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#gpio-et-interruptions" class="nav-link">GPIO et Interruptions</a>
+            <li class="nav-item" data-bs-level="1"><a href="#interfaces-dentreesortie-gpio-et-interruptions" class="nav-link">Interfaces d'Entrée/Sortie GPIO et Interruptions</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -63,14 +63,14 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="gpio-et-interruptions">GPIO et Interruptions</h1>
+<h1 id="interfaces-dentreesortie-gpio-et-interruptions">Interfaces d'Entrée/Sortie GPIO et Interruptions</h1>
 <p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
 <hr />
 <p><a href="../../#Accueil">Accueil</a></p>
 <p><br>
 <br></p>
 <h3 id="gpio"><strong>GPIO</strong></h3>
-<p>Les <strong>GPIO</strong> (<em>General Purpose Input-Output</em>) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.</p>
+<p>Les <strong>GPIO</strong> (<em>General Purpose Input-Output</em>) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, GPIOC, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.</p>
 <p><strong>Registres principaux de configuration d'un port :</strong></p>
 <p>Chaque port GPIO est contrôlé par plusieurs registres 32 bits. L'adresse de base d'un port est donnée par des constantes comme <code>GPIOA_BASE (0x40020000)</code>. En CMSIS, on accède à ces registres via une structure <code>GPIO_TypeDef</code>.</p>
 <pre><code class="language-c">typedef struct {
@@ -140,7 +140,7 @@ La carte Black Pill intègre une LED connectée à PC13 (active à l'état bas).
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 // Code Sans RTOS
-void main(void) {
+int main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
     RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
     // 2. Configurer PC13 en sortie (Bits 26-27 à 01)
@@ -152,13 +152,14 @@ void main(void) {
         GPIOC-&gt;BSRR = (1 &lt;&lt; 13);                // LED OFF (Set bit 13)
         for(int i=0; i&lt;500000; i++);
     }
+    return 0;
 }
 </code></pre>
 <p>Usage du registre ODR :</p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 // Code Bare Metal pur (Sans RTOS)
-void main(void) {
+int main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
     RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
     // 2. PC13 en sortie (Bits 26-27 à 01)
@@ -168,6 +169,7 @@ void main(void) {
         GPIOC-&gt;ODR ^= (1 &lt;&lt; 13); // Inverser l'état
         for(int i=0; i&lt;1000000; i++); // ATTENTE INUTILE : Le CPU &quot;compte ses doigts&quot;
     }
+    return 0;
 }
 </code></pre>
 <p>Explications :</p>
