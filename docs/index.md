@@ -73,6 +73,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 <br>
 
 ### Projets d’Application
+- [Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre](projects/esp01/index.md)
 - [Générateur de signaux DDS : Frequencemetre sur TFT](projects/dds_frequencemetre/index.md)
 - [Analyse spectrale d’un signal audio](technique-algos/fft/#projet-fft-audio)
 - [Filtrage des données du IMU 6050 via Filtre de Kalman](projects/imu_klf/index.md)
