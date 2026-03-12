@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Ir Paul S. Kabidu">
+        <link rel="canonical" href="https://Plkab.github.io/cst2232/projects/esp01/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre - CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/extra.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">CST2232, Conception de Systèmes Temps Réel à base du microcontrôleur STM32F4</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#serveur-web-embarque-avec-esp-01-instrument-de-laboratoire-spectrometre" class="nav-link">Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="serveur-web-embarque-avec-esp-01-instrument-de-laboratoire-spectrometre">Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre</h1>
+<p style="text-align: center;"><em>Ir Paul S. Kabidu, M.Eng. <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#115;&#112;&#97;&#117;&#108;&#107;&#97;&#98;&#105;&#100;&#117;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></em></p>
+<hr />
+<p><a href="../../#Accueil">Accueil</a></p>
+<p><br>
+<br></p>
+<h3 id="introduction"><strong>Introduction</strong></h3>
+<p>Réaliser un serveur web minimaliste sur STM32F401 (Black Pill) qui xxxxxx et l'affiche en temps réel sur une page web accessible depuis un navigateur. Le projet utilise un module Wi-Fi ESP-01 pour la connectivité et FreeRTOS pour la gestion multitâche.</p>
+<hr />
+<p><br></p>
+<h3 id="cahier-des-charges"><strong>Cahier des charges</strong></h3>
+<ul>
+<li>Lecture périodique de la valeur capteur</li>
+<li>Serveur HTTP sur le port 80</li>
+<li>Page web avec auto‑rafraîchissement AJAX affichant la valeur capteurs</li>
+<li>Configuration automatique de l'ESP-01 via une machine d'états</li>
+<li>Communication non bloquante grâce à FreeRTOS</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="materiel-necessaire"><strong>Matériel nécessaire</strong></h3>
+<ul>
+<li>Carte STM32F401 (Black Pill)</li>
+<li>Module Wi-Fi ESP-01</li>
+<li>
+<p>Capteurs</p>
+</li>
+<li>
+<p>Connexions :</p>
+<ul>
+<li>Connexions : ESP-01 sur PC10 (TX) et PC11 (RX) (USART3)</li>
+</ul>
+</li>
+</ul>
+<hr />
+<p><br></p>
+<h3 id="code-stm32-freertos"><strong>Code STM32 (FreeRTOS)</strong></h3>
+<p>Voici le code complet pour le microcontrôleur. Il utilise deux USART :</p>
+<pre><code class="language-c">/*
+ * Projet : Serveur Web embarqué avec STM32F401 et ESP-01
+ * Description : Lit une valeur analogique sur PA0 et l'envoie à un client web
+ *              via un module ESP-01 en utilisant FreeRTOS.
+ * Auteur : [Votre nom]
+ * Date : 2025
+ */
+
+#include &quot;FreeRTOS.h&quot;
+#include &quot;task.h&quot;
+#include &quot;queue.h&quot;
+#include &quot;stm32f4xx.h&quot;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+/* Définitions*/
+#define WIFI_UART        USART3              /* USART3 connecté à l'ESP-01 */
+#define RX_BUFFER_SIZE   128                 /* Taille du buffer circulaire de réception */
+#define ADC_QUEUE_SIZE   10                   /* Taille de la file pour les valeurs ADC */
+#define CMD_TIMEOUT_MS   1000                 /* Timeout pour les commandes AT (ms) */
+
+/* Variables globales*/
+/* Buffer circulaire pour la réception UART (ISR -&gt; tâche) */
+static volatile uint8_t rxBuffer[RX_BUFFER_SIZE];
+static volatile uint8_t rxHead = 0;           /* Indice d'écriture */
+static volatile uint8_t rxTail = 0;           /* Indice de lecture */
+
+/* Handle de la tâche WiFi pour les notifications */
+TaskHandle_t xWifiTaskHandle = NULL;
+
+/* File pour les valeurs ADC (producteur : tâche ADC, consommateur : tâche WiFi) */
+QueueHandle_t xAdcQueue = NULL;
+
+/* Prototypes des fonctions */
+void USART3_Init(void);
+void USART3_SendChar(char c);
+void USART3_SendString(const char *s);
+void ADC1_Init(void);
+uint16_t ADC1_Read(void);
+static void vTaskAdcReader(void *pvParameters);
+static void vTaskWifiManager(void *pvParameters);
+static int getCharFromBuffer(void);
+static int getLine(char *line, int maxLen, TickType_t timeout);
+static void sendWebPage(uint16_t adcValue);
+
+/* Initialisation USART3 (ESP-01) */
+void USART3_Init(void)
+{
+    /* Activer l'horloge du port C et de USART3 */
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOCEN;   /* GPIOC clock enable */
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART3EN;  /* USART3 clock enable (sur APB1) */
+
+    /* Configurer PC10 (TX) et PC11 (RX) en mode Alternate Function */
+    GPIOC-&gt;MODER &amp;= ~( (3 &lt;&lt; 20) | (3 &lt;&lt; 22) ); /* Effacer les bits de mode */
+    GPIOC-&gt;MODER |=   (2 &lt;&lt; 20) | (2 &lt;&lt; 22);    /* 10 = Alternate function */
+
+    /* Sélectionner AF7 pour USART3 (voir tableau des fonctions alternatives) */
+    GPIOC-&gt;AFR[1] &amp;= ~( (0xF &lt;&lt; 8) | (0xF &lt;&lt; 12) ); /* Effacer AF pour PC10 (bits 8-11) et PC11 (12-15) */
+    GPIOC-&gt;AFR[1] |=   (7 &lt;&lt; 8) | (7 &lt;&lt; 12);         /* AF7 pour USART3 */
+
+    /* Configurer le baudrate à 115200 (avec HSI 16 MHz) */
+    /* BRR = 16MHz / 115200 = 138.9 ≈ 139 -&gt; 0x8B */
+    USART3-&gt;BRR = 0x8B;      /* 115200 bauds @16 MHz */
+
+    /* Activer la transmission, la réception et l'interruption sur réception */
+    USART3-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE; /* TX, RX, RXNE interrupt enable */
+    USART3-&gt;CR1 |= USART_CR1_UE;                                   /* Activer USART3 */
+
+    /* Configurer la priorité de l'interruption et l'activer dans le NVIC */
+    NVIC_SetPriority(USART3_IRQn, 5);        /* Priorité 5 (0 = plus haute) */
+    NVIC_EnableIRQ(USART3_IRQn);              /* Activer l'interruption USART3 */
+}
+
+/* Fonctions d'émission UART */
+void USART3_SendChar(char c)
+{
+    /* Attendre que le buffer de transmission soit vide */
+    while (!(USART3-&gt;SR &amp; USART_SR_TXE));
+    USART3-&gt;DR = c;
+}
+
+void USART3_SendString(const char *s)
+{
+    while (*s) {
+        USART3_SendChar(*s++);
+    }
+}
+
+/* Gestionnaire d'interruption USART3 */
+void USART3_IRQHandler(void)
+{
+    BaseType_t xWoken = pdFALSE;
+
+    /* Vérifier si une donnée a été reçue */
+    if (USART3-&gt;SR &amp; USART_SR_RXNE) {
+        uint8_t data = USART3-&gt;DR;           /* Lire la donnée (efface le flag) */
+
+        /* Stocker dans le buffer circulaire */
+        uint8_t nextHead = (rxHead + 1) % RX_BUFFER_SIZE;
+        if (nextHead != rxTail) {             /* Si le buffer n'est pas plein */
+            rxBuffer[rxHead] = data;
+            rxHead = nextHead;
+        }
+
+        /* Notifier la tâche WiFi qu'un caractère est disponible */
+        if (xWifiTaskHandle != NULL) {
+            vTaskNotifyGiveFromISR(xWifiTaskHandle, &amp;xWoken);
+        }
+    }
+    /* Si une notification a réveillé une tâche de plus haute priorité, demander un changement de contexte */
+    portYIELD_FROM_ISR(xWoken);
+}
+
+/* Fonctions de réception UART (pour la tâche)*/
+/* Lecture non bloquante d'un caractère depuis le buffer circulaire */
+static int getCharFromBuffer(void)
+{
+    if (rxTail == rxHead) return -1;          /* Buffer vide */
+    uint8_t c = rxBuffer[rxTail];
+    rxTail = (rxTail + 1) % RX_BUFFER_SIZE;
+    return c;
+}
+
+/* Fonction pour attendre une ligne (jusqu'à '\n') avec timeout */
+static int getLine(char *line, int maxLen, TickType_t timeout)
+{
+    int idx = 0;
+    TickType_t start = xTaskGetTickCount();
+    while ( (xTaskGetTickCount() - start) &lt; timeout ) {
+        int c = getCharFromBuffer();
+        if (c &gt;= 0) {
+            if (c == '\n') {
+                line[idx] = '\0';
+                return idx;                     /* Retourne la longueur de la ligne */
+            }
+            if (idx &lt; maxLen - 1) {
+                line[idx++] = c;
+            }
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(10));     /* Attendre un peu */
+        }
+    }
+    return -1;                                   /* Timeout */
+}
+
+/* Initialisation ADC1 */
+void ADC1_Init(void)
+{
+    /* Activer l'horloge de l'ADC1 et du GPIOA */
+    RCC-&gt;APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    /* PA0 en mode analogique */
+    GPIOA-&gt;MODER |= (3 &lt;&lt; 0);                   /* 11 = analogique */
+
+    /* Configuration simple de l'ADC : canal 0, pas de trigger, résolution 12 bits */
+    ADC1-&gt;SQR3 = 0;                             /* Premier canal de la séquence = canal 0 */
+    ADC1-&gt;SMPR2 |= (7 &lt;&lt; 0);                    /* Temps d'échantillonnage max (480 cycles) */
+    ADC1-&gt;CR2 |= ADC_CR2_ADON;                   /* Activer l'ADC */
+}
+
+uint16_t ADC1_Read(void)
+{
+    /* Démarrer une conversion */
+    ADC1-&gt;CR2 |= ADC_CR2_SWSTART;
+    /* Attendre la fin de conversion */
+    while (!(ADC1-&gt;SR &amp; ADC_SR_EOC));
+    return (uint16_t)ADC1-&gt;DR;                   /* Lire le résultat */
+}
+
+/* Génération de la page web */
+void sendWebPage(uint16_t adcValue)
+{
+    char buffer[512];
+    char cmd[64];
+
+    /* Construire la page HTML avec auto‑rafraîchissement AJAX */
+    snprintf(buffer, sizeof(buffer),
+        &quot;HTTP/1.1 200 OK\r\n&quot;
+        &quot;Content-Type: text/html\r\n\r\n&quot;
+        &quot;&lt;!DOCTYPE html&gt;&quot;
+        &quot;&lt;html&gt;&quot;
+        &quot;&lt;head&gt;&quot;
+        &quot;&lt;title&gt;STM32 ADC Monitor&lt;/title&gt;&quot;
+        &quot;&lt;script&gt;&quot;
+        &quot;function refreshADC(){&quot;
+        &quot;  var xhr = new XMLHttpRequest();&quot;
+        &quot;  xhr.onreadystatechange=function(){&quot;
+        &quot;    if(xhr.readyState==4 &amp;&amp; xhr.status==200){&quot;
+        &quot;      document.getElementById('adc').innerHTML=xhr.responseText;&quot;
+        &quot;    }&quot;
+        &quot;  };&quot;
+        &quot;  xhr.open('GET','/adc',true);&quot;
+        &quot;  xhr.send();&quot;
+        &quot;}&quot;
+        &quot;setInterval(refreshADC,500);&quot;
+        &quot;&lt;/script&gt;&quot;
+        &quot;&lt;/head&gt;&quot;
+        &quot;&lt;body&gt;&quot;
+        &quot;&lt;h1&gt;STM32 ADC Monitor&lt;/h1&gt;&quot;
+        &quot;&lt;p&gt;ADC Value: &lt;span id='adc'&gt;%u&lt;/span&gt;&lt;/p&gt;&quot;
+        &quot;&lt;/body&gt;&quot;
+        &quot;&lt;/html&gt;&quot;, adcValue);
+
+    /* Commande CIPSEND pour envoyer les données via la liaison 0 */
+    snprintf(cmd, sizeof(cmd), &quot;AT+CIPSEND=0,%d\r\n&quot;, (int)strlen(buffer));
+    USART3_SendString(cmd);
+
+    /* Attendre le prompt '&gt;' (timeout 500 ms) */
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    /* Envoyer la page */
+    USART3_SendString(buffer);
+}
+
+/* Tâche de lecture ADC  */
+static void vTaskAdcReader(void *pvParameters)
+{
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod = pdMS_TO_TICKS(100);   /* Période de 100 ms */
+
+    for (;;) {
+        vTaskDelayUntil(&amp;xLastWakeTime, xPeriod);    /* Attente périodique précise */
+
+        uint16_t val = ADC1_Read();                    /* Lire l'ADC */
+        xQueueSend(xAdcQueue, &amp;val, 0);                 /* Envoyer la valeur dans la file */
+    }
+}
+
+/* Tâche de gestion du Wi-Fi (machine d'états) */
+static void vTaskWifiManager(void *pvParameters)
+{
+    enum {
+        STATE_INIT,           /* Envoi de AT */
+        STATE_AT_OK,          /* Attente OK après AT */
+        STATE_CWMODE,         /* Configuration du mode */
+        STATE_CWJAP,          /* Connexion au réseau */
+        STATE_CIPMUX,         /* Activation du multi-connexion */
+        STATE_CIPSERVER,      /* Démarrage du serveur */
+        STATE_RUN             /* Serveur actif */
+    } state = STATE_INIT;
+
+    char line[64];
+    int ret;
+    uint16_t adcValue = 0;
+    uint32_t notif;
+
+    /* Initialisation de l'ESP : on commence par envoyer AT */
+    USART3_SendString(&quot;AT\r\n&quot;);
+    state = STATE_AT_OK;
+    TickType_t startTime = xTaskGetTickCount();
+
+    for (;;) {
+        /* Attendre une notification de l'ISR (caractère reçu) ou timeout */
+        notif = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
+
+        /* Traiter les caractères reçus pour construire des lignes */
+        while (1) {
+            ret = getLine(line, sizeof(line), 0);   /* Non bloquant */
+            if (ret &lt; 0) break;                     /* Plus de données */
+
+            /* Analyser la ligne selon l'état courant */
+            switch (state) {
+                case STATE_AT_OK:
+                    if (strstr(line, &quot;OK&quot;)) {
+                        /* AT réussi, passer à la configuration du mode */
+                        USART3_SendString(&quot;AT+CWMODE=1\r\n&quot;);   /* Mode station */
+                        state = STATE_CWMODE;
+                    }
+                    break;
+
+                case STATE_CWMODE:
+                    if (strstr(line, &quot;OK&quot;)) {
+                        /* Mode configuré, se connecter au Wi-Fi */
+                        /* Remplacez &quot;SSID&quot; et &quot;PASSWORD&quot; par vos identifiants */
+                        USART3_SendString(&quot;AT+CWJAP=\&quot;SSID\&quot;,\&quot;PASSWORD\&quot;\r\n&quot;);
+                        state = STATE_CWJAP;
+                    }
+                    break;
+
+                case STATE_CWJAP:
+                    if (strstr(line, &quot;OK&quot;)) {
+                        /* Connexion réussie, activer les connexions multiples */
+                        USART3_SendString(&quot;AT+CIPMUX=1\r\n&quot;);
+                        state = STATE_CIPMUX;
+                    } else if (strstr(line, &quot;FAIL&quot;)) {
+                        /* Échec, on pourrait réessayer */
+                        /* Pour simplifier, on reste dans le même état */
+                    }
+                    break;
+
+                case STATE_CIPMUX:
+                    if (strstr(line, &quot;OK&quot;)) {
+                        /* Démarrer le serveur TCP sur le port 80 */
+                        USART3_SendString(&quot;AT+CIPSERVER=1,80\r\n&quot;);
+                        state = STATE_CIPSERVER;
+                    }
+                    break;
+
+                case STATE_CIPSERVER:
+                    if (strstr(line, &quot;OK&quot;)) {
+                        state = STATE_RUN;
+                    }
+                    break;
+
+                case STATE_RUN:
+                    /* Ici on pourrait détecter une requête HTTP (+IPD) */
+                    if (strstr(line, &quot;+IPD&quot;)) {
+                        /* Une requête a été reçue, on peut envoyer la page avec la dernière valeur ADC */
+                        /* Récupérer la dernière valeur ADC de la file */
+                        xQueueReceive(xAdcQueue, &amp;adcValue, 0);
+                        sendWebPage(adcValue);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        /* Gestion des timeouts (optionnel) */
+        /* Si on n'a pas reçu OK après un certain temps, on pourrait recommencer */
+        /* (non implémenté pour simplifier) */
+    }
+}
+
+/* Fonction principale*/
+int main(void)
+{
+    /* Initialisations matérielles */
+    USART3_Init();
+    ADC1_Init();
+
+    /* Création de la file pour les valeurs ADC */
+    xAdcQueue = xQueueCreate(ADC_QUEUE_SIZE, sizeof(uint16_t));
+
+    if (xAdcQueue == NULL) {
+        /* Erreur, on reste dans une boucle infinie */
+        while (1);
+    }
+
+    /* Création des tâches FreeRTOS */
+    xTaskCreate(vTaskAdcReader,      /* Fonction de la tâche */
+                &quot;ADC Reader&quot;,        /* Nom */
+                128,                 /* Taille de pile (mots) */
+                NULL,                /* Paramètres */
+                2,                   /* Priorité (plus haut = plus prioritaire) */
+                NULL);               /* Handle (optionnel) */
+
+    xTaskCreate(vTaskWifiManager,
+                &quot;WiFi Manager&quot;,
+                256,
+                NULL,
+                1,
+                &amp;xWifiTaskHandle);   /* Handle stocké pour notifications */
+
+    /* Lancement de l'ordonnanceur */
+    vTaskStartScheduler();
+
+    /* Ne devrait jamais arriver */
+    while (1);
+}
+</code></pre>
+<hr />
+<p><br></p>
+<h3 id="liens-connexe">Liens connexe</h3>
+<ul>
+<li><a href="../gpio/index.md">GPIO et Interruptions</a></li>
+<li><a href="../timer/index.md">Timer et Interruption</a></li>
+<li><a href="../../technique-algos/fsm/">Machine d’État Fini (FSM)</a></li>
+<li><a href="../../rtos/#introduction-a-freertos">Introduction pratique à freeRTOS</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

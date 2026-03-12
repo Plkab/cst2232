@@ -1,4 +1,4 @@
-# GPIO et Interruptions
+# Interfaces d'Entrée/Sortie GPIO et Interruptions
 
 *Ir Paul S. Kabidu, M.Eng. <spaulkabidu@gmail.com>*
 {: style="text-align: center;" }
@@ -13,7 +13,7 @@
 
 ### **GPIO**
 
-Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
+Les **GPIO** (_General Purpose Input-Output_) sont des périphériques d'entrée-sortie numériques. Ils sont utilisées pour interfacer avec des LED, des interrupteurs, des afficheurs LCD, des claviers, etc. Le STM32F4 dispose de plusieurs ports nommés (GPIOA, GPIOB, GPIOC, …, GPIOH). Chaque port possède ses propres registres de configuration sur 32 bits.
 
 **Registres principaux de configuration d'un port :**
 
@@ -62,7 +62,7 @@ La carte Black Pill intègre une LED connectée à PC13 (active à l'état bas).
 #include "stm32f4xx.h"
 
 // Code Sans RTOS
-void main(void) {
+int main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
     // 2. Configurer PC13 en sortie (Bits 26-27 à 01)
@@ -74,6 +74,7 @@ void main(void) {
         GPIOC->BSRR = (1 << 13);                // LED OFF (Set bit 13)
         for(int i=0; i<500000; i++);
     }
+    return 0;
 }
 ```
 
@@ -82,7 +83,7 @@ Usage du registre ODR :
 #include "stm32f4xx.h"
 
 // Code Bare Metal pur (Sans RTOS)
-void main(void) {
+int main(void) {
     // 1. Activer l'horloge du Port C (Bit 2 à 1)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;       // 1. Horloge ON
     // 2. PC13 en sortie (Bits 26-27 à 01)
@@ -92,6 +93,7 @@ void main(void) {
         GPIOC->ODR ^= (1 << 13); // Inverser l'état
         for(int i=0; i<1000000; i++); // ATTENTE INUTILE : Le CPU "compte ses doigts"
     }
+    return 0;
 }
 ```
 
