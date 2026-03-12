@@ -243,3 +243,15 @@ Si on utilise des périphériques avec interruptions, écrit les handlers normal
     - Assures-toi que la fonction `vApplicationIdleHook()` n'est pas requise (si `configUSE_IDLE_HOOK` est à 0).
     - Vérifie que tu n'avais pas d'interruption de plus haute priorité qui bloque le tick .
 - **Problèmes de mémoire** : Ajuste la taille du `configTOTAL_HEAP_SIZE`. Pour un F401 avec 64 Ko de RAM, commence avec 15-20 Ko et ajuste selon tes besoins.
+
+
+
+---
+<br>
+
+
+
+### Liens Connexe
+
+
+- https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf

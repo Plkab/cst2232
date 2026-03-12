@@ -71,6 +71,7 @@
 <br></p>
 <h3 id="introduction-au-dma"><strong>Introduction au DMA</strong></h3>
 <p>Le <strong>DMA (Direct Memory Access)</strong> est un périphérique matériel qui permet de transférer des données entre deux zones mémoire (mémoire ↔ mémoire, périphérique ↔ mémoire, etc.) <strong>sans intervention du processeur</strong>. Pendant qu’une opération DMA est en cours, le CPU peut continuer à exécuter d’autres instructions ou rester en mode basse consommation, ce qui améliore considérablement les performances et la réactivité du système.</p>
+<p>Dans un système classique, le CPU est impliqué dans chaque transfert de données entre mémoire et périphérique. Avec le DMA, un contrôleur dédié prend en charge ces transferts. Le CPU configure le DMA : adresse source, adresse destination, taille des données, et nombre de transferts. Une fois lancé, le DMA effectue les transferts en cycle de bus volé (lorsque le CPU n'utilise pas le bus) et génère une interruption à la fin.</p>
 <p>Dans un système temps réel, le DMA est particulièrement utile pour :</p>
 <ul>
 <li>Acquérir des données à haute fréquence (ADC) sans surcharger le CPU.</li>
@@ -98,9 +99,15 @@
 <li><code>PAR</code> (Peripheral Address Register) : adresse du périphérique.</li>
 <li><code>M0AR</code> / <code>M1AR</code> (Memory Address Register) : adresse(s) mémoire (pour double buffer).</li>
 </ul>
+<p>Des registres globaux permettent de gérer les interruptions :</p>
+<ul>
+<li>DMA_HISR / DMA_LISR : statut des interruptions (haut/bas)</li>
+<li>DMA_HIFCR / DMA_LIFCR : effacement des flags</li>
+</ul>
 <hr />
 <p><br></p>
 <h3 id="configuration-generale-dun-transfert-dma"><strong>Configuration générale d’un transfert DMA</strong></h3>
+<p>Les étapes typiques pour configurer un transfert DMA sont :</p>
 <ol>
 <li><strong>Activer l’horloge</strong> du contrôleur DMA (<code>RCC_AHB1ENR</code>).</li>
 <li>Désactiver le stream en mettant le bit <code>EN</code> du registre <code>CR</code> à 0.</li>
@@ -122,6 +129,7 @@
 <hr />
 <p><br></p>
 <h3 id="dma-avec-lusart"><strong>DMA avec l’USART</strong></h3>
+<p>Nous allons configurer le DMA pour envoyer une chaîne de caractères via USART2. La transmission se fera automatiquement, libérant le CPU. À la fin du transfert, une interruption DMA signalera la fin.</p>
 <p>L’USART peut générer une requête DMA à chaque fois qu’un caractère est reçu (RXNE) ou que le buffer de transmission est vide (TXE). On configure le DMA pour transférer automatiquement les données.</p>
 <p><strong>Réception USART par DMA</strong></p>
 <p>L’exemple suivant configure USART2 en réception DMA. Les données sont transférées vers un buffer mémoire fixe. Une fois le buffer plein, un flag est positionné.</p>
@@ -291,6 +299,7 @@ void vTaskProcessUSART(void *pvParameters) {
 <hr />
 <p><br></p>
 <h3 id="dma-avec-ladc"><strong>DMA avec l’ADC</strong></h3>
+<p>Nous allons utiliser l'ADC1 pour échantillonner un signal analogique sur PA0, déclenché par un timer (TIM2_CH2). Les résultats sont transférés par DMA vers un buffer mémoire. Quand le buffer est plein, une interruption DMA signale la disponibilité des données.</p>
 <p>Pour des acquisitions à haute fréquence, l'interruption peut saturer le CPU si elle survient trop souvent. Le DMA (Direct Memory Access) permet de transférer les données de l'ADC vers la mémoire sans intervention du processeur. On peut même utiliser un double buffer pour un traitement en parallèle.</p>
 <p>L'ADC génère une requête DMA à chaque fin de conversion. Le DMA transfère alors la valeur dans un buffer mémoire. On peut configurer le DMA en mode circulaire pour remplir un buffer en continu.</p>
 <p><strong>Configuration du DMA</strong></p>
