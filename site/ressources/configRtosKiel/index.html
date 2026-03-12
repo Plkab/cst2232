@@ -56,14 +56,6 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#configuration-freertos-pour-stm32f4-sous-keil" class="nav-link">Configuration FreeRTOS pour STM32F4 sous Keil</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#gestion-du-tick-systick_handler" class="nav-link">Gestion du tick (SysTick_Handler) :</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#gestion-des-autres-interruptions" class="nav-link">Gestion des autres interruptions :</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
             <li class="nav-item" data-bs-level="2"><a href="#resolution-des-problemes-courants" class="nav-link">Résolution des problèmes courants</a>
               <ul class="nav flex-column">
               </ul>
@@ -85,11 +77,11 @@
 <h3 id="telechargement-et-organisation-des-sources"><strong>Téléchargement et organisation des sources</strong></h3>
 <ul>
 <li>Télécharge la dernière version de FreeRTOS depuis le <a href="https://www.freertos.org/">site officiel</a>.</li>
-<li>Crée dans le projet Keil un dossier FreeRTOS/ à la racine.</li>
-<li>Copie les dossiers suivants depuis l'archive téléchargée vers FreeRTOS/ :<ul>
-<li>Source/include (tous les en-têtes)</li>
-<li>Source/portable (uniquement les sous-dossiers MemMang et RVDS/ARM_CM4F) </li>
-<li>Source/*.c (tous les fichiers .c de la racine de Source/)</li>
+<li>Crée dans le projet Keil un dossier <code>FreeRTOS/</code> à la racine.</li>
+<li>Copie les dossiers suivants depuis l'archive téléchargée vers <code>FreeRTOS/</code> :<ul>
+<li><code>Source/include</code> (tous les en-têtes)</li>
+<li><code>Source/portable</code> (uniquement les sous-dossiers <code>MemMang</code> et <code>GCC/ARM_CM4F</code>) </li>
+<li><code>Source/*.c</code> (tous les fichiers .c de la racine de <code>Source/</code>)</li>
 </ul>
 </li>
 </ul>
@@ -98,30 +90,11 @@
 <h3 id="configuration-de-lenvironnement-keil"><strong>Configuration de l'environnement Keil</strong></h3>
 <p>Pour utiliser FreeRTOS en baremetal, nous devons intégrer les fichiers sources du noyau et les adapter à notre STM32F401.</p>
 <ul>
-<li>
-<p>Ajoute les fichiers au projet :</p>
-<ul>
-<li>Crée deux nouveaux groupes : FreeRTOS_CORE et FreeRTOS_PORT.</li>
-<li>
-<p>Dans FreeRTOS_CORE, ajoute tous les fichiers .c de <code>FreeRTOS/Source/</code> (sauf ceux dans portable/).</p>
-</li>
-<li>
-<p>Dans FreeRTOS_PORT, ajoute :</p>
-<ul>
-<li><code>FreeRTOS/Source/portable/MemMang/heap_4.c</code> (le gestionnaire de mémoire recommandé).</li>
-<li><code>FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c</code> (la couche de portage pour votre processeur avec FPU) .</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p>Ajoute les chemins d'inclusion :</p>
-<ul>
-<li>Dans les options du projet, allez dans C/C++ &gt; Include Paths</li>
+<li>Ajoute les chemins d'inclusion dans Options for <strong>Target → C/C++ → Include Paths</strong> :<ul>
 <li>Ajoute les chemins suivants  :<ul>
-<li>.\FreeRTOS\Source\include</li>
-<li>.\FreeRTOS\Source\portable\RVDS\ARM_CM4F</li>
-<li>Le dossier où on a place FreeRTOSConfig.h (ex: .\User\Config)</li>
+<li><code>.\FreeRTOS\Source\include</code></li>
+<li><code>.\FreeRTOS\Source\portable\GCC\ARM_CM4F</code></li>
+<li>Le dossier où on a place <code>FreeRTOSConfig.h</code> (ex: <code>.\FreeRTOS\Config</code>)</li>
 </ul>
 </li>
 </ul>
@@ -210,14 +183,20 @@
 <h3 id="modification-des-fichiers-systeme"><strong>Modification des fichiers système</strong></h3>
 <p>FreeRTOS doit etre intégre au gestion de temps et d'interruptions.</p>
 <ul>
-<li>Dans le <code>startup_stm32f401xx.s</code> : assure-toi que les handlers <code>SVC_Handler</code>, <code>PendSV_Handler</code> et <code>SysTick_Handler</code> sont bien présents dans la table des vecteurs. Ils seront redéfinis par FreeRTOS via les alias de <code>FreeRTOSConfig.h</code>.</li>
-<li>Dans votre fichier principal (ex: main.c) :<ul>
+<li>
+<p>Dans le <code>startup_stm32f401xx.s</code> : assure-toi que les handlers <code>SVC_Handler</code>, <code>PendSV_Handler</code> et <code>SysTick_Handler</code> sont bien présents dans la table des vecteurs. Ils seront redéfinis par FreeRTOS via les alias de <code>FreeRTOSConfig.h</code>.</p>
+</li>
+<li>
+<p>Dans votre fichier principal (ex: main.c) :</p>
+<ul>
 <li>Inclue "<code>FreeRTOS.h</code>" et "<code>task.h</code>".</li>
 <li>Écrive les tâches.</li>
 <li>Lance le scheduler avec <em><code>vTaskStartScheduler()</code></em>.</li>
 </ul>
 </li>
 </ul>
+<hr />
+<p><br></p>
 <h3 id="configuration-du-projet-keil-pour-freertos"><strong>Configuration du projet Keil pour FreeRTOS</strong></h3>
 <p>Pour utiliser FreeRTOS en baremetal, nous devons intégrer les fichiers sources du noyau et les adapter à notre STM32F401 :</p>
 <ul>
@@ -269,30 +248,10 @@ void vTask2(void *pvParameters)
 </code></pre>
 <hr />
 <p><br></p>
-<h2 id="gestion-du-tick-systick_handler"><strong>Gestion du tick (SysTick_Handler)</strong> :</h2>
-<p>On doit écrire notre propre handler <code>SysTick_Handler</code> qui appelle la fonction de tick de FreeRTOS, et éventuellement notre propre incrémenteur de tick si on en a besoin.</p>
-<pre><code class="language-c">#include &quot;FreeRTOS.h&quot;
-#include &quot;task.h&quot;
-
-extern void xPortSysTickHandler(void);
-
-void SysTick_Handler(void)
-{
-    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
-        xPortSysTickHandler(); // Donne le tick à FreeRTOS
-    }
-    // 
-}
-</code></pre>
-<hr />
-<p><br></p>
-<h2 id="gestion-des-autres-interruptions"><strong>Gestion des autres interruptions :</strong></h2>
-<p>Si on utilise des périphériques avec interruptions, écrit les handlers normalement. Si une interruption doit réveiller une tâche, utilisez les fonctions FromISR de FreeRTOS (comme <em><code>xSemaphoreGiveFromISR()</code></em>) en respectant les priorités définies dans <code>FreeRTOSConfig.h</code>.</p>
-<hr />
-<p><br></p>
 <h2 id="resolution-des-problemes-courants"><strong>Résolution des problèmes courants</strong></h2>
 <ul>
 <li><strong>Erreur "FreeRTOSConfig.h not found"</strong> : Vérifie tes chemins d'inclusion.</li>
+<li><strong>Erreurs de liens "undefined symbol"</strong> : Ajoute tous les fichiers <code>.c</code> de FreeRTOS (<code>tasks.c, queue.c, list.c, timers.c, event_groups.c, port.c, heap_4.c</code>).</li>
 <li><strong>Erreurs de liens "multiple definition"</strong> : Commente ou supprime les handlers <code>SVC_Handler</code>, <code>PendSV_Handler</code> et <code>SysTick_Handler</code> de ton fichier startup_*.s ou de tout autre fichier où ils seraient définis. FreeRTOS fournit les siens via les alias dans <code>FreeRTOSConfig.h</code>.</li>
 <li><strong>Le système ne démarre pas, ou une seule tâche s'exécute :</strong><ul>
 <li>Vérifiez que <code>SysTick_Handler</code> est correctement implémenté et appelle <code>xPortSysTickHandler()</code>.</li>
@@ -307,6 +266,8 @@ void SysTick_Handler(void)
 <h3 id="liens-connexe">Liens Connexe</h3>
 <ul>
 <li><a href="https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf">Demmarrer avec FreeRTOS sous Kiel</a></li>
+<li><a href="https://www.bing.com/search?q=" title="https%3A%2F%2Fwww.st.com%2Fresource%2Fen%2Fapplication_note%2Fan2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf">AN2606 – STM32 System Memory Boot Mode</a></li>
+<li><a href="https://www.bing.com/search?q=" title="https%3A%2F%2Fcommunity.st.com%2Fysqtg83639%2Fattachments%2Fysqtg83639%2Fstm32-mcu-cubeide-forum%2F27649%2F1%2FLab10.1%2520-%2520Getting%2520started%2520with%2520embedded%2520RTOS%2520%28freeRTOS%29.pdf">Getting started with FreeRTOS (ST Community)</a></li>
 </ul></div>
             </div>
         </div>

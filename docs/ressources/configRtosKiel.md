@@ -224,6 +224,5 @@ void vTask2(void *pvParameters)
 ### Liens Connexe
 
 
-- [Demmarrer avec FreeRTOS sous Kiel](https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf)
-- [AN2606 – STM32 System Memory Boot Mode](https://www.bing.com/search?q="https%3A%2F%2Fwww.st.com%2Fresource%2Fen%2Fapplication_note%2Fan2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf")
-- [Getting started with FreeRTOS (ST Community)](https://www.bing.com/search?q="https%3A%2F%2Fcommunity.st.com%2Fysqtg83639%2Fattachments%2Fysqtg83639%2Fstm32-mcu-cubeide-forum%2F27649%2F1%2FLab10.1%2520-%2520Getting%2520started%2520with%2520embedded%2520RTOS%2520%28freeRTOS%29.pdf")
+- [Demmarrer avec FreeRTOS sous Kiel : AN2606 – STM32 System Memory Boot Mode](https://community.st.com/ysqtg83639/attachments/ysqtg83639/stm32-mcu-cubeide-forum/27649/1/Lab10.1%20-%20Getting%20started%20with%20embedded%20RTOS%20(freeRTOS).pdf)
+- [Getting started with FreeRTOS (ST Community)](https%3A%2F%2Fcommunity.st.com%2Fysqtg83639%2Fattachments%2Fysqtg83639%2Fstm32-mcu-cubeide-forum%2F27649%2F1%2FLab10.1%2520-%2520Getting%2520started%2520with%2520embedded%2520RTOS%2520%28freeRTOS%29.pdf)
