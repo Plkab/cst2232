@@ -121,7 +121,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Gestion avancée DMA]()
 
 
-**Intelligence artificielle embarquée**
+**Intelligence Artificielle Embarquée**
 -[Reconnaissance de gestes via IMU]()
 
 ---
