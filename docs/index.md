@@ -65,8 +65,6 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Analyse fréquentielle avec FFT](technique-algos/fft/index.md)
 - [Synthèse Numérique Directe (DDS) avec DAC externe MCP4822](technique-algos/dds/index.md)
 - [Bases du Graphisme Embarqué sur écran TFT ili9488 3.2](technique-algos/graphisme/index.md)
-- [Pilote graphique de l'afficheur TFT ili9488 3.2](technique-algos/tftili9488/index.md)
-- [Pilote graphique de l'afficheur de l'écran VGA](technique-algos/vga/index.md)
 
 ---
 <br>
@@ -80,6 +78,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)
 - [Filtrage des données du IMU 6050 via Filtre de Kalman](projects/imu_klf/index.md)
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](technique-algos/estimation/#projet-estimation-angle)
+- [Stabilisation dynamique d’un pendule inversé]()
 
 
 **Traitement du Signal Numérique (DSP) Synthèse Sonore**
@@ -100,15 +99,14 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Simulation de nuée d’oiseaux (Boids)]()
 - [Boids avec prédateur]()
 - [Systèmes chaotiques de Lorenz]()
-
-
-**Architecture Microcontrôleur Avancée**
-- [Bootloader série personnalisé]()
-- [Gestion avancée DMA]()
+- [Analyse statistique en temps réel (collecte de données capteurs, calcul de moyenne, corrélation, variance et histogrammes en temps réel)]()
+- [Modélisation thermique temps réel : mesure et simulation de diffusion de chaleur sur microprocesseur]()
 
 
 **Interfaces Capteurs et Périphériques**
 - [Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos-multimode) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
+- [Pilote graphique de l'afficheur TFT ili9488 3.2](technique-algos/tftili9488/index.md)
+- [Pilote graphique de l'afficheur de l'écran VGA](technique-algos/vga/index.md)
 - [claviers matriciels]()
 - [Interface DAC SPI]()
 - [Interface ADC]()
@@ -117,6 +115,15 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 **Systèmes de Communications Embarquées et IOT**
 - [Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre](projects/esp01/index.md)
 
+
+**Architecture Microcontrôleur Avancée**
+- [Bootloader série personnalisé]()
+- [Gestion avancée DMA]()
+
+
+**Intelligence artificielle embarquée**
+-[Reconnaissance de gestes via IMU]()
+
 ---
 <br>
 
@@ -124,8 +131,7 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 
 ### Laboratoires 2026
 - [Labo 1 – Stabilisation Plate-Forme dynamique](labos/stabilisation1.md)
-- [Labo 2 – Monitoring Industriel via ESP8266](labos/monitoringEsp8266.md)
-- [Labo 3 – Analyse vibratoire avec FFT](labos/fft1.md)
+- [Labo 2 – Analyse vibratoire avec FFT](labos/fft1.md)
 - [Labo Final](labos/laboFinal.md)
 
 ---
