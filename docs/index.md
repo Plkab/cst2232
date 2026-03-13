@@ -75,6 +75,7 @@ Communication Série
 ### Projets d’Application
   
 Contrôle et Systèmes Dynamiques
+
 - [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)
 - [Filtrage des données du IMU 6050 via Filtre de Kalman](projects/imu_klf/index.md)
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](technique-algos/estimation/#projet-estimation-angle)
@@ -82,6 +83,7 @@ Contrôle et Systèmes Dynamiques
 
 
 Traitement du Signal Numérique (DSP) Synthèse Sonore
+
 - [Analyse spectrale d’un signal audio avec FFT](technique-algos/fft/#projet-fft-audio)
 - [Générateur audio DDS via DAC SPI]()
 - [Générateur de signaux DDS : Frequencemetre sur TFT](projects/dds_frequencemetre/index.md)
@@ -89,12 +91,14 @@ Traitement du Signal Numérique (DSP) Synthèse Sonore
 
 
 Graphique Embarqué et Visualisation
+
 - [TFT graphics / primitives graphiques]()
 - [VGA graphics / primitives graphiques]()
 - [Lecture GPS et affichge sur GUI Python](projects/gps/index.md) : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.
 
 
 Simulation Scientifique et Systèmes Complexes
+
 - [Simulation de comportements collectifs]()
 - [Simulation de nuée d’oiseaux (Boids)]()
 - [Boids avec prédateur]()
@@ -104,6 +108,7 @@ Simulation Scientifique et Systèmes Complexes
 
 
 Interfaces Capteurs et Périphériques
+
 - [Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos-multimode) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
 - [Pilote graphique de l'afficheur TFT ili9488 3.2](technique-algos/tftili9488/index.md)
 - [Pilote graphique de l'afficheur de l'écran VGA](technique-algos/vga/index.md)
@@ -113,15 +118,18 @@ Interfaces Capteurs et Périphériques
 
 
 Systèmes de Communications Embarquées et IOT
+
 - [Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre](projects/esp01/index.md)
 
 
 Architecture Microcontrôleur Avancée
+
 - [Bootloader série personnalisé]()
 - [Gestion avancée DMA]()
 
 
 Intelligence Artificielle Embarquée
+
 -[Reconnaissance de gestes via IMU]()
 
 ---
