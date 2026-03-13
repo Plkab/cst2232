@@ -7,13 +7,7 @@ Contact : [spaulkabidu@gmail.com](mailto:spaulkabidu@gmail.com)
 {: style="text-align: center;" }
 
 ---
-  
-
-
 <br>
-  
-### Accueil {#Accueil} 
-  
  <br> 
  
 
@@ -27,9 +21,12 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - Intégrer des périphériques de communication (UART, I2C, SPI, CAN) et des modules sans fil (ESP8266).
 - Réaliser des interfaces homme-machine et des systèmes connectés (IoT).  
 
-
 ---
 <br>
+
+
+
+### Accueil {#Accueil} 
   
 - [Philosophie du cours](philosophie/index.md)
 - [Introduction aux Systèmes Temps Réels](rtos/index.md)
@@ -38,6 +35,8 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 
 ---
 <br>
+
+
 
 ### Périphériques du STM32F4
 - [GPIO et Interruptions](stm32f4/gpio/index.md)
@@ -54,9 +53,9 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 - [Communication Série CAN](stm32f4/can/index.md)
 - [Communication Série USB](stm32f4/usb/index.md)
 
-
 ---
 <br>
+
 
 ### Algorithmes et Techniques de Programmation
 - [Machine d’État Fini (FSM)](technique-algos/fsm/index.md)
@@ -72,18 +71,56 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 ---
 <br>
 
+
+
 ### Projets d’Application
-- [Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre](projects/esp01/index.md)
-- [Générateur de signaux DDS : Frequencemetre sur TFT](projects/dds_frequencemetre/index.md)
-- [Analyse spectrale d’un signal audio](technique-algos/fft/#projet-fft-audio)
+
+
+**Contrôle et Systèmes Dynamiques**
+- [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)
 - [Filtrage des données du IMU 6050 via Filtre de Kalman](projects/imu_klf/index.md)
 - [Filtrage des données du IMU 6050 via Filtre Complémentaire](technique-algos/estimation/#projet-estimation-angle)
-- [Régulation de vitesse d’un moteur DC avec PID](projects/moteurPID/index.md)
+
+
+**Traitement du Signal Numérique (DSP) Synthèse Sonore**
+- [Analyse spectrale d’un signal audio avec FFT](technique-algos/fft/#projet-fft-audio)
+- [Générateur audio DDS via DAC SPI]()
+- [Générateur de signaux DDS : Frequencemetre sur TFT](projects/dds_frequencemetre/index.md)
+- [Synthèse bio-inspirée (chants d’oiseaux)]()
+
+
+**Graphique Embarqué et Visualisation**
+- [TFT graphics / primitives graphiques]()
+- [VGA graphics / primitives graphiques]()
 - [Lecture GPS et affichge sur GUI Python](projects/gps/index.md) : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.
+
+
+**Simulation Scientifique et Systèmes Complexes**
+- [Simulation de comportements collectifs]()
+- [Simulation de nuée d’oiseaux (Boids)]()
+- [Boids avec prédateur]()
+- [Systèmes chaotiques de Lorenz]()
+
+
+**Architecture Microcontrôleur Avancée**
+- [Bootloader série personnalisé]()
+- [Gestion avancée DMA]()
+
+
+**Interfaces Capteurs et Périphériques**
 - [Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages](stm32f4/gpio/index.md#projet-gpio-interrupt-freertos-multimode) : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
+- [claviers matriciels]()
+- [Interface DAC SPI]()
+- [Interface ADC]()
+
+
+**Systèmes de Communications Embarquées et IOT**
+- [Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre](projects/esp01/index.md)
 
 ---
 <br>
+
+
 
 ### Laboratoires 2026
 - [Labo 1 – Stabilisation Plate-Forme dynamique](labos/stabilisation1.md)
@@ -93,6 +130,8 @@ L’approche pédagogique adoptée est celle d’une **expérience de conception
 
 ---
 <br>
+
+
 
 ### Ressources et Références
 
