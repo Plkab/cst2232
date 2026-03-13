@@ -69,9 +69,8 @@ Enseignant au Département de Génie Électrique et Informatique<br />
 Institut Supérieur des Techniques Appliquées de Goma (ISTA)<br />
 Contact : <a href="mailto:spaulkabidu@gmail.com">spaulkabidu@gmail.com</a><br /></p>
 <hr />
-<p><br></p>
-<h3 id="Accueil">Accueil</h3>
-<p><br> </p>
+<p><br>
+ <br> </p>
 <p>Le <strong>cours CST2232 – Conception de Systèmes Temps Réel à Base de Microcontrôleur</strong> s’adresse aux étudiants du <strong>Master en Génie Logiciel Industriel</strong> de l’ISTA. Il a pour ambition de former des ingénieurs capables de concevoir et de réaliser des systèmes embarqués temps réel complets, en intégrant à la fois les aspects matériels (microcontrôleurs, capteurs, actionneurs) et logiciels (programmation bas niveau, RTOS, algorithmes de contrôle et de traitement du signal).</p>
 <p>L’approche pédagogique adoptée est celle d’une <strong>expérience de conception cumulative (Cumulative Design Experience – CDE)</strong> : chaque chapitre apporte une brique nouvelle et les projets finaux synthétisent l’ensemble des connaissances. À l’issue de ce cours, vous serez capable de :</p>
 <ul>
@@ -83,6 +82,7 @@ Contact : <a href="mailto:spaulkabidu@gmail.com">spaulkabidu@gmail.com</a><br />
 </ul>
 <hr />
 <p><br></p>
+<h3 id="Accueil">Accueil</h3>
 <ul>
 <li><a href="philosophie/">Philosophie du cours</a></li>
 <li><a href="rtos/">Introduction aux Systèmes Temps Réels</a></li>
@@ -124,24 +124,42 @@ Contact : <a href="mailto:spaulkabidu@gmail.com">spaulkabidu@gmail.com</a><br />
 <hr />
 <p><br></p>
 <h3 id="projets-dapplication">Projets d’Application</h3>
-<ul>
-<li><a href="projects/esp01/">Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre</a></li>
-<li><a href="projects/dds_frequencemetre/">Générateur de signaux DDS : Frequencemetre sur TFT</a></li>
-<li><a href="technique-algos/fft/#projet-fft-audio">Analyse spectrale d’un signal audio</a></li>
-<li><a href="projects/imu_klf/">Filtrage des données du IMU 6050 via Filtre de Kalman</a></li>
-<li><a href="technique-algos/estimation/#projet-estimation-angle">Filtrage des données du IMU 6050 via Filtre Complémentaire</a></li>
-<li><a href="projects/moteurPID/">Régulation de vitesse d’un moteur DC avec PID</a></li>
-<li><a href="projects/gps/">Lecture GPS et affichge sur GUI Python</a> : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.</li>
-<li><a href="stm32f4/gpio/#projet-gpio-interrupt-freertos-multimode">Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages</a> : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.</li>
-</ul>
+<p><strong>Contrôle et Systèmes Dynamiques</strong>
+- <a href="projects/moteurPID/">Régulation de vitesse d’un moteur DC avec PID</a>
+- <a href="projects/imu_klf/">Filtrage des données du IMU 6050 via Filtre de Kalman</a>
+- <a href="technique-algos/estimation/#projet-estimation-angle">Filtrage des données du IMU 6050 via Filtre Complémentaire</a></p>
+<p><strong>Traitement du Signal Numérique (DSP) Synthèse Sonore</strong>
+- <a href="technique-algos/fft/#projet-fft-audio">Analyse spectrale d’un signal audio avec FFT</a>
+- <a href="">Générateur audio DDS via DAC SPI</a>
+- <a href="projects/dds_frequencemetre/">Générateur de signaux DDS : Frequencemetre sur TFT</a>
+- <a href="">Synthèse bio-inspirée (chants d’oiseaux)</a></p>
+<p><strong>Graphique Embarqué et Visualisation</strong>
+- <a href="">TFT graphics / primitives graphiques</a>
+- <a href="">VGA graphics / primitives graphiques</a>
+- <a href="projects/gps/">Lecture GPS et affichge sur GUI Python</a> : parsing NMEA, extraction de la position, envoi sur UART, interface graphique Tkinter avec mise à jour temps réel.</p>
+<p><strong>Simulation Scientifique et Systèmes Complexes</strong>
+- <a href="">Simulation de comportements collectifs</a>
+- <a href="">Simulation de nuée d’oiseaux (Boids)</a>
+- <a href="">Boids avec prédateur</a>
+- <a href="">Systèmes chaotiques de Lorenz</a></p>
+<p><strong>Architecture Microcontrôleur Avancée</strong>
+- <a href="">Bootloader série personnalisé</a>
+- <a href="">Gestion avancée DMA</a></p>
+<p><strong>Interfaces Capteurs et Périphériques</strong>
+- <a href="stm32f4/gpio/#projet-gpio-interrupt-freertos-multimode">Système de Contrôle de LED Multimode avec Interruption, Sémaphore et File de Messages</a> : Un projet complet synthétisant GPIO, Interruptions EXTI, Sémaphores et Files de messages sous FreeRTOS.
+- <a href="">claviers matriciels</a>
+- <a href="">Interface DAC SPI</a>
+- <a href="">Interface ADC</a></p>
+<p><strong>Systèmes de Communications Embarquées et IOT</strong>
+- <a href="projects/esp01/">Serveur Web embarqué avec ESP-01 : Instrument de laboratoire spectromètre</a></p>
 <hr />
 <p><br></p>
 <h3 id="laboratoires-2026">Laboratoires 2026</h3>
 <ul>
 <li><a href="labos/stabilisation1/">Labo 1 – Stabilisation Plate-Forme dynamique</a></li>
-<li><a href="labos/monitoringEsp8266/">Labo 2 – Monitoring Industriel via ESP8266</a></li>
+<li><a href="labos/monitoringEsp8266.md">Labo 2 – Monitoring Industriel via ESP8266</a></li>
 <li><a href="labos/fft1/">Labo 3 – Analyse vibratoire avec FFT</a></li>
-<li><a href="labos/laboFinal.md">Labo Final</a></li>
+<li><a href="labos/laboFinal/">Labo Final</a></li>
 </ul>
 <hr />
 <p><br></p>
@@ -245,5 +263,5 @@ Contact : <a href="mailto:spaulkabidu@gmail.com">spaulkabidu@gmail.com</a><br />
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-03-12 23:45:39.586043+00:00
+Build Date UTC : 2026-03-13 13:16:10.787554+00:00
 -->
