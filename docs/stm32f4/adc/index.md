@@ -26,7 +26,7 @@ Le STM32F401 intègre un **ADC 12 bits** avec jusqu’à 16 voies externes (PA0�
 - Gestion du temps d’échantillonnage paramétrable.
 - Possibilité d’utiliser le **DMA** pour transférer automatiquement les résultats en mémoire.
 
-Dans ce chapitre, nous verrons comment configurer l’ADC en mode polling, avec interruption, et avec DMA. Nous intégrerons ensuite ces mécanismes dans un environnement FreeRTOS pour des acquisitions temps réel non bloquantes.
+Dans ce chapitre, nous verrons comment configurer l’ADC en mode polling, avec interruption. Nous intégrerons ensuite ces mécanismes dans un environnement FreeRTOS pour des acquisitions temps réel non bloquantes.
 
 ---
 <br>
@@ -185,7 +185,7 @@ Le condensateur 100 nF sert à réduire le bruit haute fréquence.
 
 **Calcul de la température**
 
-```markdown
+```text
 Pour une conversion **ADC 12 bits** avec :
 
 \[
@@ -236,66 +236,192 @@ T \approx 82.4^\circ C
 \]
 ```
 
-**Exemple : lecture LM35 sur PA0 avec affichage UART**
+**Exemple : Mesure la tension d'un capteur branché sur la broche PA0 (ADC1_IN0) avec affichage UART**
+
+La mesure d’une tension analogique appliquée sur l’entrée PA0 est convertit en valeur numérique via le convertisseur analogique-numérique ADC1, son traitement pour obtenir la tension physique en volts, et enfin son affichage sur un terminal série via la communication USART2. Sur le plan matériel, l’expérience repose sur une carte black pill alimentée via USB, un capteur analogique ou potentiomètre connecté à l’entrée PA1, ainsi qu’un terminal série sur PC (tel que `PuTTY` ou `TeraTerm`) configuré en 9600 bauds. Le brochage de la carte STM32 prévoit l’utilisation du port PA1 en mode analogique, associé au canal ADC1_IN1, et les broches PA2/PA3 pour la communication série via USART2 (transmission et réception respectivement). Le signal mesuré est donc une tension comprise entre 0 V et 3.3 V, qui constitue la référence de l’ADC.
+
+Le programme développé débute par l’initialisation de l’horloge HSI, des GPIO nécessaires et de l’ADC1. Le GPIOA est activé via le registre RCC, et la broche PA1 est configurée en mode analogique sans pull-up/down pour permettre une mesure fiable. Le périphérique ADC1 est ensuite activé et calibré, avec un temps d’échantillonnage configuré à 480 cycles ADC afin d’optimiser la stabilité de la conversion. L’entrée utilisée est normalement PA1, correspondant au canal 1 du multiplexeur ADC interne. 
+
+La fonction ADC1_Read lance une conversion unique (mode `SWSTART`), attend la fin de conversion (bit `EOC`) et lit la valeur numérique sur 12 bits (0 à 4095). Cette valeur est ensuite utilisée dans la fonction principale main() pour calculer la tension équivalente en volts par la formule classique : `tension = (adc_value * 3.3) / 4095.0`. Le résultat est ensuite affiché via USART2, à l’aide de fonctions utilitaires personnalisées comme `USART2_PrintFloat` ou `USART2_PrintText`, afin d’envoyer des chaînes de caractères `ASCII` vers le terminal connecté au PC.
+
 
 ```c
 #include "stm32f4xx.h"
-#include <stdio.h>
 
-void USART2_Init(uint32_t);
-void USART2_SendChar(char c);
-int fputc(int ch, FILE *f);
+// Lire la valeur de l'ADC et l'envoyer sur l'USART
+uint16_t adc_value;
 
-int main(void) {
-    uint16_t adc_value;
-    float temperature;
+// Initialisation ADC1
+void ADC1_Init(void) {
+    // 1. Activation des horloges pour GPIOA, GPIOB et ADC1
+    RCC->AHB1ENR |= (1 << 0) | (1 << 1); // GPIOA + GPIOB
+    RCC->APB2ENR |= (1 << 8);            // ADC1EN
 
-    // Initialisation UART
-    USART2_Init(115200);
+    // 2. Configuration de l'ADC de base
+    ADC1->CR2 = 0;              // Reset de l'ADC avant config
+    ADC1->CR2 &= ~(1 << 0);     // Désactiver l'ADC (ADON = 0)
+    
+    // 3. Temps d'échantillonnage pour tous les canaux : 480 cycles (valeur maximale)
+    ADC1->SMPR1 = 0xFFFFFFFF;   // Canaux 10-18 (temps d'échantillonnage de 480 cycles)
+    ADC1->SMPR2 = 0xFFFFFFFF;   // Canaux 0-9 (temps d'échantillonnage de 480 cycles)
+    
+    // 4. Configuration de la séquence de conversion : 1 seule conversion
+    ADC1->SQR1 = 0;             // Une seule conversion dans la séquence
 
-    // Configuration ADC sur PA0
-    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    GPIOA->MODER |= (3U << (0*2));
-
-    ADC1->CR1 = 0;
-    ADC1->SMPR2 = (7 << 0);
-    ADC1->SQR3 = 0;
-    ADC1->CR2 = ADC_CR2_ADON;
-
-    printf("LM35 Temperature Sensor\r\n");
-
-    while (1) {
-        ADC1->CR2 |= ADC_CR2_SWSTART;
-        while (!(ADC1->SR & ADC_SR_EOC));
-        adc_value = ADC1->DR;
-
-        temperature = (float)adc_value * 330.0f / 4096.0f;
-        printf("ADC = %4u, Temp = %.2f °C\r\n", adc_value, temperature);
-
-        for (int i = 0; i < 1000000; i++); // attente simple
-    }
+    // 5. Activer l'ADC
+    ADC1->CR2 |= (1 << 0);      // Activer le convertisseur AD (ADON = 1)
 }
 
-void USART2_Init(uint32_t baud) {
+// Lire la valeur ADC sur un canal spécifique
+uint16_t ADC1_Read(uint8_t channel) {
+    // Configuration du GPIO en mode analogique
+    if (channel <= 7) {               // PA0-PA7
+        GPIOA->MODER |= 3UL << (2 * channel);  // Mode analogique sur PA0 à PA7
+    } 
+    else if (channel <= 9) {          // PB0-PB1
+        GPIOB->MODER |= 3UL << (2 * (channel - 8)); // Mode analogique sur PB0 et PB1
+    }
+    else {
+        return 0; // Canal non supporté
+    }
+
+    // Sélectionner le canal dans la séquence de conversion
+    ADC1->SQR3 = channel & 0x1F;     // 5 bits pour choisir le canal ADC
+
+    for (volatile int i = 0; i < 1000; i++); // Délai après SQR3
+
+    // Démarrer la conversion (bit SWSTART)
+    ADC1->CR2 |= (1 << 30);          // Démarrer la conversion (bit SWSTART)
+    
+    // Attendre que la conversion soit terminée (EOC = End Of Conversion)
+    while (!(ADC1->SR & (1 << 1)));  // Attendre le bit EOC (End Of Conversion)
+    
+    // Lire la valeur convertie (12 bits)
+    return ADC1->DR & 0x0FFF;        // Masquer les 12 bits de données converties
+}
+
+void USART2_Init(uint32_t baudrate) {
+    // 1. Activer l’horloge de GPIOA et USART2 (PA2 = TX, PA3 = RX)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
     RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 
-    GPIOA->MODER |= (2 << (2*2)) | (2 << (3*2));
-    GPIOA->AFR[0] |= (7 << (2*4)) | (7 << (3*4));
+		// 2. Configurer PA2 (TX) et PA3 (RX) en Alternate Function AF7
+    GPIOA->MODER &= ~((3 << (2 * 2)) | (3 << (3 * 2)));	// Clear MODER2 and MODER3
+    GPIOA->MODER |=  (2 << (2 * 2)) | (2 << (3 * 2));		// MODER2/3 = 10 (AF)
+    GPIOA->AFR[0] |= (7 << (4 * 2)) | (7 << (4 * 3)); // AFRL2/3 = AF7 (USART2)
 
-    USART2->BRR = 84000000 / baud; // si APB1 = 84 MHz
-    USART2->CR1 = USART_CR1_TE | USART_CR1_UE;
+    // 3. Configurer baudrate : BRR = fclk / baudrate
+		USART2->BRR = (84000000/baudrate);
+
+    // 4. Activer le mode Transmit et Receive, puis activer l’USART
+    USART2->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+
+		// (Optionnel) attendre la stabilisation
+    //while (!(USART2->SR & USART_SR_TC));  // Transmission complete
 }
 
-void USART2_SendChar(char c) {
-    while (!(USART2->SR & USART_SR_TXE));
+void USART2_PrintChar(char c) {
+    while (!(USART2->SR & USART_SR_TXE)); // Attente que le registre soit vide
     USART2->DR = c;
 }
 
-int fputc(int ch, FILE *f) {
-    USART2_SendChar(ch);
-    return ch;
+void USART2_PrintText(char *str) {
+    while (*str) {
+        USART2_PrintChar(*str++);
+    }
+}
+
+void USART2_NewLine(void) { // Fonction pour envoyer un retour à la ligne compatible avec les terminaux
+      USART2_PrintChar('\n');		// Saut de ligne (Line Feed)
+      USART2_PrintChar('\r');		// Retour chariot (Carriage Return)
+}
+
+// Fonction pour envoyer un entier signé sous forme ASCII
+void USART2_PrintInt(int32_t val) {
+    char buffer[12];  // Assez grand pour -2147483648\0
+    int i = 0;
+
+    if (val == 0) {		// Cas particulier du zéro
+        USART2_PrintChar('0');
+        return;
+    }
+
+    if (val < 0) {		// Si négatif, afficher le signe puis inverser
+        USART2_PrintChar('-');
+        val = -val;
+    }
+
+    while (val > 0) {		// Convertir en chiffres ASCII inversés
+        buffer[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+
+    // Afficher les chiffres en ordre inverse
+    while (--i >= 0) {
+        USART2_PrintChar(buffer[i]);
+    }
+}
+
+// Envoyer un nombre flottant avec 2 décimales
+void USART2_PrintFloat1(float num) {
+    int32_t int_part = (int32_t) num;		// Partie entière
+    int32_t frac_part = (int32_t)((num - int_part) * 100);  // Partie fractionnaire à 2 chiffres après virgule
+
+    if (num < 0 && int_part == 0) USART2_PrintChar('-');		// Cas -0.x
+
+    USART2_PrintInt(int_part);		// Afficher partie entière
+    USART2_PrintChar('.');		// Afficher séparateur décimal
+    if (frac_part < 0) frac_part = -frac_part;	// Corriger si négatif
+    if (frac_part < 10) USART2_PrintChar('0'); 	// Ajoute 0 devant les valeurs < 10 (ex: 3.04)
+    USART2_PrintInt(frac_part);		// Afficher partie fractionnaire
+}
+
+void USART2_PrintFloat(float num) {
+    if (num < 0) {
+        USART2_PrintChar('-');
+        num = -num;
+    }
+
+    int int_part = (int)num;
+    int frac_part = (int)((num - int_part) * 100 + 0.5f);  // Arrondi correct
+
+    USART2_PrintInt(int_part);
+    USART2_PrintChar('.');
+    if (frac_part < 10) USART2_PrintChar('0'); // Ajoute un zéro devant si nécessaire
+    USART2_PrintInt(frac_part);
+}
+
+int main(void) {
+    // Initialiser l'USART2 pour la communication série
+    USART2_Init(9600);
+
+    // Initialiser ADC1 pour lire depuis le canal 1 (PA1)
+    ADC1_Init();
+
+    // Afficher un message de démarrage
+    USART2_PrintText("Demarrage ADC..."); 
+    USART2_NewLine();
+   
+    uint16_t adc_val;
+    float tension;
+   
+    while (1) {
+        // Lire la valeur ADC sur le canal 1 (PA1)
+        adc_val = ADC1_Read(1);
+	tension = (adc_val * 3.3f) / 4095.0f; // Convertir en tension
+
+        // Préparer et envoyer la chaîne avec la valeur de l'ADC
+        USART2_PrintText("Valeur ADC: ");
+        USART2_PrintInt(adc_val);
+       
+	USART2_PrintText("\t | Tension [V] : ");
+	USART2_PrintFloat(tension);
+	USART2_PrintText(" V");
+	USART2_NewLine();
+
+        // Attendre un peu avant de lire à nouveau (exemple simple de délai)
+        for (volatile int i = 0; i < 1000000; i++);
+    }
 }
 ```
 
@@ -306,65 +432,210 @@ int fputc(int ch, FILE *f) {
 
 ### **Utilisation avec interruption**
 
-L'ADC peut générer une interruption à la fin de chaque conversion. Cela permet au CPU d'effectuer d'autres tâches pendant la conversion et de traiter le résultat dès qu'il est disponible.
+L'ADC peut générer une interruption à la fin de chaque conversion. Cela permet au CPU d'effectuer d'autres tâches pendant la conversion et de traiter le résultat dès qu'il est disponible. Lorsque l’ADC termine sa conversion, il génère un signal matériel d’interruption qui déclenche automatiquement une fonction spécifique appelée ISR (Interrupt Service Routine). 
+
+Le processus typique se déroule en plusieurs étapes. Tout d’abord, l’ADC est configuré pour générer une interruption à la fin de chaque conversion en activant le bit `EOCIE` dans le registre CR1 (`ADCx->CR1 |= ADC_CR1_EOCIE`). Ensuite, l’interruption de l’ADC est activée au niveau du NVIC (`NVIC_EnableIRQ(ADC_IRQn)`) afin que le processeur puisse réagir aux événements de l’ADC. La conversion est alors lancée via le registre CR2 (`ADC1->CR2 |= ADC_CR2_SWSTART`). Lorsque la conversion est terminée, l’ADC déclenche automatiquement la routine `ADC_IRQHandler()`. Dans cette ISR, le programme lit la valeur convertie à partir du registre `ADCx->DR`, ce qui permet de récupérer immédiatement la donnée sans bloquer le CPU.
 
 **Configuration avec interruption**
 
 Les étapes sont similaires à la configuration de base, mais on ajoute :
 
-- L'activation de l'interruption de fin de conversion (EOC) dans ADC_CR1 (bit EOCIE).
+- L'activation de l'interruption de fin de conversion (`EOC`) dans ADC_CR1 (bit `EOCIE`).
 - La configuration et l'activation de l'interruption dans le NVIC.
 
-**Exemple : conversion unique sur PA0 avec interruption**
+**Exemple : Mesure la température du capteur LM35 branché sur la broche PA1 (ADC1_IN1) avec interruption**
+
+Le capteur LM35 délivre une tension proportionnelle à la température ambiante, à raison de 10 mV par degré Celsius. Le système est conçu de manière à ce que l’ADC génère une interruption à la fin de chaque conversion. La routine d’interruption `ADC_IRQHandler()` lit automatiquement la valeur convertie, calcule la tension correspondante puis la transforme en température. Cette température est ensuite transmise au PC via l’USART2. L’utilisation des interruptions permet ainsi de récupérer les données immédiatement après conversion sans bloquer le processeur, améliorant la réactivité et l’efficacité du système.
+
+La configuration matérielle commence par l’initialisation de l’ADC1, en activant les horloges nécessaires pour GPIOA et ADC1. Le GPIO associé au canal ADC est mis en mode analogique pour garantir une lecture correcte du signal. L’ADC est configuré pour une seule conversion à la fois et le bit EOCIE est activé pour générer une interruption à la fin de la conversion. 
+
+L’USART2 est configuré à 9600 bauds pour permettre l’envoi des mesures vers un PC, avec des fonctions de transmission de caractères, chaînes, entiers et nombres flottants pour un affichage clair et formaté. Dans la boucle principale, le microcontrôleur lance en continu la conversion ADC. Lorsqu’une conversion est terminée, le flag conversion_done est levé et le programme envoie la valeur mesurée sur l’USART. Cette approche montre un flux de données simple mais efficace : acquisition, traitement et communication des mesures, le tout en utilisant les interruptions pour éviter le blocage du CPU. Le programme illustre également comment structurer un code modulaire et facilement extensible à d’autres capteurs analogiques.
 
 ```c
-#include "stm32f4xx.h"
+#include "stm32f4xx.h" // Inclusion des définitions pour STM32F4
 
-volatile uint16_t adc_result = 0;
+// Variable pour stocker la valeur ADC brute
+uint16_t adc_value;
+// Variable pour stocker la température calculée (en °C)
+volatile float temperature = 0.0;
+// Canal ADC sélectionné (0=PA0, 1=PA1, etc.)
+volatile uint8_t adc_channel = 0;
+// Flag pour indiquer qu’une conversion ADC est terminée
 volatile uint8_t conversion_done = 0;
 
-void ADC_Init_IT(void) {
-    // Activer les horloges
-    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+// Initialisation de l’ADC1
+void ADC1_Init(void) {
+    // Activer l’horloge pour GPIOA et GPIOB (broches analogiques)
+    RCC->AHB1ENR |= (1 << 0) | (1 << 1); // GPIOA + GPIOB
 
-    // PA0 en mode analogique
-    GPIOA->MODER |= (3U << (0*2));
+    // Activer l’horloge pour ADC1
+    RCC->APB2ENR |= (1 << 8); // ADC1
 
-    // Configuration de l'ADC
-    ADC1->CR1 = ADC_CR1_EOCIE;       // activation interruption EOC
-    ADC1->SMPR2 = (7 << 0);           // temps d'échantillonnage max
-    ADC1->SQR3 = 0;                    // canal 0 en premier
-    ADC1->CR2 |= ADC_CR2_ADON;         // activation ADC
+    // Reset de l’ADC : CR2 = 0
+    ADC1->CR2 = 0;
 
-    // NVIC
+    // Désactiver ADC avant configuration
+    ADC1->CR2 &= ~(1 << 0); // ADON = 0
+
+    // Temps d’échantillonnage maximum (480 cycles) pour tous les canaux
+    ADC1->SMPR1 = 0xFFFFFFFF; // Canaux 10-18
+    ADC1->SMPR2 = 0xFFFFFFFF; // Canaux 0-9
+
+    // Séquence de conversion : une seule conversion
+    ADC1->SQR1 = 0; // 1 conversion
+
+    // Activer interruption EOC (End Of Conversion)
+    ADC1->CR1 |= ADC_CR1_EOCIE;
+
+    // Activer ADC
+    ADC1->CR2 |= (1 << 0); // ADON = 1
+
+    // Activer l’interruption ADC dans le NVIC
     NVIC_EnableIRQ(ADC_IRQn);
-    NVIC_SetPriority(ADC_IRQn, 2);
 }
 
-void ADC_IRQHandler(void) {
-    if (ADC1->SR & ADC_SR_EOC) {
-        uint16_t value = ADC1->DR;               // Lecture (efface le flag)
-        // Stocker la valeur dans un buffer ou envoyer à une tâche
-        // (par exemple via xQueueSendFromISR)
+// Sélection du canal ADC à mesurer
+void ADC1_Select_Channel(uint8_t channel) {
+    // Configurer le GPIO en mode analogique
+    if (channel <= 7) { // PA0 à PA7
+        GPIOA->MODER &= ~(3UL << (2 * channel)); // Clear bits
+        GPIOA->MODER |= 3UL << (2 * channel);    // Mode analogique
+    }
+    else if (channel <= 9) { // PB0-PB1
+        GPIOB->MODER &= ~(3UL << (2 * (channel - 8))); // Clear
+        GPIOB->MODER |= 3UL << (2 * (channel - 8));    // Mode analogique
+    }
+    else {
+        return; // Canal invalide
+    }
 
-        conversion_done = 1;
+    adc_channel = channel;        // Stocker le canal sélectionné
+    ADC1->SQR3 = channel;         // Sélectionner le canal pour la conversion
+}
+
+// Lancer une conversion ADC
+void ADC1_StartConversion(void) {
+    // Démarrer la conversion par logiciel
+    ADC1->CR2 |= ADC_CR2_SWSTART;
+}
+
+// Initialisation USART2 pour communication série
+void USART2_Init(uint32_t baudrate) {
+    // Activer horloge GPIOA et USART2
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+
+    // Configurer PA2 (TX) et PA3 (RX) en AF7
+    GPIOA->MODER &= ~((3 << (2 * 2)) | (3 << (3 * 2))); // Clear MODER2 et MODER3
+    GPIOA->MODER |=  (2 << (2 * 2)) | (2 << (3 * 2));   // Mode AF
+    GPIOA->AFR[0] |= (7 << (4 * 2)) | (7 << (4 * 3));   // AF7
+
+    // Configurer le baudrate (BRR = fclk / baudrate)
+    USART2->BRR = (84000000 / baudrate); 
+
+    // Activer transmission, réception et USART
+    USART2->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+
+// Envoyer un caractère via USART2
+void USART2_PrintChar(char c) {
+    while (!(USART2->SR & USART_SR_TXE)); // Attendre registre vide
+    USART2->DR = c;                       // Envoyer le caractère
+}
+
+// Envoyer une chaîne via USART2
+void USART2_PrintText(char *str) {
+    while (*str) {
+        USART2_PrintChar(*str++);         // Envoyer caractère par caractère
     }
 }
 
+// Envoyer un retour à la ligne (LF + CR)
+void USART2_NewLine(void) {
+    USART2_PrintChar('\n'); // Line Feed
+    USART2_PrintChar('\r'); // Carriage Return
+}
+
+// Envoyer un entier signé sous forme ASCII
+void USART2_PrintInt(int32_t val) {
+    char buffer[12]; // Suffisant pour -2147483648\0
+    int i = 0;
+
+    if (val == 0) {
+        USART2_PrintChar('0');
+        return;
+    }
+
+    if (val < 0) { // Si négatif
+        USART2_PrintChar('-');
+        val = -val;
+    }
+
+    // Conversion en chiffres ASCII
+    while (val > 0) {
+        buffer[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+
+    // Affichage des chiffres dans l’ordre correct
+    while (--i >= 0) {
+        USART2_PrintChar(buffer[i]);
+    }
+}
+
+// Envoyer un flottant avec 2 décimales
+void USART2_PrintFloat(float num) {
+    if (num < 0) { 
+        USART2_PrintChar('-');
+        num = -num;
+    }
+
+    int int_part = (int)num; // Partie entière
+    int frac_part = (int)((num - int_part) * 100 + 0.5f); // Partie fractionnaire arrondie
+
+    USART2_PrintInt(int_part);
+    USART2_PrintChar('.');
+    if (frac_part < 10) USART2_PrintChar('0'); // Ajouter 0 devant si nécessaire
+    USART2_PrintInt(frac_part);
+}
+
+// Gestionnaire d’interruption ADC
+void ADC_IRQHandler(void) {
+    if (ADC1->SR & ADC_SR_EOC) { // Fin de conversion
+        adc_value = (uint16_t)(ADC1->DR); // Lire la valeur ADC
+        // Conversion en tension puis en température (LM35)
+        float voltage = (adc_value * 3.3f) / 4095.0f;
+        temperature = voltage * 100.0f; // LM35 : 10 mV/°C
+
+        conversion_done = 1; // Flag pour indiquer qu’une nouvelle donnée est prête
+    }
+}
+
+// Fonction principale
 int main(void) {
-    ADC_Init_IT();
+    USART2_Init(9600);      // Initialiser USART2 à 9600 bauds
+    ADC1_Init();            // Initialiser ADC1
+    ADC1_Select_Channel(1); // Choisir canal PA1 pour LM35
+
+    USART2_PrintText("Demarrage ADC INT...");
+    USART2_NewLine();
 
     while (1) {
-        // Démarrer une conversion (logiciel)
-        ADC1->CR2 |= ADC_CR2_SWSTART;
+        ADC1_StartConversion(); // Lancer une conversion ADC
 
-        // Attendre la fin de conversion (optionnel, on pourrait faire autre chose)
-        // Ici on attend simplement que le flag soit positionné
-        while (!conversion_done);
-        conversion_done = 0;
+        if (conversion_done) { // Si conversion terminée
+            USART2_PrintText("Canal ADC Ch");
+            USART2_PrintInt(adc_channel); // Afficher canal
+            USART2_PrintText(" : ");
+            USART2_PrintFloat(temperature); // Afficher température
+            USART2_PrintChar('C');
+            USART2_NewLine();
 
-        // Utiliser adc_result...
+            conversion_done = 0; // Réinitialiser flag
+        }
+
+        // Petit délai pour éviter l'envoi trop rapide
+        for (volatile int i = 0; i < 100000; i++);
     }
 }
 ```

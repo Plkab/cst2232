@@ -139,6 +139,8 @@ USARTDIV ≈ 546,875</p>
 </ul>
 <p>Donc : BRR = 0x222E</p>
 <p>On peut utiliser ces <strong>valeurs directement dans le code</strong> pour configurer le registre <strong>USART_BRR</strong>.</p>
+<hr />
+<p><br></p>
 <h3 id="configuration-simple-mode-polling"><strong>Configuration simple (mode polling)</strong></h3>
 <p><strong>Initialisation de l’USART2 sur PA2 (TX) et PA3 (RX)</strong></p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
@@ -164,25 +166,26 @@ void USART2_Init(uint32_t baud) {
 // Émission d'un caractère (polling)
 /*On utilise le flag TXE (Transmit data register empty) du registre SR. Quand ce bit est à 1, le buffer de transmission est vide et on peut écrire un nouveau caractère dans DR.
 */
-void USART2_SendChar(char c) {
-    while (!(USART2-&gt;SR &amp; USART_SR_TXE)); // Attendre que le buffer soit vide
+void USART2_PrintChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE)); // Attente que le registre soit vide
     USART2-&gt;DR = c;
 }
 
 // Émission d'une chaîne
-void USART2_SendString(char *str) {
+void USART2_PrintText(char *str) {
     while (*str) {
-        USART2_SendChar(*str++);
+        USART2_PrintChar(*str++);
     }
 }
 
 // Réception d'un caractère (polling, bloquant)
 /* Le flag RXNE (Read data register not empty) indique qu’un caractère a été reçu et est disponible dans DR. On attend qu’il soit à 1, puis on lit.
 */
-char USART2_GetChar(void) {
-    while (!(USART2-&gt;SR &amp; USART_SR_RXNE)); // Attendre qu'une donnée soit reçue
+char USART2_ReadChar(void) {
+    while (!(USART2-&gt;SR &amp; USART_SR_RXNE)); // Attente d’un caractère reçu
     return USART2-&gt;DR;
 }
+
 </code></pre>
 <p>Limitation : les fonctions d’émission/réception en polling bloquent le CPU jusqu’à ce que l’opération soit terminée. Dans un système temps réel, cela peut être problématique.</p>
 <p><strong>Exemple complet : écho</strong></p>
@@ -190,8 +193,8 @@ char USART2_GetChar(void) {
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
 
 void USART2_Init(uint32_t baud);
-void USART2_SendChar(char c);
-char USART2_GetChar(void);
+void USART2_PrintChar(char c);
+char USART2_ReadChar();  
 void delay_ms(int);
 
 int main(void) {
@@ -203,8 +206,8 @@ int main(void) {
     GPIOC-&gt;ODR &amp;= ~(1 &lt;&lt; 13); // éteinte
 
     while (1) {
-        char ch = USART2_GetChar();
-        USART2_SendChar(ch);  // écho
+        char ch = USART2_ReadChar();  
+        USART2_PrintChar(ch);  // écho
 
         // Faire clignoter la LED selon la valeur reçue
         for (int i = 0; i &lt; ch; i++) {
@@ -232,12 +235,12 @@ void USART2_Init(uint32_t baud) {
     USART2-&gt;CR1 |= USART_CR1_UE;       // Activer l'USART
 }
 
-void USART2_SendChar(char c) {
+void USART2_PrintChar(char c) {
     while (!(USART2-&gt;SR &amp; USART_SR_TXE));
     USART2-&gt;DR = c;
 }
 
-char USART2_GetChar(void) {
+char USART2_ReadChar(void) {
     while (!(USART2-&gt;SR &amp; USART_SR_RXNE));
     return USART2-&gt;DR;
 }
@@ -248,12 +251,133 @@ void delay_ms(int n) {
 </code></pre>
 <hr />
 <p><br></p>
+<h3 id="fonctions-utiles-pour-usage-de-usart"><strong>Fonctions utiles pour usage de USART</strong></h3>
+<p>Le but de cet exemple est de fournir une interface de communication série complète entre le microcontrôleur STM32F4 et un PC via UART (ici USART2). Ces fonctions vous permettront d’envoyer toute donnée utile dans vos applications embarquées, que ce soit pour afficher des mesures, transmettre des données, la trame de communication, ou pour tout échange texte-humain/texte-machine ou interagir avec un utilisateur via un terminal.</p>
+<ul>
+<li><code>USART2_WriteChar(char c)</code> : Envoie un caractère <code>ASCII</code> à travers l’USART. La fonction attend que le buffer de transmission soit vide avant d’écrire le caractère dans <code>USART2-&gt;DR</code>. C’est la base de toutes les fonctions plus complexes.</li>
+<li><code>USART2_WriteString(const char* str)</code> : Parcourt une chaîne terminée par <code>\0</code> (standard C) et envoie chaque caractère un à un. Elle permet d’afficher des messages lisibles directement sur un terminal série.</li>
+<li><code>USART2_NewLine()</code> : Les terminaux série attendent généralement un retour à la ligne (<code>\n</code>) suivi d’un retour chariot (<code>\r</code>) pour sauter à la ligne suivante et revenir au début. Cette fonction encapsule cette convention.</li>
+<li><code>USART2_WriteInt(int32_t val)</code> : Affiche un entier signé sous forme de texte. Elle convertit manuellement chaque chiffre de la base 10 (division / modulo) en caractère ASCII. La gestion du signe négatif est incluse.</li>
+<li><code>USART2_WriteFloat(float num)</code> : Affiche un nombre flottant avec 2 chiffres après la virgule. Le nombre est séparé en partie entière et partie décimale, puis traité comme deux entiers. Elle est utile pour afficher des mesures physiques (tension, température, etc.).</li>
+</ul>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+
+void USART2_Init(uint32_t baudrate) {
+    // 1. Activer l’horloge de GPIOA et USART2 (PA2 = TX, PA3 = RX)
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
+
+        // 2. Configurer PA2 (TX) et PA3 (RX) en Alternate Function AF7
+    GPIOA-&gt;MODER &amp;= ~((3 &lt;&lt; (2 * 2)) | (3 &lt;&lt; (3 * 2)));// Clear MODER2 and MODER3
+    GPIOA-&gt;MODER |=  (2 &lt;&lt; (2 * 2)) | (2 &lt;&lt; (3 * 2));   // MODER2/3 = 10 (AF)
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (4 * 2)) | (7 &lt;&lt; (4 * 3));// AFRL2/3 = AF7 (USART2)
+
+    // 3. Configurer baudrate : BRR = fclk / baudrate
+    // fclk = 84 MHz, baudrate = 9600 -&gt; BRR = 8750 (0x)
+        USART2-&gt;BRR = (84000000/baudrate);
+
+    // 4. Activer le mode Transmit et Receive, puis activer l’USART
+    USART2-&gt;CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+
+        // (Optionnel) attendre la stabilisation
+    //while (!(USART2-&gt;SR &amp; USART_SR_TC));  // Transmission complete
+}
+
+// Envoyer un caractère
+void USART2_PrintChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE)); // Attente que le registre soit vide
+    USART2-&gt;DR = c;
+}
+// Lecture d'un caractere
+char USART2_ReadChar(void) {
+    while (!(USART2-&gt;SR &amp; USART_SR_RXNE)); // Attente d’un caractère reçu
+    return USART2-&gt;DR;  // Charger le caractère dans le registre de données
+}
+
+// Envoyer une chaîne de caractères 
+void USART2_PrintText(char *str) {
+    while (*str) {  // Parcourir la chaîne jusqu’à '\0'
+        USART2_PrintChar(*str++);       // Envoyer caractère par caractère
+    }
+}
+
+// Fonction pour envoyer un retour à la ligne compatible avec les terminaux
+void USART2_NewLine(void) {
+        USART2_PrintChar('\n');     // Saut de ligne (Line Feed)
+    USART2_PrintChar('\r');     // Retour chariot (Carriage Return)
+}
+
+// Fonction pour envoyer un entier signé sous forme ASCII
+void USART2_PrintInt(int32_t val) {
+    char buffer[12];  // Assez grand pour -2147483648\0
+    int i = 0;
+
+    if (val == 0) {     // Cas particulier du zéro
+        USART2_PrintChar('0');
+        return;
+    }
+
+    if (val &lt; 0) {      // Si négatif, afficher le signe puis inverser
+        USART2_PrintChar('-');
+        val = -val;
+    }
+
+    while (val &gt; 0) {       // Convertir en chiffres ASCII inversés
+        buffer[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+
+    // Afficher les chiffres en ordre inverse
+    while (--i &gt;= 0) {
+        USART2_PrintChar(buffer[i]);
+    }
+}
+
+// Envoyer un nombre flottant avec 2 décimales
+void USART2_PrintFloat(float num) {
+    int32_t int_part = (int32_t) num;       // Partie entière
+    int32_t frac_part = (int32_t)((num - int_part) * 100);  // Partie fractionnaire à 2 chiffres après virgule
+
+    if (num &lt; 0 &amp;&amp; int_part == 0) USART2_PrintChar('-');        // Cas -0.x
+
+    USART2_PrintInt(int_part);      // Afficher partie entière
+    USART2_PrintChar('.');      // Afficher séparateur décimal
+    if (frac_part &lt; 0) frac_part = -frac_part;  // Corriger si négatif
+    if (frac_part &lt; 10) USART2_PrintChar('0');  // Ajoute 0 devant les valeurs &lt; 10 (ex: 3.04)
+    USART2_PrintInt(frac_part);     // Afficher partie fractionnaire
+}
+
+int main(void) {
+    USART2_Init(9600);
+
+USART2_PrintText(&quot;Hello USART!&quot;);
+    USART2_NewLine();
+
+    USART2_PrintText(&quot;Caractere: &quot;);
+    USART2_PrintChar('A');
+    USART2_NewLine();
+
+    USART2_PrintText(&quot;Entier: &quot;);
+    USART2_PrintInt(-12345);
+    USART2_NewLine();
+
+    USART2_PrintText(&quot;Flottant: &quot;);
+    USART2_PrintFloat(-3.1416f);
+    USART2_NewLine();
+
+    while (1) {
+
+}
+}
+</code></pre>
+<hr />
+<p><br></p>
 <h3 id="redirection-de-printf-vers-luart"><strong>Redirection de printf() vers l’UART</strong></h3>
 <p>Pour faciliter le débogage, on peut rediriger <code>printf()</code> vers l’USART. Sous Keil, il suffit de réimplémenter la fonction <code>fputc()</code> (ou <code>_write</code> selon la bibliothèque). En général, on utilise <code>fputc()</code> pour la console.</p>
 <pre><code class="language-c">#include &lt;stdio.h&gt;
 
 int fputc(int ch, FILE *f) {
-    USART2_SendChar(ch);
+    USART2_PrintChar(ch);
     return ch;
 }
 </code></pre>
@@ -262,46 +386,312 @@ int fputc(int ch, FILE *f) {
 
 int _write(int file, char *ptr, int len) {
     for (int i = 0; i &lt; len; i++) {
-        USART2_SendChar(ptr[i]);
+        USART2_PrintChar(ptr[i]);
     }
     return len;
 }
 </code></pre>
 <p>Ainsi, un simple <code>printf("Valeur : %d\r\n", maVariable);</code> enverra la chaîne formatée sur le port série.</p>
 <p>Attention : pour que cela fonctionne, il faut inclure stdio.h et s’assurer que la bibliothèque standard est utilisée.</p>
+<p>L’exemple fourni montre une boucle principale où chaque caractère reçu est immédiatement renvoyé au PC, réalisant un test d’écho. L’intégration d’un traitement particulier pour le retour chariot (<code>\r</code>) permet de gérer correctement les nouvelles lignes dans l’affichage du terminal. Cette approche démontre l’intérêt pratique de la redirection des flux standards, elle facilite à la fois le débogage (affichage d’états internes du programme via printf) et l’interaction utilisateur (saisie de commandes, menus textuels). En outre, elle illustre comment un concept fondamental de la programmation en C de la gestion des flux peut être adapté au contexte embarqué, ouvrant la voie à des systèmes plus complexes tels que des interfaces console interactives ou des protocoles de communication textuels.</p>
+<pre><code class="language-c">#include &quot;stm32f4xx.h&quot;   
+#include &lt;stdio.h&gt;       // Pour utiliser printf, fputc, fgetc
+#include &lt;stdint.h&gt;      // Pour les types entiers standardisés (uint8_t, uint16_t, etc.)
+
+// Prototypes des fonctions
+void USART2_Init(uint32_t baudrate);         // Initialisation de l'USART2
+void USART2_PrintChar(char data);    // Envoi d'un caractère via USART2
+char USART2_ReadChar(void);      // Réception d'un caractère via USART2
+int fputc(int ch, FILE *f);     // Redirection de fputc vers USART2
+int fgetc(FILE *f);             // Redirection de fgetc vers USART2
+
+// Déclaration des flux standard
+FILE __stdout;  // Flux de sortie standard (stdout)
+FILE __stdin;   // Flux d'entrée standard (stdin)
+
+int main(void) {
+    // Initialisation du périphérique USART2
+    USART2_Init(9600);
+
+    // Message initial envoyé sur le terminal série
+    printf(&quot;Console I/O using USART2 at 9600 Baud\n&quot;);
+
+    // Boucle principale
+    while (1) {
+        // Lire un caractère tapé par l'utilisateur dans le terminal
+        char ch = fgetc(stdin);    
+
+        // Renvoyer le même caractère sur le terminal (fonction echo)
+        fputc(ch, stdout);        
+
+        // Si l'utilisateur appuie sur &quot;Entrée&quot; (carriage return)
+        if (ch == '\r') {         
+            // On envoie aussi un saut de ligne (\n) pour formater correctement l'affichage
+            fputc('\n', stdout);  
+        }
+    }
+}
+
+// Initialisation USART2 
+void USART2_Init(uint32_t baudrate) {
+    // 1. Activer l’horloge de GPIOA et USART2 (PA2 = TX, PA3 = RX)
+    RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;   // Horloge pour GPIOA
+    RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;  // Horloge pour USART2
+
+    // 2. Configurer PA2 (TX) et PA3 (RX) en Alternate Function AF7
+    // Effacer les bits MODER de PA2 et PA3 (remise à 00 = input)
+    GPIOA-&gt;MODER &amp;= ~((3 &lt;&lt; (2 * 2)) | (3 &lt;&lt; (3 * 2)));
+    // Mettre PA2 et PA3 en Alternate Function mode (10)
+    GPIOA-&gt;MODER |=  (2 &lt;&lt; (2 * 2)) | (2 &lt;&lt; (3 * 2));
+    // Sélectionner l’AF7 (USART2) pour PA2 et PA3
+    GPIOA-&gt;AFR[0] &amp;= ~((0xF &lt;&lt; (4 * 2)) | (0xF &lt;&lt; (4 * 3))); // Nettoyage
+    GPIOA-&gt;AFR[0] |=  (7 &lt;&lt; (4 * 2)) | (7 &lt;&lt; (4 * 3));       // AF7
+
+    // 3. Configurer la vitesse de communication (baudrate)
+    // BRR = fréquence horloge périphérique / baudrate
+    USART2-&gt;BRR = (16000000 / baudrate); // fclk = 16 MHz
+
+    // 4. Activer TX, RX et USART
+    USART2-&gt;CR1 |= USART_CR1_TE | USART_CR1_RE; // Transmission + Réception
+    USART2-&gt;CR1 |= USART_CR1_UE;                // Activation USART2
+}
+
+// Envoi via USART2 
+void USART2_PrintChar(char c) {
+    // Attendre que le registre de transmission soit vide
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE));
+    // Charger le caractère dans le registre d’envoi
+    USART2-&gt;DR = c;
+}
+
+// Réception via USART2 
+char USART2_ReadChar(void) {
+    // Attendre qu’un caractère soit reçu (bit RXNE = 1)
+    while (!(USART2-&gt;SR &amp; USART_SR_RXNE));
+    // Lire et retourner le caractère reçu
+    return USART2-&gt;DR;
+}
+
+// Redirection printf vers USART2 
+int fputc(int ch, FILE *f) {
+    // Envoyer le caractère via USART2
+    USART2_Send(ch);
+    // Retourner le caractère envoyé
+    return ch;
+}
+
+// Redirection scanf vers USART2 
+int fgetc(FILE *f) {
+    // Lire un caractère reçu via USART2
+    char ch = USART2_Receive();
+    // Réémettre le même caractère (echo)
+    USART2_Send(ch);
+    // Retourner le caractère pour utilisation dans le programme
+    return ch;
+}
+</code></pre>
 <hr />
 <p><br></p>
 <h3 id="interruptions-usart"><strong>Interruptions USART</strong></h3>
 <p>L'USART2 peut générer une interruption sur réception (RXNE) et/ou sur émission (TXE). Le bit <code>RXNEIE</code> dans <code>USART_CR1</code> active l'interruption de réception.</p>
-<p>Exemple : réception par interruption (écho)</p>
+<p>Le fonctionnement de la réception via interruption repose sur une architecture matérielle bien intégrée dans le STM32F4. Lorsque le périphérique USART reçoit un caractère, le flag <code>RXNE</code> (Receive Data Register Not Empty) est activé dans le registre de statut <code>USART_SR</code>. Si l’interruption <code>RXNE</code> est autorisée via le bit <code>RXNEIE</code> du registre de contrôle <code>USART_CR1</code>, le périphérique génère automatiquement une interruption matérielle. Le contrôleur d’interruption <code>NVIC</code> (Nested Vectored Interrupt Controller) bascule alors vers une routine d’interruption spécifique, comme <code>USART2_IRQHandler()</code> dans le cas de l’USART2. Cette fonction est appelée immédiatement par le matériel sans intervention logicielle, assurant ainsi un traitement rapide et automatique.</p>
+<p>À l’intérieur de cette routine ISR <code>USART2_IRQHandler()</code>, il est impératif de lire sans délai le registre de données <code>USARTx-&gt;DR</code>, car cette lecture efface le flag <code>RXNE</code> et autorise la réception d’un nouveau caractère. Il est fondamental que cette routine reste très légère et rapide, car toute opération longue (comme un printf) pourrait ralentir le traitement et provoquer des pertes de données. Pour cette raison, il est vivement conseillé de transférer immédiatement le caractère reçu vers une zone mémoire tampon, appelée buffer circulaire, que le programme principal traitera ultérieurement. Ce découplage entre la réception et le traitement garantit que le microcontrôleur reste réactif, même en cas de trafic série dense ou irrégulier.</p>
+<p>La mise en œuvre de la réception par interruption constitue un excellent exercice de laboratoire pour illustrer les mécanismes bas-niveau de gestion des interruptions et l’intégration avec le logiciel applicatif. Lors de ce laboratoire, on configure d’abord le périphérique USART avec le bon débit (baud rate), la taille des données (8 ou 9 bits), le nombre de bits de stop et la parité. Ensuite, on active l’interruption RXNE en positionnant le bit RXNEIE dans USART_CR1, puis on autorise l’interruption correspondante au niveau du NVIC avec la fonction NVIC_EnableIRQ(USART2_IRQn).</p>
+<p>Une fois ces étapes effectuées, la routine d’interruption USART2_IRQHandler() sera exécutée automatiquement à chaque caractère reçu. Dans cette fonction, on lit USART2-&gt;DR pour transférer le caractère vers un buffer circulaire, sans perdre de temps. Pendant ce temps, le code principal peut exécuter d’autres tâches (affichage, calcul, gestion de capteurs, etc.), et accéder aux données reçues à son propre rythme. </p>
+<p>Lorsqu’on utilise la réception par interruption, les données peuvent arriver de manière asynchrone et imprévisible. Le problème : que faire de ces données si le code principal du microcontrôleur est occupé et ne peut les traiter immédiatement ? La réponse est l’utilisation d’un buffer circulaire (FIFO).</p>
+<p>Le buffer circulaire est un mécanisme logiciel essentiel pour stocker temporairement les caractères reçus, surtout lorsque le traitement ne peut pas être immédiat. Il s’agit d’un tableau fixe en mémoire, associé à deux indices : head (tête d’écriture) et tail (tête de lecture). À chaque interruption, le caractère reçu est stocké dans le tableau à l’indice head, puis ce dernier est incrémenté de façon circulaire (avec un retour à zéro si la fin du tableau est atteinte). </p>
+<p>Lorsque le programme principal souhaite lire un caractère, il le fait à l’indice tail, qu’il incrémente également de manière circulaire. Si head == tail, cela signifie que le buffer est vide ; si head rattrape tail, le buffer est plein. Ce mécanisme permet de gérer proprement le flux de données asynchrones, tout en maintenant la cohérence et sans perdre d’octets (sauf débordement non géré). L’intérêt principal du buffer circulaire est de découpler la réception (via interruption) du traitement (dans le code principal). </p>
+<p>Le microcontrôleur peut ainsi absorber des rafales de données sans risque de perte, même s’il est temporairement occupé ailleurs. Il est néanmoins crucial de surveiller la taille du buffer et de traiter régulièrement les données, afin d’éviter un débordement. Il convient aussi de garder les interruptions courtes, en évitant toute opération lourde ou lente dans l’ISR.</p>
+<p>Ce mécanisme est très utilisé dans les systèmes embarqués pour toutes les formes de communication asynchrone rapide : modules Bluetooth, GSM/GPRS, GNSS, PC via USB-UART, radios sans fil, etc. Il constitue également la base pour concevoir des interpréteurs de commandes série, des systèmes de logique interactive, ou des protocoles de communication temps réel. La combinaison d’un buffer circulaire et d’une réception par interruption constitue donc une solution puissante, efficace et robuste, incontournable dans le développement embarqué professionnel.</p>
+<p><strong>Exemple : Réception par Interruption (écho)</strong></p>
 <pre><code class="language-c">#include &quot;stm32f4xx.h&quot;
+#include &lt;string.h&gt;
+#include &lt;stdbool.h&gt;
+#include &lt;stdlib.h&gt;   // Pour atoi() et atof()
 
-void USART2_IRQHandler(void) {
-    if (USART2-&gt;SR &amp; USART_SR_RXNE) {
-        char c = USART2-&gt;DR;
-        USART2-&gt;DR = c;  // renvoie le caractère (écho)
-    }
-}
+#define RX_BUFFER_SIZE 128
 
-void USART2_Init(uint32_t baud) {
-    // Activer horloges
+volatile char rx_buffer[RX_BUFFER_SIZE]; // Buffer de réception circulaire
+volatile uint16_t rx_head = 0;           // Index d'écriture (rempli dans IRQ)
+volatile uint16_t rx_tail = 0;       // Index de lecture (utilisé par le programme)
+
+void USART2_Init(uint32_t baudrate) {
+    // 1. Activer l’horloge de GPIOA et USART2 (PA2 = TX, PA3 = RX)
     RCC-&gt;AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
     RCC-&gt;APB1ENR |= RCC_APB1ENR_USART2EN;
 
-    // PA2 TX, PA3 RX en AF7
-    GPIOA-&gt;MODER |= (2 &lt;&lt; (2*2)) | (2 &lt;&lt; (3*2));
-    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (2*4)) | (7 &lt;&lt; (3*4));
+        // 2. Configurer PA2 (TX) et PA3 (RX) en Alternate Function AF7
+    GPIOA-&gt;MODER &amp;= ~((3 &lt;&lt; (2 * 2)) | (3 &lt;&lt; (3 * 2)));// Clear MODER2 and MODER3
+    GPIOA-&gt;MODER |=  (2 &lt;&lt; (2 * 2)) | (2 &lt;&lt; (3 * 2));   // MODER2/3 = 10 (AF)
+    GPIOA-&gt;AFR[0] |= (7 &lt;&lt; (4 * 2)) | (7 &lt;&lt; (4 * 3)); // AFRL2/3 = AF7 (USART2)
 
-    // 115200 bauds, 8 bits, 1 stop, pas de parité
-    USART2-&gt;BRR = 84000000 / baud;  // Horloge APB1 = 84 MHz 
-    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
-    NVIC_EnableIRQ(USART2_IRQn);
+    // 3. Configurer baudrate : BRR = fclk / baudrate
+    // fclk = 16 MHz, baudrate = 9600 -&gt; BRR = 1667 (0x0683)
+        USART2-&gt;BRR = (16000000/baudrate);
+
+    // 4. Activer le mode Transmit et Receive, puis activer l’USART
+    USART2-&gt;CR1 |= USART_CR1_RE | USART_CR1_TE | USART_CR1_RXNEIE; // RX, TX, IRQ
+    USART2-&gt;CR1 |= USART_CR1_UE;                 // Activer l’USART
+
+NVIC_EnableIRQ(USART2_IRQn);   // Activer interruption dans le NVIC
+}
+
+// Envoyer un caractère
+void USART2_PrintChar(char c) {
+    while (!(USART2-&gt;SR &amp; USART_SR_TXE)); // Attente que le registre soit vide
+    USART2-&gt;DR = c;
+}
+
+// Interruption RX USART2
+void USART2_IRQHandler(void) {
+    if (USART2-&gt;SR &amp; USART_SR_RXNE) {            // Si un caractère est reçu
+        char c = USART2-&gt;DR;                     // Lire le caractère reçu
+
+                uint16_t next_head = (rx_head + 1) % RX_BUFFER_SIZE;
+
+        if (next_head != rx_tail) {      // Éviter d’écraser les données non lues
+            rx_buffer[rx_head] = c;
+            rx_head = next_head;
+        }
+    }
+        // Gestion d'erreur de débordement
+    if (USART2-&gt;SR &amp; USART_SR_ORE) {
+        (void)USART2-&gt;SR;        // Lire SR pour effacer ORE
+        (void)USART2-&gt;DR;        // Lire DR pour vider le buffer
+    }
+}
+
+// si le caractere est disponible
+int USART2_Available(void) {
+    return (rx_head != rx_tail);
+}
+
+// Lire un caractère s’il est disponible
+char USART2_ReadChar(void) {
+    if (rx_head == rx_tail) return 0;            // Rien à lire
+    char c = rx_buffer[rx_tail];
+    rx_tail = (rx_tail + 1) % RX_BUFFER_SIZE;
+    return c;
+}
+
+// Lire une chaîne jusqu’à un délimiteur (ex: '\n')
+int USART2_ReadLine(char* buffer, int maxlen) {
+    int i = 0;
+    while (i &lt; maxlen - 1) {
+        while (!USART2_Available()); // Attendre des données
+        char c = USART2_ReadChar();
+        if (c == '\n' || c == '\r') {
+            // Consommer le retour chariot supplémentaire si présent
+            if (USART2_Available()) {
+                char next_c = USART2_ReadChar();
+                if ((c == '\n' &amp;&amp; next_c != '\r') || (c == '\r' &amp;&amp; next_c != '\n')){
+                // Remettre le caractère non consommé (simulé en ajustant le tail)
+                    rx_tail = (rx_tail - 1) % RX_BUFFER_SIZE;
+                }
+            }
+            break;
+        }
+        buffer[i++] = c;
+    }
+    buffer[i] = '\0';
+    return i;
+}
+
+// Convertir une ligne en entier
+int32_t USART2_ReadInt(void) {
+    char buffer[16];
+    USART2_ReadLine(buffer, sizeof(buffer));
+    return atoi(buffer);                         // Conversion chaîne ? int
+}
+
+// Convertir une ligne en float
+float USART2_ReadFloat(void) {
+    char buffer[16];
+    USART2_ReadLine(buffer, sizeof(buffer));
+    return atof(buffer);                         // Conversion chaîne ? float
+}
+
+// flush du buffer RX
+void USART2_FlushRx(void) {
+    rx_head = 0;
+    rx_tail = 0;
+}
+
+// Envoyer une chaîne de caractères 
+void USART2_PrintText(char *str) {
+    while (*str) {  // Parcourir la chaîne jusqu’à '\0'
+        USART2_PrintChar(*str++);       // Envoyer caractère par caractère
+    }
+}
+
+// Fonction pour envoyer un retour à la ligne compatible avec les terminaux
+void USART2_NewLine(void) {
+        USART2_PrintChar('\n');     // Saut de ligne (Line Feed)
+    USART2_PrintChar('\r');     // Retour chariot (Carriage Return)
+}
+
+// Fonction pour envoyer un entier signé sous forme ASCII
+void USART2_PrintInt(int32_t val) {
+    char buffer[12];  // Assez grand pour -2147483648\0
+    int i = 0;
+
+    if (val == 0) {     // Cas particulier du zéro
+        USART2_PrintChar('0');
+        return;
+    }
+
+    if (val &lt; 0) {      // Si négatif, afficher le signe puis inverser
+        USART2_PrintChar('-');
+        val = -val;
+    }
+
+    while (val &gt; 0) {       // Convertir en chiffres ASCII inversés
+        buffer[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+
+    // Afficher les chiffres en ordre inverse
+    while (--i &gt;= 0) {
+        USART2_PrintChar(buffer[i]);
+    }
+}
+
+// Envoyer un nombre flottant avec 2 décimales
+void USART2_PrintFloat(float num) {
+    int32_t int_part = (int32_t) num;       // Partie entière
+    int32_t frac_part = (int32_t)((num - int_part) * 100);  // Partie fractionnaire à 2 chiffres après virgule
+
+    if (num &lt; 0 &amp;&amp; int_part == 0) USART2_PrintChar('-');        // Cas -0.x
+
+    USART2_PrintInt(int_part);      // Afficher partie entière
+    USART2_PrintChar('.');      // Afficher séparateur décimal
+    if (frac_part &lt; 0) frac_part = -frac_part;  // Corriger si négatif
+    if (frac_part &lt; 10) USART2_PrintChar('0');  // Ajoute 0 devant les valeurs &lt; 10 (ex: 3.04)
+    USART2_PrintInt(frac_part);     // Afficher partie fractionnaire
 }
 
 int main(void) {
-    USART2_Init(115200);
+    USART2_Init(9600);             // Initialise l’USART2 avec interruptions
 
-    while (1);
+    while (1){ // Boucle infinie
+        USART2_FlushRx(); // Nettoyer le buffer avant chaque lecture
+
+        USART2_PrintText(&quot;Entrez un entier : &quot;);
+        while (!USART2_Available()); // Attente non bloquante possible ici
+        int32_t val = USART2_ReadInt();
+
+        USART2_PrintText(&quot;Vous avez saisi : &quot;);
+        USART2_PrintInt(val);
+        USART2_NewLine();
+
+        USART2_FlushRx();
+        USART2_PrintText(&quot;Entrez un float : &quot;);
+        float fval = USART2_ReadFloat();
+
+        USART2_PrintText(&quot;Float : &quot;);
+        USART2_PrintFloat(fval);
+        USART2_NewLine();
+    }
 }
 </code></pre>
 <hr />
